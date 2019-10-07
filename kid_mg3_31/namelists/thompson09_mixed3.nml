@@ -1,0 +1,34 @@
+
+&mphys
+! hydrometeor names
+h_names=  'cloud',  'rain',  'ice',  'snow',  'graupel'  
+! number of moments for each species
+num_h_moments= 1,2,2,2,2
+! Background values for each moment (assumed the same for all species)
+mom_init=0,0,0
+! Aerosol initialization
+num_aero_moments=0,0,0
+num_aero_bins=1
+aero_N_init=0., 50.e6, 0
+aero_sig_init=0., 1.4, 0
+aero_rd_init=0., 0.05e-6, 0.
+/
+
+&case
+icase=203
+/
+
+&control
+mphys_scheme='thompson09'
+dt=1
+dgstart=0.0
+dg_dt=120
+/
+
+&switch
+l_fix_theta=.true.
+!l_noadv_qv=.true.
+/
+
+&addcontrol
+/
