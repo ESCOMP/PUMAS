@@ -1515,8 +1515,8 @@ elemental subroutine accrete_rain_ice(t, rho, rhof, af1pr8, af1pr7, qric, qiic, 
 
   if (qric >= icsmall .and. qiic >= icsmall .and. t <= tmelt) then
 
-     pracs  = 10._r8**(af1pr8+dlog(n0r))*rho*rhof*ecr
-     npracs = 10._r8**(af1pr7+dlog(n0r))*rho*rhof*ecr
+     pracs  = 10._r8**(af1pr8+dlog10(n0r))*rho*rhof*ecr
+     npracs = 10._r8**(af1pr7+dlog10(n0r))*rho*rhof*ecr
 
   else
      pracs = 0._r8
