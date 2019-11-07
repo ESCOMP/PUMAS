@@ -5,21 +5,21 @@
 
 # Edit the variables below this comment:
 
-set CESMDIR    = /glade/work/katec/mg3work/mg3_branch_dev
+set CESMDIR    = /glade/work/katec/mg3work/ESCOMP_cam_devolpment_ktfork_pumas
 set MG_vers    = mg3
 set COMPSET    = F2000climo
-set CASE       = gittest.$COMPSET.$MG_vers.001
+set CASE       = gittest.$COMPSET.$MG_vers.002
 set CASEDIR    = /glade/work/$USER/mg3work/cesm_cases/$CASE
 
 set RESUBMIT   = 0
-set STOP_N     = 5
-set STOP_OPTION = ndays
+set STOP_N     = 6
+set STOP_OPTION = nmonths
 set REST_N     = 6
 set REST_OPTION = nmonths
 set DEBUG_TF   = TRUE
 set ARCHIVE_TF = TRUE
 
-set PBSACC     = P93300642
+set PBSACC     = P93300606
 set TIMEWALL   = 12:00:00
 set QUEUE      = regular
 
@@ -34,13 +34,13 @@ set REFDIR     = /glade/u/home/katec/archive/{$REFCASE}/rest/{$REFDATE}
 cat <<EOF >! user_nl_cam.TMP
 &camexp
   history_budget = .true.
-  print_energy_errors = .true.
+  print_energy_errors = .false.
   macrop_scheme = 'CLUBB_SGS'
   cld_macmic_num_steps = 2
-  micro_mg_do_hail = .false.
-  micro_mg_do_graupel = .true.
+  micro_mg_do_hail = .true.
+  micro_mg_do_graupel = .false.
   fincl1  = 'CDNUMC','ICLDIWP','AQRAIN','AQSNOW','ANRAIN','ANSNOW','FREQS','FREQR',
-           'AQGRAU','ANGRAU','NUMICE','NUMLIQ','TMNUMICE','VTRMI','UMS','UMR',
+           'NUMICE','NUMLIQ','TMNUMICE','VTRMI','UMS','UMR',
            'LWCF','SWCF', 'ICLDTWP', 'CONCLD','ADRAIN','ADSNOW',
            'QCSEVAP', 'QISEVAP', 'CMELIQ', 'CMEIOUT', 'EVAPPREC', 'EVAPSNOW',
            'PRCO','PRAO','PRECT','PRECC','PRECL','NUMLIQ','GCLDLWP','TGCLDLWP',
@@ -48,7 +48,7 @@ cat <<EOF >! user_nl_cam.TMP
 	   'Q_qneg3','CLDICE_qneg3'
   nhtfrq  = 0
   mfilt   = 1
-  avgflag_pertape = 'I'
+  avgflag_pertape = 'A'
   dust_emis_fact         = 0.7D0
   soil_erod_file         = '/glade/u/home/mahowald/dst_source2x2tunedcam6-2x2-04062017.nc'
   ext_frc_cycle_yr               = 2000
