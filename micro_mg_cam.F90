@@ -979,8 +979,6 @@ subroutine micro_mg_cam_init(pbuf2d)
    call addfld ('MPDQ',       (/ 'lev' /), 'A', 'kg/kg/s',  'Q tendency - Morrison microphysics'                      )
    call addfld ('MPDLIQ',     (/ 'lev' /), 'A', 'kg/kg/s',  'CLDLIQ tendency - Morrison microphysics'                 )
    call addfld ('MPDICE',     (/ 'lev' /), 'A', 'kg/kg/s',  'CLDICE tendency - Morrison microphysics'                 )
-   call addfld ('MPDICERES',  (/ 'lev' /), 'A', 'kg/kg/s',  'CLDICE tendency residual debugging'                      )
-   call addfld ('MPDICEPRE',  (/ 'lev' /), 'A', 'kg/kg/s',  'CLDICE tendency residual due to pre-adjustment'          )
    call addfld ('MPDNLIQ',    (/ 'lev' /), 'A', '1/kg/s',   'NUMLIQ tendency - Morrison microphysics'                 )
    call addfld ('MPDNICE',    (/ 'lev' /), 'A', '1/kg/s',   'NUMICE tendency - Morrison microphysics'                 )
    call addfld ('MPDW2V',     (/ 'lev' /), 'A', 'kg/kg/s',  'Water <--> Vapor tendency - Morrison microphysics'       )
@@ -1182,8 +1180,6 @@ subroutine micro_mg_cam_init(pbuf2d)
       call add_default ('MPDQ     ', budget_histfile, ' ')
       call add_default ('MPDLIQ   ', budget_histfile, ' ')
       call add_default ('MPDICE   ', budget_histfile, ' ')
-      call add_default ('MPDICERES', budget_histfile, ' ')
-      call add_default ('MPDICEPRE', budget_histfile, ' ')
       call add_default ('MPDI2W   ', budget_histfile, ' ')
       call add_default ('MPDI2V   ', budget_histfile, ' ')
       call add_default ('MPDI2P   ', budget_histfile, ' ')
@@ -2995,7 +2991,7 @@ subroutine micro_mg_cam_tend_pack(state, ptend, dtime, pbuf, mgncol, mgcols, nle
          ! Calculate in-cloud snow water path
            icgrauwp(i,k) = qgout(i,k) / max( 1.e-2_r8, cldfgrau(i,k) ) * state_loc%pdel(i,k) / gravit 
            if (icgrauwp(i,k).gt.0.1_r8) then
-              write(iulog,*) 'WARNING: icgraup large: i,k,icgrauwp,qgout,cldf,pdel'
+              ! write(iulog,*) 'WARNING: icgraup large: i,k,icgrauwp,qgout,cldf,pdel'
               write(iulog,*) i,k,icgrauwp(i,k),qgout(i,k),max( mincld, cldfgrau(i,k)),state_loc%pdel(i,k)
            end if
         end if 
@@ -3755,8 +3751,6 @@ subroutine micro_mg_cam_tend_pack(state, ptend, dtime, pbuf, mgncol, mgcols, nle
    call outfld('MPDQ',        qvlat,       psetcols, lchnk, avg_subcol_field=use_subcol_microp)
    call outfld('MPDLIQ',      qcten,       psetcols, lchnk, avg_subcol_field=use_subcol_microp)
    call outfld('MPDICE',      qiten,       psetcols, lchnk, avg_subcol_field=use_subcol_microp)
-   call outfld('MPDICERES',   qitenres,    psetcols, lchnk, avg_subcol_field=use_subcol_microp)
-   call outfld('MPDICEPRE',   qitenpre,    psetcols, lchnk, avg_subcol_field=use_subcol_microp)
    call outfld('MPDNLIQ',     ncten,       psetcols, lchnk, avg_subcol_field=use_subcol_microp)
    call outfld('MPDNICE',     niten,       psetcols, lchnk, avg_subcol_field=use_subcol_microp)
    call outfld('EVAPSNOW',    evapsnow,    psetcols, lchnk, avg_subcol_field=use_subcol_microp)
