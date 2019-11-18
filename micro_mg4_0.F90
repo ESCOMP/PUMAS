@@ -1614,6 +1614,8 @@ subroutine micro_mg_tend ( &
   ums = 0._r8  
   umr = 0._r8
   unr = 0._r8
+  n0s = 0._r8
+  lams = 0._r8
 !++ag
   umg = 0._r8
   ung = 0._r8
@@ -1758,7 +1760,7 @@ subroutine micro_mg_tend ( &
            if (niic(i,k).ge.1.e-20_r8) then	
               dum=500.e+3_r8/(rho(i,k)*niic(i,k))
               niic(i,k)=niic(i,k)*min(dum,1._r8)
-              ni(i,k) = niic(i,k)*icldm(i,k)
+              !ni(i,k) = niic(i,k)*icldm(i,k)
            endif
 !--kt
            ! switch for specification of cloud ice number
@@ -1955,7 +1957,7 @@ subroutine micro_mg_tend ( &
             niic(i,k) = max(niic(i,k),f1pr10)
 
             niic(i,k) = min(niic(i,k),500.e3_r8/rho(i,k))
-            ni(i,k) = niic(i,k)*icldm(i,k)
+            !ni(i,k) = niic(i,k)*icldm(i,k)
 
            ! find index for Ni (ice number mixing ratio)
             dum22 = (dlog10(niic(i,k))+10._r8)*1.10731_r8
@@ -2044,13 +2046,16 @@ subroutine micro_mg_tend ( &
      ! "snow" - updated for mg4 as falling ice
       ums(:,k) = 0._r8
 
+      dumi(:,k) = qiic(:,k)
+      dumni(:,k) = niic(:,k)
+
       do i = 1, mgncol
 
          !if ((dumi(i,k).ge.qsmall).and.(dumni(i,k).lt.icsmall)) then
          !   write(*,*) "MG4 WARNING 1 ice present in cloud with no number conc at i=",i," k=",k
          !end if
 
-        if ((dumi(i,k).ge.qsmall).and.(dumni(i,k).ge.icsmall)) then
+        if ((dumi(i,k).ge.qsmall).and.(dumni(i,k).ge.qsmall)) then
            !! ++ trude. Since ice has been updated, call access_lookup_table again for fall speed.            
            ! find index for qi (total ice mass mixing ratio)
            dum11 = (dlog10(dumi(i,k))+16._r8)*1.41328_r8
@@ -2582,12 +2587,19 @@ subroutine micro_mg_tend ( &
 
            ! freezing of rain to produce ice if mean rain size is smaller than Dcs
            ! mg4 move all nuccr to nucci -> move all snow to ice
-!++kt      !if (lamr(i,k) > qsmall .and. 1._r8/lamr(i,k) < Dcs) then
+           if(do_hail.or.do_graupel) then
+              if (lamr(i,k) > qsmall .and. 1._r8/lamr(i,k) < Dcs) then
+                 mnuccri(i,k)=mnuccr(i,k)
+                 nnuccri(i,k)=nnuccr(i,k)
+                 mnuccr(i,k)=0._r8
+                 nnuccr(i,k)=0._r8
+              end if
+           else
               mnuccri(i,k)=mnuccr(i,k)
               nnuccri(i,k)=nnuccr(i,k)
               mnuccr(i,k)=0._r8
               nnuccr(i,k)=0._r8
-!--kt      !end if
+           end if
         end if
 
      end do
@@ -2755,9 +2767,15 @@ subroutine micro_mg_tend ( &
 !                nprai(i,k)-nsubi(i,k))*icldm(i,k)-nnuccri(i,k)*precip_frac(i,k)- &
 !                nnuccd(i,k))*deltat
 !++kt
-           dum = ((-nnucct(i,k)-tmpfrz-nnudep(i,k)-nsacwi(i,k)-nmultg(i,k)-niagg(i,k))*lcldm(i,k) &
+           if (do_hail .or. do_graupel) then
+              dum = ((-nnucct(i,k)-tmpfrz-nnudep(i,k)-nsacwi(i,k)-nmultg(i,k)-niagg(i,k))*lcldm(i,k) &
+                -nsubi(i,k)*icldm(i,k)+(-nmultrg(i,k)+ngracs(i,k))*precip_frac(i,k)- &
+                nnuccd(i,k)+nscng(i,k)*lcldm(i,k))*deltat
+           else
+              dum = ((-nnucct(i,k)-tmpfrz-nnudep(i,k)-nsacwi(i,k)-nmultg(i,k)-niagg(i,k))*lcldm(i,k) &
                 -nsubi(i,k)*icldm(i,k)+(-nmultrg(i,k)-nnuccri(i,k))*precip_frac(i,k)- &
                 nnuccd(i,k))*deltat
+           end if
 !--ag
            if (dum.gt.ni(i,k)) then
 !++ag
@@ -2766,10 +2784,19 @@ subroutine micro_mg_tend ( &
 !                   nnuccri(i,k)*precip_frac(i,k))/ &
 !                   ((nprci(i,k)+nprai(i,k)-nsubi(i,k))*icldm(i,k))*omsm
 
-              ratio = (ni(i,k)/deltat+nnuccd(i,k)+ &
-                   (nnucct(i,k)+tmpfrz+nnudep(i,k)+nsacwi(i,k)+nmultg(i,k))*lcldm(i,k)+ &
-                  (nnuccri(i,k)+nmultrg(i,k))*precip_frac(i,k))/ &
-                  ((-nsubi(i,k)-niagg(i,k))*icldm(i,k))*omsm
+              if (do_hail .or. do_graupel) then
+                 ratio = (ni(i,k)/deltat+nnuccd(i,k)+ &
+                      (nnucct(i,k)+tmpfrz+nnudep(i,k)+nsacwi(i,k)+nmultg(i,k))*lcldm(i,k)+ &
+                      (nmultrg(i,k))*precip_frac(i,k))/ &
+                      ((-nsubi(i,k)-niagg(i,k)+ngracs(i,k)+lcldm(i,k)/precip_frac(i,k)*nscng(i,k))*icldm(i,k))*omsm
+                 nscng(i,k)=nscng(i,k)*ratio
+                 ngracs(i,k)=ngracs(i,k)*ratio
+              else
+                 ratio = (ni(i,k)/deltat+nnuccd(i,k)+ &
+                      (nnucct(i,k)+tmpfrz+nnudep(i,k)+nsacwi(i,k)+nmultg(i,k))*lcldm(i,k)+ &
+                      (nnuccri(i,k)+nmultrg(i,k))*precip_frac(i,k))/ &
+                      ((-nsubi(i,k)-niagg(i,k))*icldm(i,k))*omsm
+              endif 
 !--ag
               nsubi(i,k) = nsubi(i,k)*ratio
               niagg(i,k) = niagg(i,k)*ratio
@@ -3077,7 +3104,7 @@ subroutine micro_mg_tend ( &
 !           nstend(i,k) = nstend(i,k)+(nsubs(i,k)+ &
 !                nsagg(i,k)+nnuccr(i,k))*precip_frac(i,k)+nprci(i,k)*icldm(i,k)
 
-           nitend(i,k) = nitend(i,k)+(nsubi(i,k)-ngracs(i,k))*precip_frac(i,k)-nscng(i,k)*lcldm(i,k)
+           nitend(i,k) = nitend(i,k)-ngracs(i,k)*precip_frac(i,k)-nscng(i,k)*lcldm(i,k)
 
            ngtend(i,k) = ngtend(i,k)+nscng(i,k)*lcldm(i,k)+(ngracs(i,k)+nnuccr(i,k))*precip_frac(i,k)
 
