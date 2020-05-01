@@ -2145,7 +2145,7 @@ subroutine micro_mg_tend ( &
         nsubs(i,k)=0._r8
 
         if (do_hail .or. do_graupel) then        
-           dum = ((-nsagg(i,k)-nsubs(i,k)+ngracs(i,k))*precip_frac(i,k)-nprci(i,k)*icldm(i,k)-nscng(i,k)*lcldm(i,k))*deltat
+           dum = ((-nsagg(i,k)-nsubs(i,k)+ngracs(i,k))*precip_frac(i,k)-nprci(i,k)*icldm(i,k)+nscng(i,k)*lcldm(i,k))*deltat
         else
            dum = ((-nsagg(i,k)-nsubs(i,k)-nnuccr(i,k))*precip_frac(i,k)-nprci(i,k)*icldm(i,k))*deltat
         end if
