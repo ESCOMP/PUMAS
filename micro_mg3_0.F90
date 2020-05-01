@@ -418,6 +418,9 @@ subroutine micro_mg_tend ( &
      pratot,                       prctot,                       &
      mnuccctot,          mnuccttot,          msacwitot,          &
      psacwstot,          bergstot,           bergtot,            &
+!++trude
+     npsacwstot,                                                 &
+!--trude
      melttot,                      homotot,                      &
      qcrestot,           prcitot,            praitot,            &
      qirestot,           mnuccrtot,          mnuccritot, pracstot,           &
@@ -598,6 +601,9 @@ subroutine micro_mg_tend ( &
   real(r8), intent(out) :: mnuccttot(mgncol,nlev)       ! mixing ratio tend due to contact freezing
   real(r8), intent(out) :: msacwitot(mgncol,nlev)       ! mixing ratio tend due to H-M splintering
   real(r8), intent(out) :: psacwstot(mgncol,nlev)       ! collection of cloud water by snow
+!++trude
+  real(r8), intent(out) :: npsacwstot(mgncol,nlev)      ! number collection of coud water by snow
+!--trude
   real(r8), intent(out) :: bergstot(mgncol,nlev)        ! bergeron process on snow
   real(r8), intent(out) :: bergtot(mgncol,nlev)         ! bergeron process on cloud ice
   real(r8), intent(out) :: melttot(mgncol,nlev)         ! melting of cloud ice
@@ -1086,6 +1092,9 @@ subroutine micro_mg_tend ( &
   mnuccttot=0._r8
   msacwitot=0._r8
   psacwstot=0._r8
+!++trude 
+ npsacwstot=0._r8
+!--trude
   bergstot=0._r8
   bergtot=0._r8
   melttot=0._r8
@@ -1850,6 +1859,10 @@ subroutine micro_mg_tend ( &
              qcic(1:mgncol,k), qiic(:,k), qric(:,k), qsic(:,k), qgic(:,k), &
              lamr(:,k), n0r(:,k), lams(:,k), n0s(:,k), lamg(:,k), n0g(:,k), &
              pre(:,k), prds(:,k), prdg(:,k), am_evp_st(:,k), mgncol)   
+
+        if (maxval(npracg(:,k)).gt.0._r8) & 
+             write(*,*) "OOPS, npracg > 0 : max=",maxval(npracg(:,k))
+
      else
              
         ! Routine without Graupel (original)        
@@ -2145,7 +2158,9 @@ subroutine micro_mg_tend ( &
         nsubs(i,k)=0._r8
 
         if (do_hail .or. do_graupel) then        
-           dum = ((-nsagg(i,k)-nsubs(i,k)+ngracs(i,k))*precip_frac(i,k)-nprci(i,k)*icldm(i,k)-nscng(i,k)*lcldm(i,k))*deltat
+!++trude, change -nscng to +nscng
+           dum = ((-nsagg(i,k)-nsubs(i,k)+ngracs(i,k))*precip_frac(i,k)-nprci(i,k)*icldm(i,k)+nscng(i,k)*lcldm(i,k))*deltat
+!--trude
         else
            dum = ((-nsagg(i,k)-nsubs(i,k)-nnuccr(i,k))*precip_frac(i,k)-nprci(i,k)*icldm(i,k))*deltat
         end if
@@ -2358,6 +2373,9 @@ subroutine micro_mg_tend ( &
         mnuccttot(i,k) = mnucct(i,k)*lcldm(i,k)
         msacwitot(i,k) = msacwi(i,k)*lcldm(i,k)
         psacwstot(i,k) = psacws(i,k)*lcldm(i,k)
+!++trude
+        npsacwstot(i,k) = npsacws(i,k)*lcldm(i,k)
+!--trude
         bergstot(i,k) = bergs(i,k)*lcldm(i,k)
         bergtot(i,k) = berg(i,k)
         prcitot(i,k) = prci(i,k)*icldm(i,k)
@@ -2403,7 +2421,7 @@ subroutine micro_mg_tend ( &
         if(do_graupel.or.do_hail) then
 
            nstend(i,k) = nstend(i,k)+(nsubs(i,k)+ &
-                nsagg(i,k)-ngracs(i,k))*precip_frac(i,k)+nprci(i,k)*icldm(i,k)-nscng(i,k)*lcldm(i,k)
+           nsagg(i,k)-ngracs(i,k))*precip_frac(i,k)+nprci(i,k)*icldm(i,k)-nscng(i,k)*lcldm(i,k)
            ngtend(i,k) = ngtend(i,k)+nscng(i,k)*lcldm(i,k)+(ngracs(i,k)+nnuccr(i,k))*precip_frac(i,k)
 
         else

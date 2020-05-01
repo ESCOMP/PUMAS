@@ -246,6 +246,12 @@ real(r8) :: xxls_squared
 character(len=16)  :: micro_mg_precip_frac_method  ! type of precipitation fraction method
 real(r8)           :: micro_mg_berg_eff_factor     ! berg efficiency factor
 
+!++ trude
+real(r8)           :: micro_mg_psacws_factor
+real(r8)           :: micro_mg_vtrmi_factor
+real(r8)           :: micro_mg_maxi_factor
+! -- trude
+
 logical  :: allow_sed_supersat ! Allow supersaturated conditions after sedimentation loop
 logical  :: do_sb_physics ! do SB 2001 autoconversion or accretion physics
 
@@ -1385,7 +1391,7 @@ subroutine micro_mg_tend ( &
               icldm(:,k)=max(icldm(:,k-1),icldm(:,k))
            end where
         end if
-      end do
+     end do
 !--kt
   end if
 
@@ -1614,6 +1620,11 @@ subroutine micro_mg_tend ( &
   ums = 0._r8  
   umr = 0._r8
   unr = 0._r8
+
+!++trude
+  n0s = 0._r8
+  lams = 0._r8
+!--trude
 !++ag
   umg = 0._r8
   ung = 0._r8
@@ -1750,16 +1761,24 @@ subroutine micro_mg_tend ( &
         end if
 
         if (qi(i,k).ge.qsmall) then
-           ! limit in-cloud values to 0.005 kg/kg
+         ! limit in-cloud values to 0.005 kg/kg
            qiic(i,k)=min(qi(i,k)/icldm(i,k),5.e-3_r8)
            niic(i,k)=max(ni(i,k)/icldm(i,k),0._r8)
 !++kt
            ! mg4 max niic = 500 L-1
            if (niic(i,k).ge.1.e-20_r8) then	
-              dum=500.e+3_r8/(rho(i,k)*niic(i,k))
-              niic(i,k)=niic(i,k)*min(dum,1._r8)
-              ni(i,k) = niic(i,k)*icldm(i,k)
+!++trude test no limit 10000 L-1
+!              dum=500.e+3_r8/(rho(i,k)*niic(i,k))
+!              dum=1000000.e+3_r8/(rho(i,k)*niic(i,k))
+!              niic(i,k)=niic(i,k)*min(dum,1._r8)
+
+!++trude The assignment below was added to MG2 single ice category. 
+!              However, by changing ni(i,k) inside this 
+!              routine I belive we create problems regarding ice number concentration
+!              ni(i,k) = niic(i,k)*icldm(i,k)
+!--trude
            endif
+
 !--kt
            ! switch for specification of cloud ice number
            if (nicons) then
@@ -1769,7 +1788,7 @@ subroutine micro_mg_tend ( &
            qiic(i,k)=0._r8
            niic(i,k)=0._r8
         end if
-
+        
      end do
   end do
 
@@ -1782,6 +1801,7 @@ subroutine micro_mg_tend ( &
   precip_frac = cldm
   dumi = qiic
   dumni = niic
+  
 
   micro_vert_loop: do k=1,nlev
       if(mgncol.gt.0) then
@@ -1954,8 +1974,14 @@ subroutine micro_mg_tend ( &
             niic(i,k) = min(niic(i,k),f1pr9)
             niic(i,k) = max(niic(i,k),f1pr10)
 
-            niic(i,k) = min(niic(i,k),500.e3_r8/rho(i,k))
-            ni(i,k) = niic(i,k)*icldm(i,k)
+!++ trude test limit to 10000 L-1
+!            niic(i,k) = min(niic(i,k),500.e3_r8/rho(i,k))
+!            niic(i,k) = min(niic(i,k),10000.e3_r8/rho(i,k))
+!-- trude test limit
+!++trude The assignment below was added to MG2 single ice category. However, by changing ni(i,k) inside this 
+!                  routine I belive we create problems regarding ice number concentration
+!            ni(i,k) = niic(i,k)*icldm(i,k)
+!--trude
 
            ! find index for Ni (ice number mixing ratio)
             dum22 = (dlog10(niic(i,k))+10._r8)*1.10731_r8
@@ -1978,21 +2004,21 @@ subroutine micro_mg_tend ( &
             call access_lookup_table(dumtt,dumit,dumk,10,dum11,dum22,dum4,f1pr14)
             call access_lookup_table(dumtt,dumit,dumk,12,dum11,dum22,dum4,f1pr12)
 
-            af1pr1(i,k) = f1pr1
-            af1pr2(i,k) = f1pr2
-            af1pr3(i,k) = f1pr3
-            af1pr4(i,k) = f1pr4
-            af1pr5(i,k) = f1pr5
-            af1pr6(i,k) = f1pr6
-            af1pr7(i,k) = f1pr7
-            af1pr8(i,k) = f1pr8
-            af1pr9(i,k) = f1pr9
-            af1pr10(i,k) = f1pr10
-            af1pr13(i,k) = f1pr13
-            af1pr14(i,k) = f1pr14
-            af1pr15(i,k) = f1pr15
-            af1pr16(i,k) = f1pr16
-            af1pr12(i,k) = f1pr12
+            af1pr1(i,k) = f1pr1  ! mass weighed ice number concentration fall speed
+            af1pr2(i,k) = f1pr2  ! mass weighted ice mixing ratio fall speed
+            af1pr3(i,k) = f1pr3  ! ice self accregation
+            af1pr4(i,k) = f1pr4  ! accretion of cloud water by ice
+            af1pr5(i,k) = f1pr5  ! ice deposition/sublimation
+            af1pr6(i,k) = f1pr6  ! not used
+            af1pr7(i,k) = f1pr7  ! accrete rain by ice
+            af1pr8(i,k) = f1pr8  ! accrete rain by ice
+            af1pr9(i,k) = f1pr9  ! max ice number concentration 
+            af1pr10(i,k) = f1pr10 ! min ice number concentration 
+            af1pr13(i,k) = f1pr13 ! not used
+            af1pr14(i,k) = f1pr14 ! ice deposition/sublimation
+            af1pr15(i,k) = f1pr15 ! not used
+            af1pr16(i,k) = f1pr16 ! not used
+            af1pr12(i,k) = f1pr12 ! not used
 
          endif                  ! qitot > qsmall
       enddo                     ! end get process rates from lookup table
@@ -2043,12 +2069,13 @@ subroutine micro_mg_tend ( &
      !......................................................................
      ! "snow" - updated for mg4 as falling ice
       ums(:,k) = 0._r8
-
+ 
+!++trude  updated dumni
+      dumi(:,k) = qiic(:,k)
+      dumni(:,k) = niic(:,k)
+!--trude
+     
       do i = 1, mgncol
-
-         !if ((dumi(i,k).ge.qsmall).and.(dumni(i,k).lt.icsmall)) then
-         !   write(*,*) "MG4 WARNING 1 ice present in cloud with no number conc at i=",i," k=",k
-         !end if
 
         if ((dumi(i,k).ge.qsmall).and.(dumni(i,k).ge.icsmall)) then
            !! ++ trude. Since ice has been updated, call access_lookup_table again for fall speed.            
@@ -2073,6 +2100,7 @@ subroutine micro_mg_tend ( &
            dum22 = max(dum22,1._r8)
            dumk = max(1,dumk)
            dumk = min(jsize-1,dumk)
+
            ! find index for temperature
            dum4  = t(i,k)   ! trude, and something else here for finding index qitot(i,k,iice)*3. + 1.
            if (t(i,k) .lt. 213.15_r8) then    ! (-60)
@@ -2101,8 +2129,8 @@ subroutine micro_mg_tend ( &
             n0sout(i,k) = n0s(i,k)
             vtrmi(i,k) = min(f1pr2*rhof(i,k),1.2_r8*rhof(i,k))
             ums(i,k) = vtrmi(i,k)
-           
-        endif
+            
+         endif
       enddo                     !mgncol
 !--kt
 !++ag
@@ -2302,7 +2330,7 @@ subroutine micro_mg_tend ( &
      call accrete_rain_ice(t(:,k), rho(:,k), rhof(:,k), af1pr8(:,k), af1pr7(:,k), &
           qric(:,k), qiic(:,k), n0r(:,k), pracs(:,k), npracs(:,k))
 !--kt
-
+     
      call heterogeneous_rain_freezing(t(:,k), qric(:,k), nric(:,k), lamr(:,k), &
           mnuccr(:,k), nnuccr(:,k), mgncol)
 
@@ -2370,7 +2398,7 @@ subroutine micro_mg_tend ( &
         call graupel_collecting_snow(qiic(:,k),qric(:,k),umr(:,k),ums(:,k), &
              rho(:,k),lamr(:,k),n0r(:,k),lams(:,k),n0s(:,k), &
              psacr(:,k), mgncol)
-
+        
        call graupel_collecting_cld_water(qgic(:,k),qcic(:,k),ncic(:,k),rho(:,k), &
              n0g(:,k),lamg(:,k),bgtmp,agn(:,k), psacwg(:,k), npsacwg(:,k), mgncol)
         
@@ -2388,7 +2416,7 @@ subroutine micro_mg_tend ( &
        call graupel_rain_riming_snow(pracs(:,k),npracs(:,k),psacr(:,k),qiic(:,k), &
              qric(:,k),nric(:,k),niic(:,k),n0s(:,k),lams(:,k),n0r(:,k),lamr(:,k), &
              deltat,pgracs(:,k),ngracs(:,k),mgncol)
-        
+
         call graupel_rime_splintering(t(:,k),qcic(:,k),qric(:,k),qgic(:,k), &
              psacwg(:,k),pracg(:,k),qmultg(:,k),nmultg(:,k),qmultrg(:,k), &
              nmultrg(:,k),mgncol)
@@ -2583,13 +2611,22 @@ subroutine micro_mg_tend ( &
            ! freezing of rain to produce ice if mean rain size is smaller than Dcs
            ! mg4 move all nuccr to nucci -> move all snow to ice
 !++kt      !if (lamr(i,k) > qsmall .and. 1._r8/lamr(i,k) < Dcs) then
+!++trude This test must be added again when we run with graupel
+           if(do_hail.or.do_graupel) then
+              if (lamr(i,k) > qsmall .and. 1._r8/lamr(i,k) < Dcs) then
+                 mnuccri(i,k)=mnuccr(i,k)
+                 nnuccri(i,k)=nnuccr(i,k)
+                 mnuccr(i,k)=0._r8
+                 nnuccr(i,k)=0._r8
+              end if
+           else 
               mnuccri(i,k)=mnuccr(i,k)
               nnuccri(i,k)=nnuccr(i,k)
               mnuccr(i,k)=0._r8
               nnuccr(i,k)=0._r8
-!--kt      !end if
+           endif
         end if
-
+!--trude
      end do
 
      do i=1,mgncol
@@ -2688,7 +2725,8 @@ subroutine micro_mg_tend ( &
 !                prai(i,k))*icldm(i,k)-mnuccri(i,k)*precip_frac(i,k) &
 !                -ice_sublim(i,k)-vap_dep(i,k)-berg(i,k)-mnuccd(i,k))*deltat
 !++kt
-           dum = ((-mnuccc(i,k)-mnucct(i,k)-mnudep(i,k)-msacwi(i,k)-qmultg(i,k)-psacws(i,k))*lcldm(i,k)+ &
+           dum = ((-mnuccc(i,k)-mnucct(i,k)-msacwi(i,k)-qmultg(i,k)-psacws(i,k))*lcldm(i,k)+ &
+                (-mnudep(i,k))*icldm(i,k)+&            
                 (-qmultrg(i,k)-mnuccri(i,k)-pracs(i,k))*precip_frac(i,k) &
                 -ice_sublim(i,k)-vap_dep(i,k)-berg(i,k)-mnuccd(i,k))*deltat
 !--kt
@@ -2702,8 +2740,8 @@ subroutine micro_mg_tend ( &
 !                   ((prci(i,k)+prai(i,k))*icldm(i,k)-ice_sublim(i,k))*omsm
 !++kt
               ratio = (qi(i,k)/deltat+vap_dep(i,k)+berg(i,k)+mnuccd(i,k)+ &
-                   (mnuccc(i,k)+mnucct(i,k)+mnudep(i,k)+msacwi(i,k)+qmultg(i,k)+psacws(i,k))*lcldm(i,k)+ &
-                   (qmultrg(i,k)+mnuccri(i,k)+pracs(i,k))*precip_frac(i,k))/ &
+                   (mnuccc(i,k)+mnucct(i,k)+msacwi(i,k)+qmultg(i,k)+psacws(i,k))*lcldm(i,k)+ &
+                   (qmultrg(i,k)+mnuccri(i,k)+pracs(i,k))*precip_frac(i,k)+mnudep(i,k)*icldm(i,k))/ &
                    (-ice_sublim(i,k))*omsm
 
 ! Only sink terms are limited. 
@@ -2755,24 +2793,45 @@ subroutine micro_mg_tend ( &
 !                nprai(i,k)-nsubi(i,k))*icldm(i,k)-nnuccri(i,k)*precip_frac(i,k)- &
 !                nnuccd(i,k))*deltat
 !++kt
-           dum = ((-nnucct(i,k)-tmpfrz-nnudep(i,k)-nsacwi(i,k)-nmultg(i,k)-niagg(i,k))*lcldm(i,k) &
-                -nsubi(i,k)*icldm(i,k)+(-nmultrg(i,k)-nnuccri(i,k))*precip_frac(i,k)- &
-                nnuccd(i,k))*deltat
 !--ag
+!++trude add graupel
+           if (do_hail .or. do_graupel) then        
+              dum = ((-nnucct(i,k)-tmpfrz-nsacwi(i,k)-nmultg(i,k))*lcldm(i,k)+&
+                   (-nsubi(i,k)-niagg(i,k)-nnudep(i,k))*icldm(i,k)+(-nmultrg(i,k)+ngracs(i,k)-nnuccri(i,k))*precip_frac(i,k)- &
+                   nnuccd(i,k)+nscng(i,k)*lcldm(i,k))*deltat
+           else
+              dum = ((-nnucct(i,k)-tmpfrz-nsacwi(i,k)-nmultg(i,k))*lcldm(i,k)+&
+                   (-nsubi(i,k)-niagg(i,k)-nnudep(i,k))*icldm(i,k)+(-nmultrg(i,k)-nnuccri(i,k))*precip_frac(i,k)- &
+                   nnuccd(i,k))*deltat
+           end if
+!--trude end add graupel
+
            if (dum.gt.ni(i,k)) then
 !++ag
 !              ratio = (ni(i,k)/deltat+nnuccd(i,k)+ &
 !                   (nnucct(i,k)+tmpfrz+nnudep(i,k)+nsacwi(i,k))*lcldm(i,k)+ &
 !                   nnuccri(i,k)*precip_frac(i,k))/ &
 !                   ((nprci(i,k)+nprai(i,k)-nsubi(i,k))*icldm(i,k))*omsm
-
-              ratio = (ni(i,k)/deltat+nnuccd(i,k)+ &
-                   (nnucct(i,k)+tmpfrz+nnudep(i,k)+nsacwi(i,k)+nmultg(i,k))*lcldm(i,k)+ &
-                  (nnuccri(i,k)+nmultrg(i,k))*precip_frac(i,k))/ &
-                  ((-nsubi(i,k)-niagg(i,k))*icldm(i,k))*omsm
+!++trude add graupel
+              if (do_hail .or. do_graupel) then        
+                 ratio = (ni(i,k)/deltat+nnuccd(i,k)+ &
+                      (nnucct(i,k)+tmpfrz+nsacwi(i,k)+nmultg(i,k))*lcldm(i,k)+ &
+                      (nnuccri(i,k)+nmultrg(i,k))*precip_frac(i,k)+nnudep(i,k)*icldm(i,k))/ &
+                      (ngracs(i,k)*precip_frac(i,k)+nscng(i,k)*lcldm(i,k)+&
+                      (-nsubi(i,k)-niagg(i,k))*icldm(i,k))*omsm
+                 nscng(i,k)=nscng(i,k)*ratio
+                 ngracs(i,k)=ngracs(i,k)*ratio
+              else
+                 ratio = (ni(i,k)/deltat+nnuccd(i,k)+ &
+                      (nnucct(i,k)+tmpfrz+nsacwi(i,k)+nmultg(i,k))*lcldm(i,k)+ &
+                      (nnuccri(i,k)+nmultrg(i,k))*precip_frac(i,k)+nnudep(i,k)*icldm(i,k))/ &
+                      ((-nsubi(i,k)-niagg(i,k))*icldm(i,k))*omsm
+              endif
+!--trude               
 !--ag
               nsubi(i,k) = nsubi(i,k)*ratio
               niagg(i,k) = niagg(i,k)*ratio
+              
 !--kt
            end if
 
@@ -2898,8 +2957,9 @@ subroutine micro_mg_tend ( &
 !        qvlat(i,k) = qvlat(i,k)-(pre(i,k)+prds(i,k))*precip_frac(i,k)-&
 !             vap_dep(i,k)-ice_sublim(i,k)-mnuccd(i,k)-mnudep(i,k)*lcldm(i,k)
 !++kt remove prds
+! ++ trude. mnudep*icldm instead of mnudep*lcldm
         qvlat(i,k) = qvlat(i,k)-(pre(i,k)*precip_frac(i,k))-&
-             vap_dep(i,k)-ice_sublim(i,k)-mnuccd(i,k)-mnudep(i,k)*lcldm(i,k) &
+             vap_dep(i,k)-ice_sublim(i,k)-mnuccd(i,k)-mnudep(i,k)*icldm(i,k) &
              -prdg(i,k)*precip_frac(i,k) 
 
 !        tlat(i,k) = tlat(i,k)+((pre(i,k)*precip_frac(i,k)) &
@@ -2907,9 +2967,10 @@ subroutine micro_mg_tend ( &
 !             ((bergs(i,k)+psacws(i,k)+mnuccc(i,k)+mnucct(i,k)+msacwi(i,k))*lcldm(i,k)+(mnuccr(i,k)+ &
 !             pracs(i,k)+mnuccri(i,k))*precip_frac(i,k)+berg(i,k))*xlf)
 !++kt remove bergs
+! ++ trude. mnudep*icldm instead of mnudep*lcldm
          tlat(i,k) = tlat(i,k)+((pre(i,k)*precip_frac(i,k))*xxlv+ &
              ((prdg(i,k))*precip_frac(i,k)+vap_dep(i,k)+ice_sublim(i,k)+ &
-                mnuccd(i,k)+mnudep(i,k)*lcldm(i,k))*xxls+ &
+                mnuccd(i,k)+mnudep(i,k)*icldm(i,k))*xxls+ &
              ((psacws(i,k)+mnuccc(i,k)+mnucct(i,k)+msacwi(i,k)+psacwg(i,k)+ &
                 qmultg(i,k)+pgsacw(i,k))*lcldm(i,k)+ &
              (mnuccr(i,k)+pracs(i,k)+mnuccri(i,k)+pracg(i,k)+pgracs(i,k)+qmultrg(i,k))*precip_frac(i,k)+ &
@@ -2923,7 +2984,6 @@ subroutine micro_mg_tend ( &
              (-pra(i,k)-prc(i,k)-mnuccc(i,k)-mnucct(i,k)-msacwi(i,k)- &
              psacws(i,k)-qmultg(i,k)-psacwg(i,k)-pgsacw(i,k))*lcldm(i,k)-berg(i,k)
 
-
         if (do_cldice) then
 !           qitend(i,k) = qitend(i,k)+ &
 !                (mnuccc(i,k)+mnucct(i,k)+mnudep(i,k)+msacwi(i,k))*lcldm(i,k)+(-prci(i,k)- &
@@ -2931,10 +2991,12 @@ subroutine micro_mg_tend ( &
 !                mnuccd(i,k)+mnuccri(i,k)*precip_frac(i,k)
 !++kt move psacws and pracs from snow to ice
            qitend(i,k) = qitend(i,k)+ &
-                (mnuccc(i,k)+mnucct(i,k)+mnudep(i,k)+msacwi(i,k)+psacws(i,k)+ &
-                qmultg(i,k))*lcldm(i,k)+ &
+                (mnuccc(i,k)+mnucct(i,k)+msacwi(i,k)+psacws(i,k)+ &
+                qmultg(i,k))*lcldm(i,k)+ mnudep(i,k)*icldm(i,k)+&
                 vap_dep(i,k)+berg(i,k)+ice_sublim(i,k)+ &
                 mnuccd(i,k)+(mnuccri(i,k)+pracs(i,k)+qmultrg(i,k))*precip_frac(i,k)
+
+
         end if
 
 !        qrtend(i,k) = qrtend(i,k)+ &
@@ -2950,6 +3012,7 @@ subroutine micro_mg_tend ( &
                 + (psacwg(i,k)+pgsacw(i,k))*lcldm(i,k)
 
            qitend(i,k) = qitend(i,k)-psacr(i,k)*precip_frac(i,k)
+
         else
            !necessary since mnuccr moved to graupel
            qitend(i,k) = qitend(i,k)+mnuccr(i,k)*precip_frac(i,k)  
@@ -3063,8 +3126,9 @@ subroutine micro_mg_tend ( &
 !                nprai(i,k))*icldm(i,k)+nnuccri(i,k)*precip_frac(i,k)
 
           nitend(i,k) = nitend(i,k)+ nnuccd(i,k)+ &
-                (nnucct(i,k)+tmpfrz+nnudep(i,k)+nsacwi(i,k)+nmultg(i,k))*lcldm(i,k)+nsubi(i,k) &
-                *icldm(i,k)+(niagg(i,k)+nnuccri(i,k)+nmultrg(i,k))*precip_frac(i,k)
+                (nnucct(i,k)+tmpfrz+nsacwi(i,k)+nmultg(i,k))*lcldm(i,k)&
+                +(nsubi(i,k)+niagg(i,k)+nnudep(i,k))*icldm(i,k) &
+                +(nnuccri(i,k)+nmultrg(i,k))*precip_frac(i,k)
 
         end if
 
@@ -3076,14 +3140,15 @@ subroutine micro_mg_tend ( &
         if(do_graupel.or.do_hail) then
 !           nstend(i,k) = nstend(i,k)+(nsubs(i,k)+ &
 !                nsagg(i,k)+nnuccr(i,k))*precip_frac(i,k)+nprci(i,k)*icldm(i,k)
-
-           nitend(i,k) = nitend(i,k)+(nsubi(i,k)-ngracs(i,k))*precip_frac(i,k)-nscng(i,k)*lcldm(i,k)
-
+!++trude nsubi(i,k) is alredy in nitend(i,k) equtaiton above. Remove the nsubi process below
+           nitend(i,k) = nitend(i,k)+(-ngracs(i,k))*precip_frac(i,k)-nscng(i,k)*lcldm(i,k)
+!--trude
            ngtend(i,k) = ngtend(i,k)+nscng(i,k)*lcldm(i,k)+(ngracs(i,k)+nnuccr(i,k))*precip_frac(i,k)
 
         else
            !necessary since mnuccr moved to graupel
-           nitend(i,k) = nitend(i,k)+(nsubi(i,k)+nnuccr(i,k))*precip_frac(i,k)
+!++trude, remove nsubi, alreadi included above.
+           nitend(i,k) = nitend(i,k)+(nnuccr(i,k))*precip_frac(i,k)
 
         end if
 
@@ -3268,7 +3333,10 @@ subroutine micro_mg_tend ( &
 
             dumni(i,k) = min(dumni(i,k),f1pr9)
             dumni(i,k) = max(dumni(i,k),f1pr10)
-            dumni(i,k) = min(dumni(i,k), 500.e3_r8/rho(i,k))
+!++ trude test limit 10000 in stead
+!            dumni(i,k) = min(dumni(i,k), 500.e3_r8/rho(i,k))
+!            dumni(i,k) = min(dumni(i,k), 10000.e3_r8/rho(i,k))
+!-- trude test limit
          end if                 !qiic > qsmall
         end do !mgncol
 !--kt
@@ -3520,10 +3588,13 @@ subroutine micro_mg_tend ( &
            dum1=min(dum1,1._r8)
 
            faltndqie=(falouti(k)-falouti(k-1))/pdel(i,k)
+!++ trude. Why is faltndi with dum1 commented out?? Why is dum1 not included? In MG3 they are included
            !faltndi=(falouti(k)-dum1*falouti(k-1))/pdel(i,k)
            !faltndni=(faloutni(k)-dum1*faloutni(k-1))/pdel(i,k)
+
            faltndi=(falouti(k)-falouti(k-1))/pdel(i,k)
            faltndni=(faloutni(k)-faloutni(k-1))/pdel(i,k)
+!-- trude
 
            ! add fallout terms to eulerian tendencies
 
@@ -3536,12 +3607,14 @@ subroutine micro_mg_tend ( &
            ! add terms to to evap/sub of cloud water
 
 !++   ktc
-!          qvlat(i,k)=qvlat(i,k)-(faltndqie-faltndi)/nstep
+          qvlat(i,k)=qvlat(i,k)-(faltndqie-faltndi)/nstep
 !     for output
-           qisevap(i,k)=0._r8
+!++trude test. Uncomment qisevap 01/10/20
+!           qisevap(i,k)=0._r8
+           qisevap(i,k)=qisevap(i,k)-(faltndqie-faltndi)/nstep
 !++   ktc
            !ask trude why??
-           !tlat(i,k)=tlat(i,k)+(faltndqie-faltndi)*xxls/nstep
+           tlat(i,k)=tlat(i,k)+(faltndqie-faltndi)*xxls/nstep
 !-- ktc
            dumi(i,k) = dumi(i,k)-faltndi*deltat/nstep
            dumni(i,k) = dumni(i,k)-faltndni*deltat/nstep
@@ -3962,6 +4035,7 @@ subroutine micro_mg_tend ( &
                  end if
 
                  qitend(i,k)=qitend(i,k)+dum*dumc(i,k)/deltat
+
                  ! for output
                  homotot(i,k)=dum*dumc(i,k)/deltat
 
@@ -4147,9 +4221,10 @@ subroutine micro_mg_tend ( &
 ! trude test
               dumni(i,k) = min(dumni(i,k),f1pr9)
               dumni(i,k) = max(dumni(i,k),f1pr10)
-              dumni(i,k) = min(dumni(i,k), 500.e3_r8/rho(i,k))
-
-
+!++ trude test limit 10000 instead
+!              dumni(i,k) = min(dumni(i,k), 500.e3_r8/rho(i,k))
+!              dumni(i,k) = min(dumni(i,k), 10000.e3_r8/rho(i,k))
+!-- trude end test
               ! dum_2D(i,k) = dumni(i,k)
               ! call size_dist_param_basic(mg_ice_props, dumi(i,k), dumni(i,k), &
               !     lami(i,k), dumni0)
@@ -4207,9 +4282,13 @@ subroutine micro_mg_tend ( &
               call access_lookup_table(dumtt,dumit,dumk,12,dum11,dum22,dum4,f1pr12)
 
               effi(i,k) = f1pr6*1.e6_r8   ! f1pr6 is in meter, effi is in micrometer 
-           else
+!++trude, not sure if sadice is needed
+             sadice(i,k)=4._r8*pi*(effi(i,k)**2)*ni(i,k)*rho(i,k)*1e-2_r8
+          else
+!--trude
               effi(i,k) = 25._r8
               sadice(i,k) = 0._r8
+
            end if
 !--kt
            ! ice effective diameter for david mitchell's optics
@@ -4493,8 +4572,8 @@ subroutine micro_mg_tend ( &
 !--kt calculate qitendresid
   do i = 1,mgncol
      do k=1,nlev
-        dumqitend(i,k) = (mnuccc(i,k)+mnucct(i,k)+mnudep(i,k)+msacwi(i,k)+psacws(i,k)+ &
-             qmultg(i,k))*lcldm(i,k)+ &
+        dumqitend(i,k) = (mnuccc(i,k)+mnucct(i,k)+msacwi(i,k)+psacws(i,k)+ &
+             qmultg(i,k))*lcldm(i,k)+mnudep(i,k)*icldm(i,k)+ &
              vap_dep(i,k)+berg(i,k)+ice_sublim(i,k)+ &
              mnuccd(i,k)+(mnuccri(i,k)+pracs(i,k)+qmultrg(i,k))*precip_frac(i,k)
         dumqitend(i,k) = dumqitend(i,k)+(mnuccr(i,k)*precip_frac(i,k))+qisedten(i,k)+ &

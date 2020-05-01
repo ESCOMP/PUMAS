@@ -979,8 +979,6 @@ subroutine micro_mg_cam_init(pbuf2d)
    call addfld ('MPDQ',       (/ 'lev' /), 'A', 'kg/kg/s',  'Q tendency - Morrison microphysics'                      )
    call addfld ('MPDLIQ',     (/ 'lev' /), 'A', 'kg/kg/s',  'CLDLIQ tendency - Morrison microphysics'                 )
    call addfld ('MPDICE',     (/ 'lev' /), 'A', 'kg/kg/s',  'CLDICE tendency - Morrison microphysics'                 )
-   call addfld ('MPDICERES',  (/ 'lev' /), 'A', 'kg/kg/s',  'CLDICE tendency residual debugging'                      )
-   call addfld ('MPDICEPRE',  (/ 'lev' /), 'A', 'kg/kg/s',  'CLDICE tendency residual due to pre-adjustment'          )
    call addfld ('MPDNLIQ',    (/ 'lev' /), 'A', '1/kg/s',   'NUMLIQ tendency - Morrison microphysics'                 )
    call addfld ('MPDNICE',    (/ 'lev' /), 'A', '1/kg/s',   'NUMICE tendency - Morrison microphysics'                 )
    call addfld ('MPDW2V',     (/ 'lev' /), 'A', 'kg/kg/s',  'Water <--> Vapor tendency - Morrison microphysics'       )
@@ -1182,8 +1180,6 @@ subroutine micro_mg_cam_init(pbuf2d)
       call add_default ('MPDQ     ', budget_histfile, ' ')
       call add_default ('MPDLIQ   ', budget_histfile, ' ')
       call add_default ('MPDICE   ', budget_histfile, ' ')
-      call add_default ('MPDICERES', budget_histfile, ' ')
-      call add_default ('MPDICEPRE', budget_histfile, ' ')
       call add_default ('MPDI2W   ', budget_histfile, ' ')
       call add_default ('MPDI2V   ', budget_histfile, ' ')
       call add_default ('MPDI2P   ', budget_histfile, ' ')
@@ -1381,6 +1377,7 @@ subroutine micro_mg_cam_tend_pack(state, ptend, dtime, pbuf, mgncol, mgcols, nle
 !++ktc
    use micro_mg4_0, only: micro_mg_tend4_0 => micro_mg_tend, &
                           micro_mg_tend_pre_adjust
+   use infnan,                 only: isnan   !++trude
    use micro_mg_utils, only: tsize, isize, jsize, access_lookup_table
 !--ktc
 
@@ -2583,6 +2580,9 @@ subroutine micro_mg_cam_tend_pack(state, ptend, dtime, pbuf, mgncol, mgcols, nle
               packed_pra,             packed_prc,             &
               packed_mnuccc,  packed_mnucct,  packed_msacwi,  &
               packed_psacws,  packed_bergs,   packed_berg,    &
+!++trude          
+                 packed_npsacws, &
+!--trude
               packed_melt,            packed_homo,            &
               packed_qcres,   packed_prci,    packed_prai,    &
               packed_qires,   packed_mnuccr,  packed_mnuccri, packed_pracs,   &
@@ -2996,7 +2996,7 @@ subroutine micro_mg_cam_tend_pack(state, ptend, dtime, pbuf, mgncol, mgcols, nle
            icgrauwp(i,k) = qgout(i,k) / max( 1.e-2_r8, cldfgrau(i,k) ) * state_loc%pdel(i,k) / gravit 
            if (icgrauwp(i,k).gt.0.1_r8) then
               write(iulog,*) 'WARNING: icgraup large: i,k,icgrauwp,qgout,cldf,pdel'
-              write(iulog,*) i,k,icgrauwp(i,k),qgout(i,k),max( mincld, cldfgrau(i,k)),state_loc%pdel(i,k)
+!              write(iulog,*) i,k,icgrauwp(i,k),qgout(i,k),max( mincld, cldfgrau(i,k)),state_loc%pdel(i,k)
            end if
         end if 
 
@@ -3417,8 +3417,10 @@ subroutine micro_mg_cam_tend_pack(state, ptend, dtime, pbuf, mgncol, mgcols, nle
 
                 niic_grid(i,k) = min(niic_grid(i,k),f1pr9)
                 niic_grid(i,k) = max(niic_grid(i,k),f1pr10)
-                niic_grid(i,k) = min(niic_grid(i,k), 500.e3_r8)
-
+!++ trude, test increase limit on ni 
+!               niic_grid(i,k) = min(niic_grid(i,k), 500.e3_r8)
+!               niic_grid(i,k) = min(niic_grid(i,k), 10000.e3_r8)
+!--trude test
                 ! find index for Ni (ice number mixing ratio)
                 dum22 = (dlog10(niic_grid(i,k))+10._r8)*1.10731_r8
                 dumk = int(dum22)
@@ -3431,8 +3433,7 @@ subroutine micro_mg_cam_tend_pack(state, ptend, dtime, pbuf, mgncol, mgcols, nle
       
                 call access_lookup_table(dumtt,dumit,dumk,6,dum11,dum22,dum4,f1pr6)
                 call access_lookup_table(dumtt,dumit,dumk,12,dum11,dum22,dum4,f1pr12)
-
-                rei_grid(i,k) = f1pr6*1.e6_r8   ! f1pr6 is in meter, effi is in micrometer 
+              rei_grid(i,k) = f1pr6*1.e6_r8   ! f1pr6 is in meter, effi is in micrometer 
              else ! if(icimrst_grid > qsmall)	
                 rei_grid(i,k) = 25._r8
              end if  ! if(icimrst_grid > qsmall)
@@ -3755,8 +3756,6 @@ subroutine micro_mg_cam_tend_pack(state, ptend, dtime, pbuf, mgncol, mgcols, nle
    call outfld('MPDQ',        qvlat,       psetcols, lchnk, avg_subcol_field=use_subcol_microp)
    call outfld('MPDLIQ',      qcten,       psetcols, lchnk, avg_subcol_field=use_subcol_microp)
    call outfld('MPDICE',      qiten,       psetcols, lchnk, avg_subcol_field=use_subcol_microp)
-   call outfld('MPDICERES',   qitenres,    psetcols, lchnk, avg_subcol_field=use_subcol_microp)
-   call outfld('MPDICEPRE',   qitenpre,    psetcols, lchnk, avg_subcol_field=use_subcol_microp)
    call outfld('MPDNLIQ',     ncten,       psetcols, lchnk, avg_subcol_field=use_subcol_microp)
    call outfld('MPDNICE',     niten,       psetcols, lchnk, avg_subcol_field=use_subcol_microp)
    call outfld('EVAPSNOW',    evapsnow,    psetcols, lchnk, avg_subcol_field=use_subcol_microp)
