@@ -8,15 +8,15 @@ This repository contains the open source code for most versions of the Morrison-
  Checking out and running PUMAS
 ================================
 
- Running with an ESCOMP/CAM branch
+ Running with an PUMASDevelopment/CAM branch
 -----------------------------------
-The code in this repository is not sufficient for completing a simulation outside of the included Kidd emulator. For instructions on running with Kidd, see below. To run within the Community Atmosphere Model (CAM), you will need to either check out a branch of CAM that has the appropriate modifiecations to support this PUMAS build structure, or checkout a version and make those modifications. 
+The code in this repository is not sufficient for completing a simulation outside of the included Kidd emulator. For instructions on running with Kidd, see below. To run within the Community Atmosphere Model (CAM), you will need to check out a branch of CAM that has the appropriate modifiecations to support this PUMAS build structure. 
 
 These are instructions for checking out a branch of CAM that already includes the modifications. These could be used as an example for modification of other CAM source to include PUMAS.
 
 1. Clone a repository that contains a PUMAS-adapted CAM source tree. ::
 
-   git clone https://github.com/Katetc/CAM.git Github_CAM_PUMAS_Clone
+   git clone https://github.com/PUMASDevelopment/CAM.git Github_CAM_PUMAS_Clone
 
    This will create a directory ``Github_CAM_PUMAS_Clone`` in your current working directory.
 
@@ -60,9 +60,8 @@ For new branch names, it is generally a good idea to put your Github name first,
 7. The second step for making changes in PUMAS is to update the source code in the **pumas** subdirectory to work with this branch. For various reasons, we are not going to use manage_externals for this. Just cd into the pumas subdirectory and checkout your remote branch. ::
 
        cd Github_CAM_PUMAS_Clone/src/physics/pumas
-       git checkout -b katetc/graupel_consv_fix
-
-Note: Doing this is incompatible with manage_externals. If you need to run manage_externals to checkout other externals, you will probably need to repoint your pumas branch back to your development branch manually afterwards. 
+       git fetch
+       git checkout katetc/graupel_consv_fix
 
 8. Once you have your own branch checked out, you can make local changes to the code. When it's time to commit them, you will need to ::
 
