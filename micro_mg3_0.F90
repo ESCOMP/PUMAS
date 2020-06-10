@@ -111,6 +111,8 @@ module micro_mg3_0
 ! 2) saturation vapor pressure and specific humidity over water
 ! 3) svp over ice
 
+
+
 #ifndef HAVE_GAMMA_INTRINSICS
 use shr_spfn_mod, only: gamma => shr_spfn_gamma
 #endif
