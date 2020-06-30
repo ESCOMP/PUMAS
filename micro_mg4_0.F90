@@ -245,7 +245,12 @@ real(r8) :: xxls_squared
 
 character(len=16)  :: micro_mg_precip_frac_method  ! type of precipitation fraction method
 real(r8)           :: micro_mg_berg_eff_factor     ! berg efficiency factor
-
+! ++ Trude
+real(r8)           :: micro_mg_vtrmi_factor
+real(r8)           :: micro_mg_effi_factor
+real(r8)           :: micro_mg_iaccr_factor
+real(r8)           :: micro_mg_max_nicons
+! -- Trude
 logical  :: allow_sed_supersat ! Allow supersaturated conditions after sedimentation loop
 logical  :: do_sb_physics ! do SB 2001 autoconversion or accretion physics
 
@@ -262,6 +267,10 @@ subroutine micro_mg_init( &
 !--ag
      microp_uniform_in, do_cldice_in, use_hetfrz_classnuc_in, &
      micro_mg_precip_frac_method_in, micro_mg_berg_eff_factor_in, &
+! ++ trude
+     micro_mg_vtrmi_factor_in, micro_mg_effi_factor_in,  micro_mg_iaccr_factor_in,&
+     micro_mg_max_nicons_in, &
+!-- trude
      allow_sed_supersat_in, do_sb_physics_in, &
      nccons_in, nicons_in, ncnst_in, ninst_in, errstring)
 
@@ -304,6 +313,13 @@ subroutine micro_mg_init( &
 
   character(len=16),intent(in)  :: micro_mg_precip_frac_method_in  ! type of precipitation fraction method
   real(r8),         intent(in)  :: micro_mg_berg_eff_factor_in     ! berg efficiency factor
+!++ trude
+  real(r8),         intent(in)  :: micro_mg_vtrmi_factor_in    !factor for ice fall velocity
+  real(r8),         intent(in)  :: micro_mg_effi_factor_in    !factor for ice effective radius
+  real(r8),         intent(in)  :: micro_mg_iaccr_factor_in  ! ice accretion factor
+  real(r8),         intent(in)  :: micro_mg_max_nicons_in ! maximum number ice crystal allowed 
+! -- trude
+
   logical,  intent(in)  ::  allow_sed_supersat_in ! allow supersaturated conditions after sedimentation loop
   logical,  intent(in)  ::  do_sb_physics_in ! do SB autoconversion and accretion physics
 
@@ -337,6 +353,12 @@ subroutine micro_mg_init( &
   allow_sed_supersat          = allow_sed_supersat_in
   do_sb_physics               = do_sb_physics_in
 
+  !++ trude
+  micro_mg_vtrmi_factor = micro_mg_vtrmi_factor_in
+  micro_mg_effi_factor = micro_mg_effi_factor_in
+  micro_mg_iaccr_factor=micro_mg_iaccr_factor_in
+  micro_mg_max_nicons = micro_mg_max_nicons_in
+  ! -- trude
   nccons = nccons_in
   nicons = nicons_in
   ncnst = ncnst_in
@@ -1761,7 +1783,8 @@ subroutine micro_mg_tend ( &
 !++kt
            ! mg4 max niic = 500 L-1
            if (niic(i,k).ge.1.e-20_r8) then	
-              dum=500.e+3_r8/(rho(i,k)*niic(i,k))
+!              dum=500.e+3_r8/(rho(i,k)*niic(i,k))
+              dum=micro_mg_max_nicons/(rho(i,k)*niic(i,k))
               niic(i,k)=niic(i,k)*min(dum,1._r8)
 !++trude The assignment below was added to MG2 single ice category. 
 !              However, by changing ni(i,k) inside this 
@@ -1963,7 +1986,9 @@ subroutine micro_mg_tend ( &
             niic(i,k) = min(niic(i,k),f1pr9)
             niic(i,k) = max(niic(i,k),f1pr10)
 
-            niic(i,k) = min(niic(i,k),500.e3_r8/rho(i,k))
+!            niic(i,k) = min(niic(i,k),500.e3_r8/rho(i,k))
+            niic(i,k) = min(niic(i,k),micro_mg_max_nicons/rho(i,k))
+
 !++trude The assignment below was added to MG2 single ice category. However, by changing ni(i,k) inside this 
 !                  routine I belive we create problems regarding ice number concentration
 !            ni(i,k) = niic(i,k)*icldm(i,k)
@@ -1995,7 +2020,7 @@ subroutine micro_mg_tend ( &
             af1pr3(i,k) = f1pr3  ! ice self accregation
             af1pr4(i,k) = f1pr4  ! accretion of cloud water by ice
             af1pr5(i,k) = f1pr5  ! ice deposition/sublimation
-            af1pr6(i,k) = f1pr6  ! not used
+            af1pr6(i,k) = f1pr6  ! effective radius
             af1pr7(i,k) = f1pr7  ! accrete rain by ice
             af1pr8(i,k) = f1pr8  ! accrete rain by ice
             af1pr9(i,k) = f1pr9  ! max ice number concentration 
@@ -2108,7 +2133,9 @@ subroutine micro_mg_tend ( &
            call access_lookup_table(dumtt,dumit,dumk,14,dum11,dum22,dum4,f1pr17n0s)
            
             lams(i,k) = f1pr11lams
-
+! ++ trude, to test changes to fall speed
+            f1pr2=f1pr2*micro_mg_vtrmi_factor
+! -- trude
             n0s(i,k)  = f1pr17n0s
             n0sout(i,k) = n0s(i,k)
             vtrmi(i,k) = min(f1pr2*rhof(i,k),1.2_r8*rhof(i,k))
@@ -2224,9 +2251,16 @@ subroutine micro_mg_tend ( &
 !++kt
      call ice_self_aggregation(t(:,k), rho(:,k), rhof(:,k), af1pr3(:,k), qiic(:,k), niagg(:,k))
      niagg(:,k) = -niagg(:,k)
-     call accrete_cloud_water_ice(t(:,k), rho(:,k), rhof(:,k), af1pr4(:,k), &
+ 
+!++ trude, test for changes in ice collection cloud water
+    af1pr4(:,k)=af1pr4(:,k)*micro_mg_iaccr_factor
+!--trude
+
+    call accrete_cloud_water_ice(t(:,k), rho(:,k), rhof(:,k), af1pr4(:,k), &
           qcic(:,k), ncic(:,k), qiic(:,k), &
           psacws(:,k), npsacws(:,k))
+
+ 
 !--kt
 
      if (do_cldice) then
@@ -2310,6 +2344,11 @@ subroutine micro_mg_tend ( &
            af1pr8(i,k) = f1pr8
         end if ! qiic > qsmall
      end do
+
+!++ trude, test for changes in ice collection rain
+    af1pr7(:,k)=af1pr7(:,k)*micro_mg_iaccr_factor
+    af1pr8(:,k)=af1pr8(:,k)*micro_mg_iaccr_factor
+!--trude
 
      call accrete_rain_ice(t(:,k), rho(:,k), rhof(:,k), af1pr8(:,k), af1pr7(:,k), &
           qric(:,k), qiic(:,k), n0r(:,k), pracs(:,k), npracs(:,k))
@@ -3316,7 +3355,8 @@ subroutine micro_mg_tend ( &
 
             dumni(i,k) = min(dumni(i,k),f1pr9)
             dumni(i,k) = max(dumni(i,k),f1pr10)
-            dumni(i,k) = min(dumni(i,k), 500.e3_r8/rho(i,k))
+!            dumni(i,k) = min(dumni(i,k), 500.e3_r8/rho(i,k))
+            dumni(i,k) = min(dumni(i,k), micro_mg_max_nicons/rho(i,k))
          end if                 !qiic > qsmall
         end do !mgncol
 !--kt
@@ -3398,8 +3438,10 @@ subroutine micro_mg_tend ( &
            call access_lookup_table(dumtt,dumit,dumk,1,dum11,dum22,dum4,f1pr1)
            call access_lookup_table(dumtt,dumit,dumk,2,dum11,dum22,dum4,f1pr2)
 
-           ! vtrmi(i,k)=min(ain(i,k)*gamma_bi_plus4/(6._r8*lami(i,k)**bi), &
-           !      1.2_r8*rhof(i,k))
+           ! ++ trude, to test changes to fall speed
+           f1pr2=f1pr2*micro_mg_vtrmi_factor
+           ! -- trude
+
            vtrmi(i,k) = min(f1pr2*rhof(i,k),1.2_r8*rhof(i,k))
            fi(i,k) = g*rho(i,k)*vtrmi(i,k)
 
@@ -4198,9 +4240,8 @@ subroutine micro_mg_tend ( &
               dum_2D(i,k) = dumni(i,k)
               dumni(i,k) = min(dumni(i,k),f1pr9)
               dumni(i,k) = max(dumni(i,k),f1pr10)
-              dumni(i,k) = min(dumni(i,k), 500.e3_r8/rho(i,k))
-
-
+!              dumni(i,k) = min(dumni(i,k), 500.e3_r8/rho(i,k))
+              dumni(i,k) = min(dumni(i,k), micro_mg_max_nicons/rho(i,k))
               ! dum_2D(i,k) = dumni(i,k)
               ! call size_dist_param_basic(mg_ice_props, dumi(i,k), dumni(i,k), &
               !     lami(i,k), dumni0)
@@ -4256,6 +4297,9 @@ subroutine micro_mg_tend ( &
 
               call access_lookup_table(dumtt,dumit,dumk,6,dum11,dum22,dum4,f1pr6)
               call access_lookup_table(dumtt,dumit,dumk,12,dum11,dum22,dum4,f1pr12)
+! ++ trude
+              f1pr6=f1pr6*micro_mg_effi_factor
+! -- trude
               effi(i,k) = f1pr6*1.e6_r8   ! f1pr6 is in meter, effi is in micrometer 
 !++trude, not sure if sadice is needed
              sadice(i,k)=4._r8*pi*(effi(i,k)**2)*ni(i,k)*rho(i,k)*1e-2_r8
