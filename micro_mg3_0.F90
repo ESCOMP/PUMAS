@@ -111,8 +111,6 @@ module micro_mg3_0
 ! 2) saturation vapor pressure and specific humidity over water
 ! 3) svp over ice
 
-
-
 #ifndef HAVE_GAMMA_INTRINSICS
 use shr_spfn_mod, only: gamma => shr_spfn_gamma
 #endif
@@ -163,13 +161,48 @@ public :: &
 
 logical :: nccons ! nccons = .true. to specify constant cloud droplet number
 logical :: nicons ! nicons = .true. to specify constant cloud ice number
-logical :: ngcons = .false. ! ngcons = .true. to specify constant graupel number
+logical :: ngcons ! ngcons = .true. to specify constant graupel number
+logical :: nrcons ! constant rain number
+logical :: nscons ! constant snow number
 
 ! specified ice and droplet number concentrations
 ! note: these are local in-cloud values, not grid-mean
 real(r8) :: ncnst  ! droplet num concentration when nccons=.true. (m-3)
 real(r8) :: ninst  ! ice num concentration when nicons=.true. (m-3)
-real(r8) :: ngnst = 0.1e6_r8  ! graupel num concentration when ngcons=.true. (m-3)
+real(r8) :: ngnst   ! graupel num concentration when ngcons=.true. (m-3)
+real(r8) :: nrnst
+real(r8) :: nsnst
+
+! IFS Switches....
+! Switch to turn off evaporation of sedimenting condensate 
+! Found to interact badly in some models with diagnostic cloud fraction
+logical :: evap_sed_off 
+
+! Remove RH conditional from ice nucleation
+logical :: icenuc_rh_off
+
+! Internally: Meyers Ice Nucleation 
+logical :: icenuc_use_meyers
+
+! Scale evaporation as IFS does (*0.3)
+logical :: evap_scl_ifs
+
+! Evap RH threhold following ifs
+logical :: evap_rhthrsh_ifs
+
+! Rain freezing at 0C following ifs
+
+logical :: rainfreeze_ifs
+
+! Snow sedimentation = 1 m/s
+
+logical :: ifs_sed
+
+! Rain fall speed, prevent zero velocity if rain above
+
+logical :: rain_fall_corr
+
+!--ag
 
 !=========================================================
 ! Private module parameters
@@ -253,7 +286,12 @@ subroutine micro_mg_init( &
      microp_uniform_in, do_cldice_in, use_hetfrz_classnuc_in, &
      micro_mg_precip_frac_method_in, micro_mg_berg_eff_factor_in, &
      allow_sed_supersat_in, do_sb_physics_in, &
-     nccons_in, nicons_in, ncnst_in, ninst_in, ngcons_in, ngnst_in, errstring)
+     micro_mg_evap_sed_off_in, micro_mg_icenuc_rh_off_in, micro_mg_icenuc_use_meyers_in, &
+     micro_mg_evap_scl_ifs_in, micro_mg_evap_rhthrsh_ifs_in, &
+     micro_mg_rainfreeze_ifs_in,  micro_mg_ifs_sed_in, micro_mg_rain_fall_corr,&
+     nccons_in, nicons_in, ncnst_in, ninst_in, ngcons_in, ngnst_in, & 
+     nrcons_in, nrnst_in, nscons_in, nsnst_in, &
+     errstring)
 
   use micro_mg_utils, only: micro_mg_utils_init
 
@@ -294,6 +332,18 @@ subroutine micro_mg_init( &
   logical,  intent(in)  ::  allow_sed_supersat_in ! allow supersaturated conditions after sedimentation loop
   logical,  intent(in)  ::  do_sb_physics_in ! do SB autoconversion and accretion physics
 
+! IFS-like Switches
+
+  logical, intent(in) :: micro_mg_evap_sed_off_in ! Turn off evaporation/sublimation based on cloud fraction for sedimenting condensate
+
+  logical, intent(in) :: micro_mg_icenuc_rh_off_in ! Remove RH conditional from ice nucleation
+  logical, intent(in) :: micro_mg_icenuc_use_meyers_in ! Internally: Meyers Ice Nucleation
+  logical, intent(in) :: micro_mg_evap_scl_ifs_in ! Scale evaporation as IFS does (*0.3)
+  logical, intent(in) :: micro_mg_evap_rhthrsh_ifs_in ! Evap RH threhold following ifs
+  logical, intent(in) ::micro_mg_rainfreeze_ifs_in ! Rain freezing temp following ifs
+  logical, intent(in) ::micro_mg_ifs_sed_in ! snow sedimentation = 1m/s following ifs
+  logical, intent(in) ::micro_mg_rain_fall_corr ! ensure rain fall speed non-zero if rain above in column
+
   logical, intent(in)   :: nccons_in
   logical, intent(in)   :: nicons_in
   real(r8), intent(in)  :: ncnst_in
@@ -301,6 +351,10 @@ subroutine micro_mg_init( &
 
   logical, intent(in)   :: ngcons_in
   real(r8), intent(in)  :: ngnst_in
+  logical, intent(in)   :: nrcons_in
+  real(r8), intent(in)  :: nrnst_in
+  logical, intent(in)   :: nscons_in
+  real(r8), intent(in)  :: nsnst_in
 
   character(128), intent(out) :: errstring    ! Output status (non-blank for error return)
 
@@ -333,6 +387,10 @@ subroutine micro_mg_init( &
   ninst  = ninst_in
   ngcons = ngcons_in
   ngnst  = ngnst_in
+  nscons = nscons_in
+  nsnst  = nsnst_in
+  nrcons = nrcons_in
+  nrnst  = nrnst_in
 
   ! latent heats
 
@@ -346,7 +404,14 @@ subroutine micro_mg_init( &
   use_hetfrz_classnuc = use_hetfrz_classnuc_in
   do_hail = micro_mg_do_hail_in
   do_graupel = micro_mg_do_graupel_in
-
+  evap_sed_off = micro_mg_evap_sed_off_in
+  icenuc_rh_off = micro_mg_icenuc_rh_off_in
+  icenuc_use_meyers = micro_mg_icenuc_use_meyers_in
+  evap_scl_ifs = micro_mg_evap_scl_ifs_in
+  evap_rhthrsh_ifs = micro_mg_evap_rhthrsh_ifs_in
+  rainfreeze_ifs = micro_mg_rainfreeze_ifs_in
+  ifs_sed = micro_mg_ifs_sed_in 
+  rain_fall_corr = micro_mg_rain_fall_corr  
   ! typical air density at 850 mb
 
   rhosu = 85000._r8/(rair * tmelt)
@@ -354,7 +419,12 @@ subroutine micro_mg_init( &
   ! Maximum temperature at which snow is allowed to exist
   snowmelt = tmelt + 2._r8
   ! Minimum temperature at which rain is allowed to exist
-  rainfrze = tmelt - 40._r8
+   if (rainfreeze_ifs) then
+      rainfrze = tmelt
+   else
+      rainfrze = tmelt - 40._r8
+   end if
+
 
   ! Ice nucleation temperature
   icenuct  = tmelt - 5._r8
@@ -420,9 +490,9 @@ subroutine micro_mg_tend ( &
      pratot,                       prctot,                       &
      mnuccctot,          mnuccttot,          msacwitot,          &
      psacwstot,          bergstot,           bergtot,            &
-     melttot,                      homotot,                      &
+     melttot,    meltstot,   meltgtot,       homotot,            &
      qcrestot,           prcitot,            praitot,            &
-     qirestot,           mnuccrtot,          mnuccritot, pracstot,           &
+     qirestot,           mnuccrtot,    mnudeptot,       mnuccritot, pracstot,           &
      meltsdttot,         frzrdttot,          mnuccdtot,          &
      pracgtot,           psacwgtot,          pgsacwtot,          &
      pgracstot,          prdgtot,           &
@@ -603,6 +673,9 @@ subroutine micro_mg_tend ( &
   real(r8), intent(out) :: bergstot(mgncol,nlev)        ! bergeron process on snow
   real(r8), intent(out) :: bergtot(mgncol,nlev)         ! bergeron process on cloud ice
   real(r8), intent(out) :: melttot(mgncol,nlev)         ! melting of cloud ice
+  real(r8), intent(out) :: meltstot(mgncol,nlev)         ! melting of snow
+  real(r8), intent(out) :: meltgtot(mgncol,nlev)         ! melting of graupel
+  real(r8), intent(out) :: mnudeptot(mgncol,nlev)       ! deposition nucleation to ice 
   real(r8), intent(out) :: homotot(mgncol,nlev)         ! homogeneous freezing cloud water
   real(r8), intent(out) :: qcrestot(mgncol,nlev)        ! residual cloud condensation due to removal of excess supersat
   real(r8), intent(out) :: prcitot(mgncol,nlev)         ! autoconversion of cloud ice to snow
@@ -949,6 +1022,9 @@ subroutine micro_mg_tend ( &
   real(r8) :: irad
   real(r8) :: ifrac
 
+  real(r8) :: nimey  !meyers ice nucleation
+  real(r8) :: niact(mgncol,nlev) ! dummy for modified activation
+
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
   ! Return error message
@@ -1022,6 +1098,7 @@ subroutine micro_mg_tend ( &
   asn=as*rhof
   ! Hail use ah*rhof graupel use ag*rhof
   ! Note that do_hail and do_graupel can't both be true
+  agn = 0._r8 
   if (do_hail) then
      agn = ah*rhof
   end if
@@ -1059,6 +1136,14 @@ subroutine micro_mg_tend ( &
            esl(i,k) = qsfm(i,k) * esl(i,k)
         end if
 
+!  Adjust NAAI with meyers ice nucleation for 0 > T > -37
+        if ((t(i,k).gt.tmelt-37._r8.and.t(i,k).lt.tmelt).and.icenuc_use_meyers) then
+         nimey=1.e3_r8*exp(12.96_r8*(esl(i,k)-esi(i,k))/esi(i,k) - 0.639_r8) 
+         niact(i,k)=max(naai(i,k),nimey/rho(i,k))
+      else
+         niact(i,k)=naai(i,k)
+      endif
+
      end do
   end do
 
@@ -1091,6 +1176,9 @@ subroutine micro_mg_tend ( &
   bergstot=0._r8
   bergtot=0._r8
   melttot=0._r8
+  mnudeptot=0._r8
+  meltstot=0._r8
+  meltgtot=0._r8
   homotot=0._r8
   qcrestot=0._r8
   prcitot=0._r8
@@ -1272,7 +1360,7 @@ subroutine micro_mg_tend ( &
   end where
 
   where (t < icenuct)
-     ncai = naai*rho
+     ncai = niact*rho
   elsewhere
      ncai = 0._r8
   end where
@@ -1288,25 +1376,48 @@ subroutine micro_mg_tend ( &
   !-------------------------------------------------------
 
   if (do_cldice) then
-     where (naai > 0._r8 .and. t < icenuct .and. &
-          relhum*esl/esi > 1.05_r8)
 
-        !if NAAI > 0. then set numice = naai (as before)
-        !note: this is gridbox averaged
-        nnuccd = (naai-ni/icldm)/mtime*icldm
-        nnuccd = max(nnuccd,0._r8)
-        nimax = naai*icldm
+   if (icenuc_rh_off) then 
+      where (niact > 0._r8 .and. t < icenuct)
 
-        !Calc mass of new particles using new crystal mass...
-        !also this will be multiplied by mtime as nnuccd is...
+      !if NAAI > 0. then set numice = naai (as before)
+      !note: this is gridbox averaged
+         nnuccd = (niact-ni/icldm)/mtime*icldm
+         nnuccd = max(nnuccd,0._r8)
+         nimax = niact*icldm
 
-        mnuccd = nnuccd * mi0
+      !Calc mass of new particles using new crystal mass...
+      !also this will be multiplied by mtime as nnuccd is...
 
-     elsewhere
-        nnuccd = 0._r8
-        nimax = 0._r8
-        mnuccd = 0._r8
-     end where
+         mnuccd = nnuccd * mi0
+
+      elsewhere
+         nnuccd = 0._r8
+         nimax = 0._r8
+         mnuccd = 0._r8
+      end where
+   else
+      where (niact > 0._r8 .and. t < icenuct .and. &
+      relhum*esl/esi > 1.05_r8)
+
+      !if NAAI > 0. then set numice = naai (as before)
+      !note: this is gridbox averaged
+         nnuccd = (niact-ni/icldm)/mtime*icldm
+         nnuccd = max(nnuccd,0._r8)
+         nimax = niact*icldm
+
+      !Calc mass of new particles using new crystal mass...
+      !also this will be multiplied by mtime as nnuccd is...
+
+         mnuccd = nnuccd * mi0
+
+      elsewhere
+         nnuccd = 0._r8
+         nimax = 0._r8
+         mnuccd = 0._r8
+      end where
+   end if
+!--ag
 
   end if
 
@@ -1340,6 +1451,7 @@ subroutine micro_mg_tend ( &
               dum1=-xlf*minstsm(i,k)/deltat
               tlat(i,k)=tlat(i,k)+dum1
               meltsdttot(i,k)=meltsdttot(i,k) + dum1
+              meltstot(i,k)=minstsm(i,k)/deltat
 
               qs(i,k) = max(qs(i,k) - minstsm(i,k), 0._r8)
               ns(i,k) = max(ns(i,k) - ninstsm(i,k), 0._r8)
@@ -1376,6 +1488,7 @@ subroutine micro_mg_tend ( &
               dum1=-xlf*minstgm(i,k)/deltat
               tlat(i,k)=tlat(i,k)+dum1
               meltsdttot(i,k)=meltsdttot(i,k) + dum1
+              meltgtot(i,k)=minstgm(i,k)/deltat
 
               qg(i,k) = max(qg(i,k) - minstgm(i,k), 0._r8)
               ng(i,k) = max(ng(i,k) - ninstgm(i,k), 0._r8)
@@ -1648,6 +1761,16 @@ subroutine micro_mg_tend ( &
         uns(:,k) = 0._r8
      end where
 
+     if (ifs_sed) then
+         where (lams(:,k) > 0._r8)      
+            ums(:,k) = 1._r8
+            uns(:,k) = 1._r8
+         elsewhere
+            ums(:,k) = 0._r8
+            uns(:,k) = 0._r8
+         end where
+      end if 
+
      !......................................................................
      !       graupel/hail density set (Hail = 400, Graupel = 500 from M2005)
         
@@ -1851,7 +1974,7 @@ subroutine micro_mg_tend ( &
              lcldm(:,k), precip_frac(:,k), arn(:,k), asn(:,k), agn(:,k), bgtmp, &
              qcic(1:mgncol,k), qiic(:,k), qric(:,k), qsic(:,k), qgic(:,k), &
              lamr(:,k), n0r(:,k), lams(:,k), n0s(:,k), lamg(:,k), n0g(:,k), &
-             pre(:,k), prds(:,k), prdg(:,k), am_evp_st(:,k), mgncol)   
+             pre(:,k), prds(:,k), prdg(:,k), am_evp_st(:,k), mgncol, evap_rhthrsh_ifs)   
      else
              
         ! Routine without Graupel (original)        
@@ -1859,10 +1982,15 @@ subroutine micro_mg_tend ( &
           dv(:,k), mu(:,k), sc(:,k), q(:,k), qvl(:,k), qvi(:,k), &
           lcldm(:,k), precip_frac(:,k), arn(:,k), asn(:,k), qcic(1:mgncol,k), qiic(:,k), &
           qric(:,k), qsic(:,k), lamr(:,k), n0r(:,k), lams(:,k), n0s(:,k), &
-          pre(:,k), prds(:,k), am_evp_st(:,k), mgncol)
+          pre(:,k), prds(:,k), am_evp_st(:,k), mgncol, evap_rhthrsh_ifs)
 
 
      end if ! end do_graupel/hail loop
+
+! scale precip evaporation to match IFS 'new' version (option 2)
+     if (evap_scl_ifs) then
+         pre(:,k)= 0.15_r8 * pre(:,k)
+     end if
 
      do i=1,mgncol
 
@@ -2357,6 +2485,7 @@ subroutine micro_mg_tend ( &
         pratot(i,k) = pra(i,k)*lcldm(i,k)
         prctot(i,k) = prc(i,k)*lcldm(i,k)
         mnuccctot(i,k) = mnuccc(i,k)*lcldm(i,k)
+        mnudeptot(i,k) = mnudep(i,k)*lcldm(i,k)
         mnuccttot(i,k) = mnucct(i,k)*lcldm(i,k)
         msacwitot(i,k) = msacwi(i,k)*lcldm(i,k)
         psacwstot(i,k) = psacws(i,k)*lcldm(i,k)
@@ -2550,6 +2679,18 @@ subroutine micro_mg_tend ( &
         if (nicons) then
            dumni(i,k)=ninst/rho(i,k)
         end if
+
+        ! switch for specification of constant number        
+        if (nscons) then
+            dumns(i,k)=nsnst/rho(i,k)
+        end if
+
+        ! switch for specification of constant number                
+        if (nrcons) then
+            dumnr(i,k)=nrnst/rho(i,k)
+        end if
+
+
      enddo
   enddo
 
@@ -2583,6 +2724,13 @@ subroutine micro_mg_tend ( &
            fc(i,k) = 0._r8
            fnc(i,k)= 0._r8
         end if
+        
+        ! Following ifs, no condensate sedimentation
+        if (ifs_sed) then
+            fc(i,k)=0._r8
+            fnc(i,k)=0._r8
+        end if
+
 
         ! calculate number and mass weighted fall velocity for cloud ice
         if (dumi(i,k).ge.qsmall) then
@@ -2611,6 +2759,13 @@ subroutine micro_mg_tend ( &
                  g*rho(i,k)* &
                  min(ajn(i,k)*gamma_bj_plus1/lami(i,k)**bj,1.2_r8*rhof(i,k))
            end if
+
+         ! Fix ice fall speed following IFS microphysics
+           if (ifs_sed) then
+               fi(i,k)=g*rho(i,k)*0.1_r8
+               fni(i,k)=g*rho(i,k)*0.1_r8
+           end if
+
         else
            fi(i,k) = 0._r8
            fni(i,k)= 0._r8
@@ -2644,6 +2799,19 @@ subroutine micro_mg_tend ( &
            fnr(i,k)=0._r8
         end if
 
+     ! Fallspeed correction to ensure non-zero if rain in the column
+     ! from updated Morrison (WRFv3.3) and P3 schemes
+     ! If fallspeed exists at a higher level, apply it below to eliminate    
+
+      if(rain_fall_corr) then 
+         if (k.gt.2) then
+            if (fr(i,k).lt.1.e-10_r8) then
+               fr(i,k)=fr(i,k-1)
+               fnr(i,k)=fnr(i,k-1)
+            end if
+         end if
+      endif    
+
         ! fallspeed for snow
         call size_dist_param_basic(mg_snow_props, dums(i,k), dumns(i,k), &
              lams(i,k))
@@ -2656,6 +2824,12 @@ subroutine micro_mg_tend ( &
 
            fs(i,k) = g*rho(i,k)*ums(i,k)
            fns(i,k) = g*rho(i,k)*uns(i,k)
+ 
+      ! Fix fallspeed for snow
+           if (ifs_sed) then
+               ums(i,k) = 1._r8
+               uns(i,k) = 1._r8
+            end if
 
         else
            fs(i,k)=0._r8
@@ -2780,11 +2954,14 @@ subroutine micro_mg_tend ( &
 
            ! add terms to to evap/sub of cloud water
 
-           qvlat(i,k)=qvlat(i,k)-(faltndqie-faltndi)/nstep
+           if (.not.evap_sed_off) then
+               qvlat(i,k)=qvlat(i,k)-(faltndqie-faltndi)/nstep
            ! for output
-           qisevap(i,k)=qisevap(i,k)-(faltndqie-faltndi)/nstep
+               qisevap(i,k)=qisevap(i,k)-(faltndqie-faltndi)/nstep
 
-           tlat(i,k)=tlat(i,k)+(faltndqie-faltndi)*xxls/nstep
+               tlat(i,k)=tlat(i,k)+(faltndqie-faltndi)*xxls/nstep
+           end if
+
 
            dumi(i,k) = dumi(i,k)-faltndi*deltat/nstep
            dumni(i,k) = dumni(i,k)-faltndni*deltat/nstep
@@ -2851,11 +3028,13 @@ subroutine micro_mg_tend ( &
            qcsedten(i,k)=qcsedten(i,k)-faltndc/nstep
 
            ! add terms to to evap/sub of cloud water
-           qvlat(i,k)=qvlat(i,k)-(faltndqce-faltndc)/nstep
+           if (.not.evap_sed_off) then
+               qvlat(i,k)=qvlat(i,k)-(faltndqce-faltndc)/nstep
            ! for output
-           qcsevap(i,k)=qcsevap(i,k)-(faltndqce-faltndc)/nstep
+               qcsevap(i,k)=qcsevap(i,k)-(faltndqce-faltndc)/nstep
 
-           tlat(i,k)=tlat(i,k)+(faltndqce-faltndc)*xxlv/nstep
+               tlat(i,k)=tlat(i,k)+(faltndqce-faltndc)*xxlv/nstep
+           end if 
 
            dumc(i,k) = dumc(i,k)-faltndc*deltat/nstep
            dumnc(i,k) = dumnc(i,k)-faltndnc*deltat/nstep
@@ -3080,6 +3259,16 @@ subroutine micro_mg_tend ( &
            dumng(i,k)=ngnst/rho(i,k)*precip_frac(i,k)
         end if
 
+        ! switch for specification of constant snow number                 
+        if (nscons) then
+            dumns(i,k)=nsnst/rho(i,k)
+        end if
+
+      ! switch for specification of constant rain number         
+        if (nrcons) then
+            dumnr(i,k)=nrnst/rho(i,k)
+        end if
+
         if (dumc(i,k).lt.qsmall) dumnc(i,k)=0._r8
         if (dumi(i,k).lt.qsmall) dumni(i,k)=0._r8
         if (dumr(i,k).lt.qsmall) dumnr(i,k)=0._r8
@@ -3120,6 +3309,15 @@ subroutine micro_mg_tend ( &
               dum1=-xlf*dum*dums(i,k)/deltat
               tlat(i,k)=tlat(i,k)+dum1
               meltsdttot(i,k)=meltsdttot(i,k) + dum1
+
+!STOPPED FIX FOR SNOW NUMBER
+!ensure that snow... number does not go negative with constant number set
+!necessary because dumng is updated above.                               
+              if (nscons .and. ((ns(i,k)+nstend(i,k)*deltat) .lt. 0._r8)) then
+                  nstend(i,k)=-ns(i,k)/deltat
+              end if
+
+
            end if
         end if
      enddo
@@ -3153,6 +3351,14 @@ subroutine micro_mg_tend ( &
               dum1=-xlf*dum*dumg(i,k)/deltat
               tlat(i,k)=tlat(i,k)+dum1
               meltsdttot(i,k)=meltsdttot(i,k) + dum1
+
+!ensure that graupel number does not go negative with constant number set
+!necessary because dumng is updated above.                               
+              if (ngcons .and. ((ng(i,k)+ngtend(i,k)*deltat) .lt. 0._r8)) then
+               ngtend(i,k)=-ng(i,k)/deltat
+            end if
+
+
            end if
         end if
      enddo
@@ -3366,6 +3572,17 @@ subroutine micro_mg_tend ( &
         if (ngcons) then
            dumng(i,k)=ngnst/rho(i,k)*precip_frac(i,k)
         end if
+
+        ! switch for specification of constant snow number    
+        if (nscons) then
+            dumns(i,k)=nsnst/rho(i,k)
+        end if   
+
+      ! switch for specification of constant rain number 
+        if (nrcons) then
+            dumnr(i,k)=nrnst/rho(i,k)
+        end if
+
 
         ! limit in-cloud mixing ratio to reasonable value of 5 g kg-1
         dumc(i,k)=min(dumc(i,k),5.e-3_r8)
