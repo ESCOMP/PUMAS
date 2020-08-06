@@ -947,6 +947,10 @@ subroutine micro_mg_tend ( &
   real(r8) :: irad
   real(r8) :: ifrac
 
+!+++ARH
+  logical :: do_rain
+!---ARH
+
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
   ! Return error message
@@ -1308,6 +1312,10 @@ subroutine micro_mg_tend ( &
 
   end if
 
+!+++ARH
+do_rain = .false.
+IF (do_rain) THEN
+!---ARH
 
   !=============================================================================
   do k=1,nlev
@@ -3043,6 +3051,10 @@ subroutine micro_mg_tend ( &
         
   enddo
   ! end sedimentation
+
+!+++ARH
+END IF
+!---ARH
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
