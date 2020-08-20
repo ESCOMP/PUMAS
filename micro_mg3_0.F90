@@ -118,6 +118,9 @@ use shr_spfn_mod, only: gamma => shr_spfn_gamma
 use wv_sat_methods, only: &
      qsat_water => wv_sat_qsat_water, &
      qsat_ice => wv_sat_qsat_ice
+!+++ARH
+use phys_control,   only: phys_getopts
+!---ARH
 
 ! Parameters from the utilities module.
 use micro_mg_utils, only: &
@@ -948,7 +951,8 @@ subroutine micro_mg_tend ( &
   real(r8) :: ifrac
 
 !+++ARH
-  logical :: do_rain
+  logical  :: do_clubb_mf
+  call phys_getopts(do_clubb_mf_out = do_clubb_mf)
 !---ARH
 
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -1313,8 +1317,7 @@ subroutine micro_mg_tend ( &
   end if
 
 !+++ARH
-do_rain = .false.
-IF (do_rain) THEN
+IF (do_clubb_mf==.false.) THEN
 !---ARH
 
   !=============================================================================
