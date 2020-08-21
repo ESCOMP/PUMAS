@@ -118,9 +118,6 @@ use shr_spfn_mod, only: gamma => shr_spfn_gamma
 use wv_sat_methods, only: &
      qsat_water => wv_sat_qsat_water, &
      qsat_ice => wv_sat_qsat_ice
-!+++ARH
-use phys_control,   only: phys_getopts
-!---ARH
 
 ! Parameters from the utilities module.
 use micro_mg_utils, only: &
@@ -242,6 +239,10 @@ real(r8)           :: micro_mg_berg_eff_factor     ! berg efficiency factor
 logical  :: allow_sed_supersat ! Allow supersaturated conditions after sedimentation loop
 logical  :: do_sb_physics ! do SB 2001 autoconversion or accretion physics
 
+!+++ARH
+logical  :: do_clubb_mf
+!---ARH
+
 !===============================================================================
 contains
 !===============================================================================
@@ -254,7 +255,10 @@ subroutine micro_mg_init( &
      microp_uniform_in, do_cldice_in, use_hetfrz_classnuc_in, &
      micro_mg_precip_frac_method_in, micro_mg_berg_eff_factor_in, &
      allow_sed_supersat_in, do_sb_physics_in, &
-     nccons_in, nicons_in, ncnst_in, ninst_in, ngcons_in, ngnst_in, errstring)
+     nccons_in, nicons_in, ncnst_in, ninst_in, ngcons_in, ngnst_in, &
+!+++ARH
+     do_clubb_mf_in, errstring)
+!---ARH
 
   use micro_mg_utils, only: micro_mg_utils_init
 
@@ -303,6 +307,10 @@ subroutine micro_mg_init( &
   logical, intent(in)   :: ngcons_in
   real(r8), intent(in)  :: ngnst_in
 
+!+++ARH
+  logical, intent(in)   :: do_clubb_mf_in
+!---ARH
+
   character(128), intent(out) :: errstring    ! Output status (non-blank for error return)
 
   !-----------------------------------------------------------------------
@@ -347,6 +355,10 @@ subroutine micro_mg_init( &
   use_hetfrz_classnuc = use_hetfrz_classnuc_in
   do_hail = micro_mg_do_hail_in
   do_graupel = micro_mg_do_graupel_in
+
+!+++ARH
+  do_clubb_mf = do_clubb_mf_in
+!---ARH
 
   ! typical air density at 850 mb
 
@@ -949,11 +961,6 @@ subroutine micro_mg_tend ( &
   ! Varaibles to scale fall velocity between small and regular ice regimes.
   real(r8) :: irad
   real(r8) :: ifrac
-
-!+++ARH
-  logical  :: do_clubb_mf
-  call phys_getopts(do_clubb_mf_out = do_clubb_mf)
-!---ARH
 
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
