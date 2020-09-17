@@ -198,9 +198,9 @@ logical :: rainfreeze_ifs
 
 logical :: ifs_sed
 
-! Rain fall speed, prevent zero velocity if rain above
+! Precipitation fall speed, prevent zero velocity if precip above
 
-logical :: rain_fall_corr
+logical :: precip_fall_corr
 
 !--ag
 
@@ -288,7 +288,7 @@ subroutine micro_mg_init( &
      allow_sed_supersat_in, do_sb_physics_in, &
      micro_mg_evap_sed_off_in, micro_mg_icenuc_rh_off_in, micro_mg_icenuc_use_meyers_in, &
      micro_mg_evap_scl_ifs_in, micro_mg_evap_rhthrsh_ifs_in, &
-     micro_mg_rainfreeze_ifs_in,  micro_mg_ifs_sed_in, micro_mg_rain_fall_corr,&
+     micro_mg_rainfreeze_ifs_in,  micro_mg_ifs_sed_in, micro_mg_precip_fall_corr, &
      nccons_in, nicons_in, ncnst_in, ninst_in, ngcons_in, ngnst_in, & 
      nrcons_in, nrnst_in, nscons_in, nsnst_in, &
      errstring)
@@ -340,9 +340,9 @@ subroutine micro_mg_init( &
   logical, intent(in) :: micro_mg_icenuc_use_meyers_in ! Internally: Meyers Ice Nucleation
   logical, intent(in) :: micro_mg_evap_scl_ifs_in ! Scale evaporation as IFS does (*0.3)
   logical, intent(in) :: micro_mg_evap_rhthrsh_ifs_in ! Evap RH threhold following ifs
-  logical, intent(in) ::micro_mg_rainfreeze_ifs_in ! Rain freezing temp following ifs
-  logical, intent(in) ::micro_mg_ifs_sed_in ! snow sedimentation = 1m/s following ifs
-  logical, intent(in) ::micro_mg_rain_fall_corr ! ensure rain fall speed non-zero if rain above in column
+  logical, intent(in) :: micro_mg_rainfreeze_ifs_in ! Rain freezing temp following ifs
+  logical, intent(in) :: micro_mg_ifs_sed_in ! snow sedimentation = 1m/s following ifs
+  logical, intent(in) :: micro_mg_precip_fall_corr ! ensure rain fall speed non-zero if rain above in column
 
   logical, intent(in)   :: nccons_in
   logical, intent(in)   :: nicons_in
@@ -411,7 +411,7 @@ subroutine micro_mg_init( &
   evap_rhthrsh_ifs = micro_mg_evap_rhthrsh_ifs_in
   rainfreeze_ifs = micro_mg_rainfreeze_ifs_in
   ifs_sed = micro_mg_ifs_sed_in 
-  rain_fall_corr = micro_mg_rain_fall_corr  
+  precip_fall_corr = micro_mg_precip_fall_corr
   ! typical air density at 850 mb
 
   rhosu = 85000._r8/(rair * tmelt)
@@ -1607,7 +1607,7 @@ subroutine micro_mg_tend ( &
         ! if rain or snow mix ratios are smaller than threshold,
         ! then leave precip_frac as cloud fraction at current level
         if (k /= 1) then
-           where (qr(:,k-1) >= qsmall .or. qs(:,k-1) >= qsmall)
+           where (qr(:,k-1) >= qsmall .or. qs(:,k-1) >= qsmall .or. qg(:,k-1) >= qsmall)
               precip_frac(:,k)=max(precip_frac(:,k-1),precip_frac(:,k))
            end where
         end if
@@ -2799,18 +2799,18 @@ subroutine micro_mg_tend ( &
            fnr(i,k)=0._r8
         end if
 
-     ! Fallspeed correction to ensure non-zero if rain in the column
-     ! from updated Morrison (WRFv3.3) and P3 schemes
-     ! If fallspeed exists at a higher level, apply it below to eliminate    
+        ! Fallspeed correction to ensure non-zero if rain in the column
+        ! from updated Morrison (WRFv3.3) and P3 schemes
+        ! If fallspeed exists at a higher level, apply it below to eliminate    
 
-      if(rain_fall_corr) then 
-         if (k.gt.2) then
-            if (fr(i,k).lt.1.e-10_r8) then
-               fr(i,k)=fr(i,k-1)
-               fnr(i,k)=fnr(i,k-1)
-            end if
-         end if
-      endif    
+        if(precip_fall_corr) then 
+           if (k.gt.2) then
+              if (fr(i,k).lt.1.e-10_r8) then
+                 fr(i,k)=fr(i,k-1)
+                 fnr(i,k)=fnr(i,k-1)
+              end if
+           end if
+        endif
 
         ! fallspeed for snow
         call size_dist_param_basic(mg_snow_props, dums(i,k), dumns(i,k), &
@@ -2836,6 +2836,15 @@ subroutine micro_mg_tend ( &
            fns(i,k)=0._r8
         end if
 
+        if(precip_fall_corr) then
+           if (k.gt.2) then
+              if (fs(i,k).lt.1.e-10_r8) then
+                 fs(i,k)=fs(i,k-1)
+                 fns(i,k)=fns(i,k-1)
+              end if
+           end if
+        endif
+
         ! fallspeed for graupel
 
         if (do_hail) then
@@ -2860,6 +2869,15 @@ subroutine micro_mg_tend ( &
            fg(i,k)=0._r8
            fng(i,k)=0._r8
         end if
+
+        if(precip_fall_corr) then
+           if (k.gt.2) then
+              if (fg(i,k).lt.1.e-10_r8) then
+                 fg(i,k)=fg(i,k-1)
+                 fng(i,k)=fng(i,k-1)
+              end if
+           end if
+        endif
 
         ! redefine dummy variables - sedimentation is calculated over grid-scale
         ! quantities to ensure conservation
