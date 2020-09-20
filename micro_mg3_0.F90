@@ -4050,7 +4050,7 @@ end subroutine calc_rercld
 !2020-09-15: Follow John Dennis's version to generate a new interface 
 !            to update tendency in the sedimentation loop
 !========================================================================
-subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdelInv,pdel,qxtend,nxtend, &
+subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,pdel,qxtend,nxtend, &
                             qxsedten,dumx,dumnx,prect,xflx,xxlx,qxsevap,xcldm,tlat,qvlat,preci)
 
    integer, intent(in)               :: mgncol,nlev
@@ -4058,7 +4058,7 @@ subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdelInv,pdel,qxt
    real(r8),intent(in)               :: deltat
    real(r8), intent(in)              :: fx(mgncol,nlev)
    real(r8), intent(in)              :: fnx(mgncol,nlev)
-   real(r8), intent(in)              :: pdelInv(mgncol,nlev)
+   real(r8), intent(in)              :: pdel_inv(mgncol,nlev)
    real(r8), intent(in)              :: pdel(mgncol,nlev)
    real(r8), intent(inout)           :: qxtend(mgncol,nlev)
    real(r8), intent(inout)           :: nxtend(mgncol,nlev)
@@ -4079,8 +4079,8 @@ subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdelInv,pdel,qxt
 
    do i=1,mgncol
      nstep = 1 + int(max( &
-          maxval( fx(i,:)*pdelInv(i,:)), &
-          maxval(fnx(i,:)*pdelInv(i,:))) &
+          maxval( fx(i,:)*pdel_inv(i,:)), &
+          maxval(fnx(i,:)*pdel_inv(i,:))) &
           * deltat)
      ! loop over sedimentation sub-time step to ensure stability
      !==============================================================
@@ -4099,8 +4099,8 @@ subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdelInv,pdel,qxt
         k = 1
         ! add fallout terms to microphysical tendencies
 
-        faltndx = faloutx(k)/pdel(i,k)
-        faltndnx = faloutnx(k)/pdel(i,k)
+        faltndx = faloutx(k)*pdel_inv(i,k)
+        faltndnx = faloutnx(k)*pdel_inv(i,k)
         qxtend(i,k) = qxtend(i,k)-faltndx/nstep
         nxtend(i,k) = nxtend(i,k)-faltndnx/nstep
         ! sedimentation tendency for output
@@ -4124,9 +4124,9 @@ subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdelInv,pdel,qxt
            else
               dum1=1.0
            endif
-           faltndqxe=(faloutx(k)-faloutx(k-1))/pdel(i,k)
-           faltndx=(faloutx(k)-dum1*faloutx(k-1))/pdel(i,k)
-           faltndnx=(faloutnx(k)-dum1*faloutnx(k-1))/pdel(i,k)
+           faltndqxe=(faloutx(k)-faloutx(k-1))*pdel_inv(i,k)
+           faltndx=(faloutx(k)-dum1*faloutx(k-1))*pdel_inv(i,k)
+           faltndnx=(faloutnx(k)-dum1*faloutnx(k-1))*pdel_inv(i,k)
            ! add fallout terms to eulerian tendencies
 
            qxtend(i,k) = qxtend(i,k)-faltndx/nstep
