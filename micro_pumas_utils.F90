@@ -640,7 +640,7 @@ real(r8) elemental function avg_diameter(q, n, rho_air, rho_sub)
   real(r8), intent(in) :: rho_air   ! local density of the air
   real(r8), intent(in) :: rho_sub   ! density of the particle substance
 
-  avg_diameter = (pi * rho_sub * n/(q*rho_air))**(-1._r8/3._r8)
+  avg_diameter = (q*rho_air/(pi * rho_sub * n))**(1._r8/3._r8)
 
 end function avg_diameter
 
