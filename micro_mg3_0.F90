@@ -4082,9 +4082,10 @@ subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,pdel,qx
           maxval( fx(i,:)*pdel_inv(i,:)), &
           maxval(fnx(i,:)*pdel_inv(i,:))) &
           * deltat)
+     rnstep = 1._r8/real(nstep)
+
      ! loop over sedimentation sub-time step to ensure stability
      !==============================================================
-!     rnstep = 1._r8/real(nstep)
      do n = 1,nstep
 
         if (do_cldice) then
@@ -4101,14 +4102,14 @@ subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,pdel,qx
 
         faltndx = faloutx(k)*pdel_inv(i,k)
         faltndnx = faloutnx(k)*pdel_inv(i,k)
-        qxtend(i,k) = qxtend(i,k)-faltndx/nstep
-        nxtend(i,k) = nxtend(i,k)-faltndnx/nstep
+        qxtend(i,k) = qxtend(i,k)-faltndx*rnstep
+        nxtend(i,k) = nxtend(i,k)-faltndnx*rnstep
         ! sedimentation tendency for output
 
-        qxsedten(i,k)=qxsedten(i,k)-faltndx/nstep
+        qxsedten(i,k)=qxsedten(i,k)-faltndx*rnstep
 
-        dumx(i,k)  = dumx(i,k)-faltndx*deltat/real(nstep)
-        dumnx(i,k) = dumnx(i,k)-faltndnx*deltat/real(nstep)
+        dumx(i,k)  = dumx(i,k)-faltndx*deltat*rnstep
+        dumnx(i,k) = dumnx(i,k)-faltndnx*deltat*rnstep
 
         do k = 2,nlev
            ! for cloud liquid and ice, if cloud fraction increases with height
@@ -4129,34 +4130,34 @@ subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,pdel,qx
            faltndnx=(faloutnx(k)-dum1*faloutnx(k-1))*pdel_inv(i,k)
            ! add fallout terms to eulerian tendencies
 
-           qxtend(i,k) = qxtend(i,k)-faltndx/nstep
-           nxtend(i,k) = nxtend(i,k)-faltndnx/nstep
+           qxtend(i,k) = qxtend(i,k)-faltndx*rnstep
+           nxtend(i,k) = nxtend(i,k)-faltndnx*rnstep
            ! sedimentation tendency for output
 
-           qxsedten(i,k)=qxsedten(i,k)-faltndx/nstep
+           qxsedten(i,k)=qxsedten(i,k)-faltndx*rnstep
            ! add terms to to evap/sub of cloud water
 
 
            ! for output
-           if(present(qxsevap)) qxsevap(i,k)=qxsevap(i,k)-(faltndqxe-faltndx)/nstep
+           if(present(qxsevap)) qxsevap(i,k)=qxsevap(i,k)-(faltndqxe-faltndx)*rnstep
 
-           if(present(qvlat)) qvlat(i,k)=qvlat(i,k)-(faltndqxe-faltndx)/nstep
-           if(present(tlat))  tlat(i,k)=tlat(i,k)+(faltndqxe-faltndx)*xxlx/nstep
+           if(present(qvlat)) qvlat(i,k)=qvlat(i,k)-(faltndqxe-faltndx)*rnstep
+           if(present(tlat))  tlat(i,k)=tlat(i,k)+(faltndqxe-faltndx)*xxlx*rnstep
 
-           dumx(i,k) = dumx(i,k)-faltndx*deltat/nstep
-           dumnx(i,k) = dumnx(i,k)-faltndnx*deltat/nstep
+           dumx(i,k) = dumx(i,k)-faltndx*deltat*rnstep
+           dumnx(i,k) = dumnx(i,k)-faltndnx*deltat*rnstep
 
         end do
         do k = 1,nlev
-          xflx(i,k+1) = xflx(i,k+1) + faloutx(k) / g / real(nstep)
+          xflx(i,k+1) = xflx(i,k+1) + faloutx(k) / g * rnstep
         end do
         ! units below are m/s
         ! sedimentation flux at surface is added to precip flux at surface
         ! to get total precip (cloud + precip water) rate
 
-        prect(i) = prect(i)+faloutx(nlev)/g/real(nstep)/1000._r8
+        prect(i) = prect(i)+faloutx(nlev)/g*rnstep/1000._r8
 
-        if(present(preci)) preci(i) = preci(i)+faloutx(nlev)/g/real(nstep)/1000._r8
+        if(present(preci)) preci(i) = preci(i)+faloutx(nlev)/g*rnstep/1000._r8
 
 
      end do
