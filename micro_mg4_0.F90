@@ -246,6 +246,10 @@ real(r8) :: xxls_squared
 character(len=16)  :: micro_mg_precip_frac_method  ! type of precipitation fraction method
 real(r8)           :: micro_mg_berg_eff_factor     ! berg efficiency factor
 ! ++ Trude
+real(r8)           :: micro_mg_accre_enhan_fact     ! accretion enhancment factor
+real(r8)           :: micro_mg_autocon_fact     ! autoconversion prefactor
+real(r8)           :: micro_mg_autocon_exp     ! autoconversion exponent factor
+real(r8)           :: micro_mg_homog_size  ! size of freezing homogeneous ice
 real(r8)           :: micro_mg_vtrmi_factor
 real(r8)           :: micro_mg_effi_factor
 real(r8)           :: micro_mg_iaccr_factor
@@ -268,6 +272,8 @@ subroutine micro_mg_init( &
      microp_uniform_in, do_cldice_in, use_hetfrz_classnuc_in, &
      micro_mg_precip_frac_method_in, micro_mg_berg_eff_factor_in, &
 ! ++ trude
+     micro_mg_accre_enhan_fact_in, micro_mg_autocon_fact_in, & !++ trude
+     micro_mg_autocon_exp_in, micro_mg_homog_size_in, & !++ trude
      micro_mg_vtrmi_factor_in, micro_mg_effi_factor_in,  micro_mg_iaccr_factor_in,&
      micro_mg_max_nicons_in, &
 !-- trude
@@ -314,6 +320,10 @@ subroutine micro_mg_init( &
   character(len=16),intent(in)  :: micro_mg_precip_frac_method_in  ! type of precipitation fraction method
   real(r8),         intent(in)  :: micro_mg_berg_eff_factor_in     ! berg efficiency factor
 !++ trude
+  real(r8),         intent(in)  :: micro_mg_accre_enhan_fact_in     !accretion enhancment factor
+  real(r8),         intent(in) ::  micro_mg_autocon_fact_in    !autconversion prefactor
+  real(r8),         intent(in) ::  micro_mg_autocon_exp_in    !autconversion exponent factor
+  real(r8),         intent(in) ::  micro_mg_homog_size_in  ! size of homoegenous freezing ice
   real(r8),         intent(in)  :: micro_mg_vtrmi_factor_in    !factor for ice fall velocity
   real(r8),         intent(in)  :: micro_mg_effi_factor_in    !factor for ice effective radius
   real(r8),         intent(in)  :: micro_mg_iaccr_factor_in  ! ice accretion factor
@@ -1865,7 +1875,7 @@ subroutine micro_mg_tend ( &
 
            if (.not. do_sb_physics) then
               call kk2000_liq_autoconversion(microp_uniform, qcic(:,k), &
-              ncic(:,k), rho(:,k), relvar(:,k), prc(:,k), nprc(:,k), nprc1(:,k), mgncol)
+              ncic(:,k), rho(:,k), relvar(:,k), prc(:,k), nprc(:,k), nprc1(:,k), micro_mg_autocon_fact, micro_mg_autocon_exp, mgncol)
            endif
 
      ! assign qric based on prognostic qr, using assumed precip fraction
@@ -2366,6 +2376,10 @@ subroutine micro_mg_tend ( &
        call accrete_cloud_water_rain(microp_uniform, qric(:,k), qcic(:,k), &
             ncic(:,k), relvar(:,k), accre_enhan(:,k), pra(:,k), npra(:,k), mgncol)
      endif
+!++ trude
+     pra(:,k)=pra(:,k)*micro_mg_accre_enhan_fact
+     npra(:,k)=npra(:,k)*micro_mg_accre_enhan_fact
+! -- trude
 
      call self_collection_rain(rho(:,k), qric(:,k), nric(:,k), nragg(:,k), mgncol)
 
@@ -4062,8 +4076,11 @@ subroutine micro_mg_tend ( &
 !++ kt reduce these values by half (deltat*8)
                  ! assume 25 micron mean volume radius of homogeneously frozen droplets
                  ! consistent with size of detrained ice in stratiform.F90
-                 nitend(i,k)=nitend(i,k)+dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*1.563e-14_r8* &
-                      500._r8)/(deltat*8)
+!                 nitend(i,k)=nitend(i,k)+dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*1.563e-14_r8* &
+ ! ++ trude
+                 nitend(i,k)=nitend(i,k)+dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*micro_mg_homog_size**3._r8* &
+                 !-- trude
+                 500._r8)/(deltat*8)
 !--kt
                  qctend(i,k)=((1._r8-dum)*dumc(i,k)-qc(i,k))/deltat
                  nctend(i,k)=((1._r8-dum)*dumnc(i,k)-nc(i,k))/deltat
