@@ -2911,7 +2911,7 @@ subroutine micro_mg_tend ( &
   enddo
 
 #if 1
-  call UpdateTendencies(mgncol,nlev,do_cldice,deltat,fi,fni,pdel_inv,pdel, &
+  call Sedimentation(mgncol,nlev,do_cldice,deltat,fi,fni,pdel_inv,pdel, &
                        qitend,nitend,qisedten,dumi,dumni,prect,iflx, &
                        xxlx=xxls,qxsevap=qisevap,tlat=tlat,qvlat=qvlat, &
                        xcldm=icldm,preci=preci)
@@ -3012,7 +3012,7 @@ subroutine micro_mg_tend ( &
 #endif
 
 #if 1
-  call UpdateTendencies(mgncol,nlev,.TRUE.,deltat,fc,fnc,pdel_inv,pdel, &
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,fc,fnc,pdel_inv,pdel, &
                        qctend,nctend,qcsedten,dumc,dumnc,prect,lflx, &
                        xxlx=xxlv,qxsevap=qcsevap,tlat=tlat,qvlat=qvlat,xcldm=lcldm)
 #else
@@ -3089,7 +3089,7 @@ subroutine micro_mg_tend ( &
 #endif
 
 #if 1
-  call UpdateTendencies(mgncol,nlev,.TRUE.,deltat,fr,fnr,pdel_inv,pdel, &
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,fr,fnr,pdel_inv,pdel, &
                        qrtend,nrtend,qrsedten,dumr,dumnr,prect,rflx)
 #else
   do i=1,mgncol
@@ -3153,7 +3153,7 @@ subroutine micro_mg_tend ( &
 #endif
 
 #if 1
-  call UpdateTendencies(mgncol,nlev,.TRUE.,deltat,fs,fns,pdel_inv,pdel, &
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,fs,fns,pdel_inv,pdel, &
                        qstend,nstend,qssedten,dums,dumns,prect,sflx,preci=preci)
 #else
   do i=1,mgncol
@@ -3218,7 +3218,7 @@ subroutine micro_mg_tend ( &
 #endif
 
 #if 1
-  call UpdateTendencies(mgncol,nlev,.TRUE.,deltat,fg,fng,pdel_inv,pdel, &
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,fg,fng,pdel_inv,pdel, &
                        qgtend,ngtend,qgsedten,dumg,dumng,prect,gflx,preci=preci)
 #else
   do i=1,mgncol
@@ -4052,7 +4052,7 @@ end subroutine calc_rercld
 !2020-09-15: Follow John Dennis's version to generate a new interface 
 !            to update tendency in the sedimentation loop
 !========================================================================
-subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,pdel,qxtend,nxtend, &
+subroutine Sedimentation(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,pdel,qxtend,nxtend, &
                             qxsedten,dumx,dumnx,prect,xflx,xxlx,qxsevap,xcldm,tlat,qvlat,preci)
 
    integer, intent(in)               :: mgncol,nlev
@@ -4169,7 +4169,7 @@ subroutine UpdateTendencies(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,pdel,qx
 
   enddo
 
-end subroutine UpdateTendencies
+end subroutine Sedimentation
 
 !========================================================================
 !UTILITIES
