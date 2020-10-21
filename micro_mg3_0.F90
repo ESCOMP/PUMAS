@@ -1453,7 +1453,7 @@ subroutine micro_mg_tend ( &
               dum1=-xlf*minstsm(i,k)*rdeltat
               tlat(i,k)=tlat(i,k)+dum1
               meltsdttot(i,k)=meltsdttot(i,k) + dum1
-              meltstot(i,k)=minstsm(i,k)/deltat
+              meltstot(i,k)=minstsm(i,k)*rdeltat
 
               qs(i,k) = max(qs(i,k) - minstsm(i,k), 0._r8)
               ns(i,k) = max(ns(i,k) - ninstsm(i,k), 0._r8)
@@ -1490,7 +1490,7 @@ subroutine micro_mg_tend ( &
               dum1=-xlf*minstgm(i,k)*rdeltat
               tlat(i,k)=tlat(i,k)+dum1
               meltsdttot(i,k)=meltsdttot(i,k) + dum1
-              meltgtot(i,k)=minstgm(i,k)/deltat
+              meltgtot(i,k)=minstgm(i,k)*rdeltat
 
               qg(i,k) = max(qg(i,k) - minstgm(i,k), 0._r8)
               ng(i,k) = max(ng(i,k) - ninstgm(i,k), 0._r8)
@@ -3374,7 +3374,7 @@ subroutine micro_mg_tend ( &
 !ensure that snow... number does not go negative with constant number set
 !necessary because dumng is updated above.                               
               if (nscons .and. ((ns(i,k)+nstend(i,k)*deltat) .lt. 0._r8)) then
-                  nstend(i,k)=-ns(i,k)/deltat
+                  nstend(i,k)=-ns(i,k)*rdeltat
               end if
 
 
@@ -3415,7 +3415,7 @@ subroutine micro_mg_tend ( &
 !ensure that graupel number does not go negative with constant number set
 !necessary because dumng is updated above.                               
               if (ngcons .and. ((ng(i,k)+ngtend(i,k)*deltat) .lt. 0._r8)) then
-               ngtend(i,k)=-ng(i,k)/deltat
+               ngtend(i,k)=-ng(i,k)*rdeltat
             end if
 
 
