@@ -235,7 +235,12 @@ real(r8) :: xxls_squared
 
 character(len=16)  :: micro_mg_precip_frac_method  ! type of precipitation fraction method
 real(r8)           :: micro_mg_berg_eff_factor     ! berg efficiency factor
-
+!++ trude
+real(r8)           :: micro_mg_accre_enhan_fact     ! accretion enhancment factor
+real(r8)           :: micro_mg_autocon_fact     ! autoconversion prefactor
+real(r8)           :: micro_mg_autocon_exp     ! autoconversion exponent factor
+real(r8)           :: micro_mg_homog_size  ! size of freezing homogeneous ice
+!-- trude
 logical  :: allow_sed_supersat ! Allow supersaturated conditions after sedimentation loop
 logical  :: do_sb_physics ! do SB 2001 autoconversion or accretion physics
 
@@ -250,6 +255,8 @@ subroutine micro_mg_init( &
      micro_mg_do_hail_in,micro_mg_do_graupel_in, &
      microp_uniform_in, do_cldice_in, use_hetfrz_classnuc_in, &
      micro_mg_precip_frac_method_in, micro_mg_berg_eff_factor_in, &
+     micro_mg_accre_enhan_fact_in, micro_mg_autocon_fact_in, & !++ trude
+     micro_mg_autocon_exp_in, micro_mg_homog_size_in, & !++ trude
      allow_sed_supersat_in, do_sb_physics_in, &
      nccons_in, nicons_in, ncnst_in, ninst_in, ngcons_in, ngnst_in, errstring)
 
@@ -289,6 +296,12 @@ subroutine micro_mg_init( &
 
   character(len=16),intent(in)  :: micro_mg_precip_frac_method_in  ! type of precipitation fraction method
   real(r8),         intent(in)  :: micro_mg_berg_eff_factor_in     ! berg efficiency factor
+!++ trude 
+  real(r8),         intent(in)  :: micro_mg_accre_enhan_fact_in     !accretion enhancment factor
+  real(r8),         intent(in) ::  micro_mg_autocon_fact_in    !autconversion prefactor
+  real(r8),         intent(in) ::  micro_mg_autocon_exp_in    !autconversion exponent factor
+  real(r8),         intent(in) ::  micro_mg_homog_size_in  ! size of homoegenous freezing ice
+! -- trude
   logical,  intent(in)  ::  allow_sed_supersat_in ! allow supersaturated conditions after sedimentation loop
   logical,  intent(in)  ::  do_sb_physics_in ! do SB autoconversion and accretion physics
 
@@ -322,6 +335,12 @@ subroutine micro_mg_init( &
   rhmini = rhmini_in
   micro_mg_precip_frac_method = micro_mg_precip_frac_method_in
   micro_mg_berg_eff_factor    = micro_mg_berg_eff_factor_in
+! ++ trude
+  micro_mg_accre_enhan_fact   =  micro_mg_accre_enhan_fact_in
+  micro_mg_autocon_fact  = micro_mg_autocon_fact_in
+  micro_mg_autocon_exp = micro_mg_autocon_exp_in
+  micro_mg_homog_size   = micro_mg_homog_size_in
+! -- trude
   allow_sed_supersat          = allow_sed_supersat_in
   do_sb_physics               = do_sb_physics_in
 
@@ -947,6 +966,7 @@ subroutine micro_mg_tend ( &
   real(r8) :: irad
   real(r8) :: ifrac
 
+
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
   ! Return error message
@@ -968,6 +988,7 @@ subroutine micro_mg_tend ( &
   ns = nsn
   qg = qgr
   ng = ngr
+
 
   ! cldn: used to set cldm, unused for subcolumns
   ! liqcldf: used to set lcldm, unused for subcolumns
@@ -1519,7 +1540,7 @@ subroutine micro_mg_tend ( &
 
      if (.not. do_sb_physics) then
        call kk2000_liq_autoconversion(microp_uniform, qcic(1:mgncol,k), &
-          ncic(:,k), rho(:,k), relvar(:,k), prc(:,k), nprc(:,k), nprc1(:,k), mgncol)
+          ncic(:,k), rho(:,k), relvar(:,k), prc(:,k), nprc(:,k), nprc1(:,k), micro_mg_autocon_fact, micro_mg_autocon_exp, mgncol)
      endif
 
      ! assign qric based on prognostic qr, using assumed precip fraction
@@ -1775,7 +1796,10 @@ subroutine micro_mg_tend ( &
        call accrete_cloud_water_rain(microp_uniform, qric(:,k), qcic(1:mgncol,k), &
             ncic(:,k), relvar(:,k), accre_enhan(:,k), pra(:,k), npra(:,k), mgncol)
      endif
-
+!++ trude
+     pra(:,k)=pra(:,k)*micro_mg_accre_enhan_fact
+     npra(:,k)=npra(:,k)*micro_mg_accre_enhan_fact
+! -- trude
      call self_collection_rain(rho(:,k), qric(:,k), nric(:,k), nragg(:,k), mgncol)
 
      if (do_cldice) then
@@ -3274,7 +3298,10 @@ subroutine micro_mg_tend ( &
 
                  ! assume 25 micron mean volume radius of homogeneously frozen droplets
                  ! consistent with size of detrained ice in stratiform.F90
-                 nitend(i,k)=nitend(i,k)+dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*1.563e-14_r8* &
+!                nitend(i,k)=nitend(i,k)+dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*1.563e-14_r8* &
+! ++ trude
+                nitend(i,k)=nitend(i,k)+dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*micro_mg_homog_size**3._r8* &
+!-- trude
                       500._r8)/deltat
                  qctend(i,k)=((1._r8-dum)*dumc(i,k)-qc(i,k))/deltat
                  nctend(i,k)=((1._r8-dum)*dumnc(i,k)-nc(i,k))/deltat
