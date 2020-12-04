@@ -1288,7 +1288,7 @@ end subroutine ice_self_aggregation
 ! since minimum size ice particle for accretion is 50 - 150 micron
 
 subroutine accrete_cloud_water_snow(t, rho, asn, uns, mu, qcic, ncic, qsic, &
-     pgam, lamc, lams, n0s, psacws, npsacws, mgncol)
+     pgam, lamc, lams, n0s, psacws, npsacws, micro_mg_iaccr_factor, mgncol)
 
   integer, intent(in) :: mgncol
   real(r8), dimension(mgncol), intent(in) :: t   ! Temperature
@@ -1337,6 +1337,10 @@ subroutine accrete_cloud_water_snow(t, rho, asn, uns, mu, qcic, ncic, qsic, &
         dc0 = (pgam(i)+1._r8)/lamc(i)
         dum = dc0*dc0*uns(i)*rhow*lams(i)/(9._r8*mu(i))
         eci = dum*dum/((dum+0.4_r8)*(dum+0.4_r8))
+
+!++ trude for PPE
+        eci = eci*micro_mg_iaccr_factor
+!-- trude        
 
         eci = max(eci,0._r8)
         eci = min(eci,1._r8)
@@ -1430,7 +1434,7 @@ end subroutine secondary_ice_production
 ! formula from ikawa and saito, 1991, used by reisner et al., 1998
 
 subroutine accrete_rain_snow(t, rho, umr, ums, unr, uns, qric, qsic, &
-     lamr, n0r, lams, n0s, pracs, npracs, mgncol)
+     lamr, n0r, lams, n0s, pracs, npracs, micro_mg_iaccr_factor, mgncol)
 
   integer,                          intent(in) :: mgncol
 
@@ -1469,6 +1473,9 @@ subroutine accrete_rain_snow(t, rho, umr, ums, unr, uns, qric, qsic, &
   ! Common factor between mass and number expressions
   real(r8) :: common_factor
   integer :: i
+
+!+ trude added for ppe
+  ecr=micro_mg_iaccr_factor
 
   do i=1,mgncol
      if (qric(i) >= icsmall .and. qsic(i) >= icsmall .and. t(i) <= tmelt) then

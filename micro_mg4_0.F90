@@ -341,7 +341,7 @@ subroutine micro_mg_init( &
   character(128), intent(out) :: errstring    ! Output status (non-blank for error return)
 
   !-----------------------------------------------------------------------
-
+ 
   dcs = micro_mg_dcs
 
   ! Initialize subordinate utilities module.
@@ -360,15 +360,21 @@ subroutine micro_mg_init( &
   rhmini = rhmini_in
   micro_mg_precip_frac_method = micro_mg_precip_frac_method_in
   micro_mg_berg_eff_factor    = micro_mg_berg_eff_factor_in
-  allow_sed_supersat          = allow_sed_supersat_in
-  do_sb_physics               = do_sb_physics_in
-
+  
   !++ trude
+  micro_mg_accre_enhan_fact   =  micro_mg_accre_enhan_fact_in
+  micro_mg_autocon_fact  = micro_mg_autocon_fact_in
+  micro_mg_autocon_exp = micro_mg_autocon_exp_in
+  micro_mg_homog_size = micro_mg_homog_size_in
   micro_mg_vtrmi_factor = micro_mg_vtrmi_factor_in
   micro_mg_effi_factor = micro_mg_effi_factor_in
   micro_mg_iaccr_factor=micro_mg_iaccr_factor_in
   micro_mg_max_nicons = micro_mg_max_nicons_in
-  ! -- trude
+   ! -- trude
+  allow_sed_supersat          = allow_sed_supersat_in
+  do_sb_physics               = do_sb_physics_in
+
+ 
   nccons = nccons_in
   nicons = nicons_in
   ncnst = ncnst_in
@@ -1666,6 +1672,9 @@ subroutine micro_mg_tend ( &
   pgamrad = 0._r8
   effc_fn = 10._r8
   effi = 25._r8
+  !++ trude
+  effi = effi*micro_mg_effi_factor
+  !-- trude
   sadice = 0._r8
   sadsnow = 0._r8
   deffi = 50._r8
@@ -4314,15 +4323,19 @@ subroutine micro_mg_tend ( &
 
               call access_lookup_table(dumtt,dumit,dumk,6,dum11,dum22,dum4,f1pr6)
               call access_lookup_table(dumtt,dumit,dumk,12,dum11,dum22,dum4,f1pr12)
-! ++ trude
-              f1pr6=f1pr6*micro_mg_effi_factor
-! -- trude
+
               effi(i,k) = f1pr6*1.e6_r8   ! f1pr6 is in meter, effi is in micrometer 
-!++trude, not sure if sadice is needed
+!++ trude
+              effi = effi*micro_mg_effi_factor
+!-- trude
+              !++trude, not sure if sadice is needed
              sadice(i,k)=4._r8*pi*(effi(i,k)**2)*ni(i,k)*rho(i,k)*1e-2_r8
           else
 !--trude
               effi(i,k) = 25._r8
+!++ trude
+              effi = effi*micro_mg_effi_factor
+!-- trude
               sadice(i,k) = 0._r8
            end if
 !--kt
@@ -4336,6 +4349,9 @@ subroutine micro_mg_tend ( &
            ! NOTE: If CARMA is doing the ice microphysics, then the ice effective
            ! radius has already been determined from the size distribution.
            effi(i,k) = re_ice(i,k) * 1.e6_r8      ! m -> um
+!++ trude
+           effi = effi*micro_mg_effi_factor
+!-- trude
            deffi(i,k)=effi(i,k) * 2._r8
            sadice(i,k) = 4._r8*pi*(effi(i,k)**2)*ni(i,k)*rho(i,k)*1e-2_r8
         enddo
