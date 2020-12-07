@@ -2447,7 +2447,10 @@ subroutine micro_mg_tend ( &
 
        call graupel_collecting_cld_water(qgic(:,k),qcic(:,k),ncic(:,k),rho(:,k), &
              n0g(:,k),lamg(:,k),bgtmp,agn(:,k), psacwg(:,k), npsacwg(:,k), mgncol)
-        
+!++ trude added for PPE
+             psacwg(:,k)= psacwg(:,k)*micro_mg_iaccr_factor
+             npsacwg(:,k)= npsacwg(:,k)*micro_mg_iaccr_factor   
+             
         call graupel_riming_liquid_snow(psacws(:,k),qiic(:,k),qcic(:,k),niic(:,k), &
              rho(:,k),rhosn,rhogtmp,asn(:,k),lams(:,k),n0s(:,k),deltat, &
              pgsacw(:,k),nscng(:,k),mgncol)
@@ -2455,7 +2458,9 @@ subroutine micro_mg_tend ( &
         call graupel_collecting_rain(qric(:,k),qgic(:,k),umg(:,k), &
              umr(:,k),ung(:,k),unr(:,k),rho(:,k),n0r(:,k),lamr(:,k),n0g(:,k), &
              lamg(:,k), pracg(:,k),npracg(:,k),mgncol)
-        
+!++ trude added for PPE
+             pracg(:,k)= pracg(:,k)*micro_mg_iaccr_factor
+             npracg(:,k)= npracg(:,k)*micro_mg_iaccr_factor           
 !AG note: Graupel rain riming snow changes  
 !    pracs, npracs, (accretion of rain by snow)  psacr (collection of snow by rain)
 

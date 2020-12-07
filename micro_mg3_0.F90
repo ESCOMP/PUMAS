@@ -1792,22 +1792,25 @@ subroutine micro_mg_tend ( &
      call snow_self_aggregation(t(:,k), rho(:,k), asn(:,k), rhosn, qsic(:,k), nsic(:,k), &
           nsagg(:,k), mgncol)
 
-!++ trude added micro_mg_iaccr_factor for PPE
      call accrete_cloud_water_snow(t(:,k), rho(:,k), asn(:,k), uns(:,k), mu(:,k), &
           qcic(1:mgncol,k), ncic(:,k), qsic(:,k), pgam(:,k), lamc(:,k), lams(:,k), n0s(:,k), &
-          psacws(:,k), npsacws(:,k), micro_mg_iaccr_factor, mgncol)
-
-     if (do_cldice) then
+          psacws(:,k), npsacws(:,k), mgncol)
+!++ trude added for PPE
+     psacws(:,k)= psacws(:,k)*micro_mg_iaccr_factor
+     npsacws(:,k)= npsacws(:,k)*micro_mg_iaccr_factor      
+          if (do_cldice) then
         call secondary_ice_production(t(:,k), psacws(:,k), msacwi(:,k), nsacwi(:,k), mgncol)
      else
         nsacwi(:,k) = 0.0_r8
         msacwi(:,k) = 0.0_r8
      end if
 
-     !++ trude added micro_mg_iaccr_factor for PPE
      call accrete_rain_snow(t(:,k), rho(:,k), umr(:,k), ums(:,k), unr(:,k), uns(:,k), &
           qric(:,k), qsic(:,k), lamr(:,k), n0r(:,k), lams(:,k), n0s(:,k), &
-          pracs(:,k), npracs(:,k), micro_mg_iaccr_factor, mgncol)
+          pracs(:,k), npracs(:,k), mgncol)
+     !++ trude added for PPE
+     pracs(:,k) = pracs(:,k)*micro_mg_iaccr_factor
+     npracs(:,k) = npracs(:,k)*micro_mg_iaccr_factor
 
      call heterogeneous_rain_freezing(t(:,k), qric(:,k), nric(:,k), lamr(:,k), &
           mnuccr(:,k), nnuccr(:,k), mgncol)
@@ -1868,17 +1871,27 @@ subroutine micro_mg_tend ( &
              rho(:,k),lamr(:,k),n0r(:,k),lams(:,k),n0s(:,k), &
              psacr(:,k), mgncol)
 
+! ++ Trude added micro_mg_iaccr_factor for PPE
        call graupel_collecting_cld_water(qgic(:,k),qcic(:,k),ncic(:,k),rho(:,k), &
              n0g(:,k),lamg(:,k),bgtmp,agn(:,k), psacwg(:,k), npsacwg(:,k), mgncol)
-        
+
+!++ trude added for PPE
+             psacwg(:,k)= psacwg(:,k)*micro_mg_iaccr_factor
+             npsacwg(:,k)= npsacwg(:,k)*micro_mg_iaccr_factor               
+             
+
         call graupel_riming_liquid_snow(psacws(:,k),qsic(:,k),qcic(:,k),nsic(:,k), &
              rho(:,k),rhosn,rhogtmp,asn(:,k),lams(:,k),n0s(:,k),deltat, &
              pgsacw(:,k),nscng(:,k),mgncol)
 
+             ! ++ Trude added micro_mg_iaccr_factor for PPE
         call graupel_collecting_rain(qric(:,k),qgic(:,k),umg(:,k), &
              umr(:,k),ung(:,k),unr(:,k),rho(:,k),n0r(:,k),lamr(:,k),n0g(:,k), &
-             lamg(:,k), pracg(:,k),npracg(:,k),mgncol)
-        
+             lamg(:,k), pracg(:,k),npracg(:,k), mgncol)
+!++ trude added for PPE
+             pracg(:,k)= pracg(:,k)*micro_mg_iaccr_factor
+             npracg(:,k)= npracg(:,k)*micro_mg_iaccr_factor  
+             
 !AG note: Graupel rain riming snow changes  
 !    pracs, npracs, (accretion of rain by snow)  psacr (collection of snow by rain)
 
