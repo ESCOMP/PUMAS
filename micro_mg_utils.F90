@@ -1472,9 +1472,7 @@ subroutine accrete_rain_snow(t, rho, umr, ums, unr, uns, qric, qsic, &
 
   do i=1,mgncol
      if (qric(i) >= icsmall .and. qsic(i) >= icsmall .and. t(i) <= tmelt) then
-
-        common_factor = pi*ecr*rho(i)*n0r(i)*n0s(i)/(lamr(i)**3 * lams(i))
-
+        common_factor = pi*ecr*rho(i)*n0r(i)*n0s(i)/(lamr(i)**3 * lams(i))             
         d_rat = lamr(i)/lams(i)
 
         pracs(i) = common_factor*pi*rhow* &
@@ -2336,7 +2334,6 @@ subroutine graupel_collecting_cld_water(qgic,qcic,ncic,rho,n0g,lamg,bg,agn, &
   ! Output tendencies
   real(r8), dimension(mgncol), intent(out) :: psacwg
   real(r8), dimension(mgncol), intent(out) :: npsacwg
-
   real(r8) :: cons
   integer :: i 
 
