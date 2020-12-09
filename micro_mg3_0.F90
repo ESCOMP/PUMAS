@@ -532,9 +532,7 @@ subroutine micro_mg_tend ( &
        size_dist_param_liq, &
        size_dist_param_basic, &
        avg_diameter, &
-       avg_diameter_vec, &
-       size_dist_param_liq_vect, &
-       size_dist_param_basic_vect
+       avg_diameter_vec
 
   ! Microphysical processes.
   use micro_mg_utils, only: &
@@ -1650,7 +1648,7 @@ subroutine micro_mg_tend ( &
 
   ! cloud liquid
   !-------------------------------------------
-  call size_dist_param_liq_vect(mg_liq_props, qcic, ncic, rho, pgam, lamc, mgncol*nlev)
+  call size_dist_param_liq(mg_liq_props, qcic, ncic, rho, pgam, lamc, mgncol, nlev)
 
   !========================================================================
   ! autoconversion of cloud liquid water to rain
@@ -1687,7 +1685,7 @@ subroutine micro_mg_tend ( &
   end do
 
   ! Get size distribution parameters for cloud ice
-  call size_dist_param_basic_vect(mg_ice_props, qiic, niic, lami, mgncol*nlev, n0=n0i)
+  call size_dist_param_basic(mg_ice_props, qiic, niic, lami, mgncol, nlev, n0=n0i)
 
   ! Alternative autoconversion 
   if (do_sb_physics) then
@@ -1754,7 +1752,7 @@ subroutine micro_mg_tend ( &
   ! get size distribution parameters for precip
   !......................................................................
   ! rain
-  call size_dist_param_basic_vect(mg_rain_props, qric, nric, lamr, mgncol*nlev, n0=n0r)
+  call size_dist_param_basic(mg_rain_props, qric, nric, lamr, mgncol, nlev, n0=n0r)
 
   do k=1,nlev
      do i=1,mgncol
@@ -1772,7 +1770,7 @@ subroutine micro_mg_tend ( &
 
   !......................................................................
   ! snow
-  call size_dist_param_basic_vect(mg_snow_props, qsic, nsic, lams, mgncol*nlev, n0=n0s)
+  call size_dist_param_basic(mg_snow_props, qsic, nsic, lams, mgncol, nlev, n0=n0s)
 
   do k=1,nlev
      do i=1,mgncol
@@ -1813,10 +1811,10 @@ subroutine micro_mg_tend ( &
   !  graupel/hail size distributions and properties
 
   if (do_hail) then
-     call size_dist_param_basic_vect(mg_hail_props, qgic, ngic, lamg, mgncol*nlev, n0=n0g)
+     call size_dist_param_basic(mg_hail_props, qgic, ngic, lamg, mgncol, nlev, n0=n0g)
   end if
   if (do_graupel) then
-     call size_dist_param_basic_vect(mg_graupel_props, qgic, ngic, lamg, mgncol*nlev, n0=n0g)
+     call size_dist_param_basic(mg_graupel_props, qgic, ngic, lamg, mgncol, nlev, n0=n0g)
   end if
   
   do k=1,nlev
@@ -2548,7 +2546,7 @@ subroutine micro_mg_tend ( &
   ! calculate n0r and lamr from rain mass and number
   ! divide by precip fraction to get in-precip (local) values of
   ! rain mass and number, divide by rhow to get rain number in kg^-1
-  call size_dist_param_basic_vect(mg_rain_props, qric, nric, lamr, mgncol*nlev, n0=n0r)
+  call size_dist_param_basic(mg_rain_props, qric, nric, lamr, mgncol, nlev, n0=n0r)
 
   ! Calculate rercld
   ! calculate mean size of combined rain and cloud water
@@ -2650,8 +2648,8 @@ subroutine micro_mg_tend ( &
   end do
 
   ! obtain new slope parameter to avoid possible singularity
-  call size_dist_param_basic_vect(mg_ice_props, dumi, dumni, lami, mgncol*nlev)
-  call size_dist_param_liq_vect(mg_liq_props, dumc, dumnc, rho, pgam, lamc, mgncol*nlev)
+  call size_dist_param_basic(mg_ice_props, dumi, dumni, lami, mgncol, nlev)
+  call size_dist_param_liq(mg_liq_props, dumc, dumnc, rho, pgam, lamc, mgncol, nlev)
 
   do k=1,nlev
      do i=1,mgncol
@@ -2720,15 +2718,15 @@ subroutine micro_mg_tend ( &
   end do
 
   ! fallspeed for rain
-  call size_dist_param_basic_vect(mg_rain_props, dumr, dumnr, lamr, mgncol*nlev)
+  call size_dist_param_basic(mg_rain_props, dumr, dumnr, lamr, mgncol, nlev)
   ! fallspeed for snow
-  call size_dist_param_basic_vect(mg_snow_props, dums, dumns, lams, mgncol*nlev)
+  call size_dist_param_basic(mg_snow_props, dums, dumns, lams, mgncol, nlev)
   ! fallspeed for graupel
   if (do_hail) then
-     call size_dist_param_basic_vect(mg_hail_props, dumg, dumng, lamg, mgncol*nlev)
+     call size_dist_param_basic(mg_hail_props, dumg, dumng, lamg, mgncol, nlev)
   end if
   if (do_graupel) then
-     call size_dist_param_basic_vect(mg_graupel_props, dumg, dumng, lamg, mgncol*nlev)
+     call size_dist_param_basic(mg_graupel_props, dumg, dumng, lamg, mgncol, nlev)
   end if
 
   do k=1,nlev
@@ -2977,7 +2975,7 @@ subroutine micro_mg_tend ( &
   ! get mean size of rain = 1/lamr, add frozen rain to either snow or cloud ice
   ! depending on mean rain size
   ! add to graupel if using that option....
-  call size_dist_param_basic_vect(mg_rain_props, dumr, dumnr, lamr, mgncol*nlev)
+  call size_dist_param_basic(mg_rain_props, dumr, dumnr, lamr, mgncol, nlev)
 
   do k=1,nlev
      do i=1,mgncol
@@ -3198,7 +3196,7 @@ subroutine micro_mg_tend ( &
            dum_2D(i,k) = dumni(i,k)
         end do
      end do
-     call size_dist_param_basic_vect(mg_ice_props, dumi, dumni, lami, mgncol*nlev, n0=dumni0A2D)
+     call size_dist_param_basic(mg_ice_props, dumi, dumni, lami, mgncol, nlev, n0=dumni0A2D)
 
      do k=1,nlev
         do i=1,mgncol
@@ -3236,7 +3234,7 @@ subroutine micro_mg_tend ( &
         dum_2D(i,k) = dumnc(i,k)
      end do
   end do
-  call size_dist_param_liq_vect(mg_liq_props, dumc, dumnc, rho, pgam, lamc, mgncol*nlev)
+  call size_dist_param_liq(mg_liq_props, dumc, dumnc, rho, pgam, lamc, mgncol, nlev)
 
   do k=1,nlev
      do i=1,mgncol
@@ -3270,7 +3268,7 @@ subroutine micro_mg_tend ( &
 
   ! Pass in "false" adjust flag to prevent number from being changed within
   ! size distribution subroutine.
-  call size_dist_param_liq_vect(mg_liq_props, dumc, dumnc, rho, pgam, lamc, mgncol*nlev)
+  call size_dist_param_liq(mg_liq_props, dumc, dumnc, rho, pgam, lamc, mgncol, nlev)
 
   do k =1,nlev
      do i=1,mgncol
@@ -3292,7 +3290,7 @@ subroutine micro_mg_tend ( &
         dum_2D(i,k) = dumnr(i,k)
      end do
   end do
-  call size_dist_param_basic_vect(mg_rain_props, dumr, dumnr, lamr, mgncol*nlev)
+  call size_dist_param_basic(mg_rain_props, dumr, dumnr, lamr, mgncol, nlev)
 
   do k=1,nlev
      do i=1,mgncol
@@ -3313,7 +3311,7 @@ subroutine micro_mg_tend ( &
         dum_2D(i,k) = dumns(i,k)
      end do
   end do
-  call size_dist_param_basic_vect(mg_snow_props, dums, dumns, lams, mgncol*nlev, n0=dumns0A2D)
+  call size_dist_param_basic(mg_snow_props, dums, dumns, lams, mgncol, nlev, n0=dumns0A2D)
 
   do k=1,nlev
      do i=1,mgncol
@@ -3338,10 +3336,10 @@ subroutine micro_mg_tend ( &
      end do
   end do
   if (do_hail) then
-     call size_dist_param_basic_vect(mg_hail_props, dumg, dumng, lamg, mgncol*nlev)
+     call size_dist_param_basic(mg_hail_props, dumg, dumng, lamg, mgncol, nlev)
   end if
   if (do_graupel) then
-     call size_dist_param_basic_vect(mg_graupel_props, dumg, dumng, lamg, mgncol*nlev)
+     call size_dist_param_basic(mg_graupel_props, dumg, dumng, lamg, mgncol, nlev)
   end if
 
   do k=1,nlev

@@ -82,9 +82,7 @@ public :: &
      access_lookup_table, & !! mg4
      access_lookup_table_coll, & !! mg4
      init_lookup_table, &      !! mg4
-     avg_diameter_vec, &
-     size_dist_param_liq_vect, & 
-     size_dist_param_basic_vect
+     avg_diameter_vec
 
 ! 8 byte real and integer
 integer, parameter, public :: r8 = selected_real_kind(12)
@@ -119,10 +117,12 @@ type(MGHydrometeorProps), public :: mg_graupel_props
 type(MGHydrometeorProps), public :: mg_hail_props
 
 interface size_dist_param_liq
+  module procedure size_dist_param_liq_vect
   module procedure size_dist_param_liq_line
 end interface
 interface size_dist_param_basic
-  module procedure size_dist_param_basic_vect2
+  module procedure size_dist_param_basic_2D
+  module procedure size_dist_param_basic_vect
   module procedure size_dist_param_basic_line
 end interface
 interface calc_ab
@@ -582,60 +582,63 @@ end subroutine size_dist_param_liq_line
 
 ! get cloud droplet size distribution parameters
 
-subroutine size_dist_param_liq_vect(props, qcic, ncic, rho, pgam, lamc, vlen)
+subroutine size_dist_param_liq_vect(props, qcic, ncic, rho, pgam, lamc, dim1, dim2)
 
-  type(mghydrometeorprops), intent(in)     :: props
-  integer,                  intent(in)     :: vlen
-  real(r8), dimension(vlen), intent(in)    :: qcic
-  real(r8), dimension(vlen), intent(inout) :: ncic
-  real(r8), dimension(vlen), intent(in)    :: rho
-  real(r8), dimension(vlen), intent(out)   :: pgam
-  real(r8), dimension(vlen), intent(out)   :: lamc
+  type(mghydrometeorprops),       intent(in)    :: props
+  integer,                        intent(in)    :: dim1, dim2
+  real(r8), dimension(dim1,dim2), intent(in)    :: qcic
+  real(r8), dimension(dim1,dim2), intent(inout) :: ncic
+  real(r8), dimension(dim1,dim2), intent(in)    :: rho
+  real(r8), dimension(dim1,dim2), intent(out)   :: pgam
+  real(r8), dimension(dim1,dim2), intent(out)   :: lamc
 
   ! local variables
-  integer  :: i, cnt
-  real(r8) :: tmp(vlen),pgamp1(vlen)
-  real(r8) :: shapeC(vlen),lbnd(vlen),ubnd(vlen)
+  integer  :: i, k
+  real(r8) :: tmp(dim1,dim2),pgamp1(dim1,dim2)
+  real(r8) :: shapeC(dim1,dim2),lbnd(dim1,dim2),ubnd(dim1,dim2)
 
-  cnt = COUNT(qcic>qsmall)
-  if (cnt>0) then
+  do i = 1, dim1
+     do k = 1, dim2
+        if (qcic(i,k) > qsmall) then
+           ! Get pgam from fit Rotstayn and Liu 2003 (changed from Martin 1994 for CAM6)
+           pgam(i,k) = 1.0_r8 - 0.7_r8 * exp(-0.008_r8*1.e-6_r8*ncic(i,k)*rho(i,k))
+           pgam(i,k) = 1._r8/(pgam(i,k)**2) - 1._r8
+           pgam(i,k) = max(pgam(i,k), 2._r8)
+           pgamp1(i,k) = pgam(i,k)+1._r8
+        end if
+     end do
+  end do
 
-    do i=1,vlen
-       if (qcic(i) > qsmall) then
-          ! Get pgam from fit Rotstayn and Liu 2003 (changed from Martin 1994 for CAM6)
-          pgam(i) = 1.0_r8 - 0.7_r8 * exp(-0.008_r8*1.e-6_r8*ncic(i)*rho(i))
-          pgam(i) = 1._r8/(pgam(i)**2) - 1._r8
-          pgam(i) = max(pgam(i), 2._r8)
-          pgamp1(i) = pgam(i)+1._r8
-       end if
-    end do
-    ! Set coefficient for use in size_dist_param_basic.
-    ! The 3D case is so common and optimizable that we specialize it:
-    if (props%eff_dim == 3._r8) then
-       call rising_factorial(pgamp1,3,tmp,vlen)
-    else
-       call rising_factorial(pgamp1, props%eff_dim,tmp,vlen)
-    end if
-
-    do i=1,vlen
-       if (qcic(i) > qsmall) then
-          shapeC(i) = pi / 6._r8 * props%rho * tmp(i)
-          ! Limit to between 2 and 50 microns mean size.
-          lbnd(i)   = pgamp1(i)*1._r8/50.e-6_r8
-          ubnd(i)   = pgamp1(i)*1._r8/2.e-6_r8
-       end if
-    end do
-    call size_dist_param_basic(props, qcic, ncic, shapeC, lbnd, ubnd, lamc, vlen)
+  ! Set coefficient for use in size_dist_param_basic.
+  ! The 3D case is so common and optimizable that we specialize it:
+  if (props%eff_dim == 3._r8) then
+     call rising_factorial_integer_vec(pgamp1,3,tmp,dim1*dim2)
+  else
+     call rising_factorial_r8_vec(pgamp1, props%eff_dim,tmp,dim1*dim2)
   end if
 
-  do i=1,vlen
-     if (qcic(i) <= qsmall) then
-        ! pgam not calculated in this case, so set it to a value likely to
-        ! cause an error if it is accidentally used
-        ! (gamma function undefined for negative integers)
-        pgam(i) = -100._r8
-        lamc(i) = 0._r8
-     end if
+  do i = 1, dim1
+     do k = 1, dim2
+        if (qcic(i,k) > qsmall) then
+           shapeC(i,k) = pi / 6._r8 * props%rho * tmp(i,k)
+           ! Limit to between 2 and 50 microns mean size.
+           lbnd(i,k)   = pgamp1(i,k)*1._r8/50.e-6_r8
+           ubnd(i,k)   = pgamp1(i,k)*1._r8/2.e-6_r8
+        end if
+     end do
+  end do
+  call size_dist_param_basic_vect2(props, qcic, ncic, shapeC, lbnd, ubnd, lamc, dim1*dim2)
+
+  do i = 1, dim1
+     do k = 1, dim2
+        if (qcic(i,k) <= qsmall) then
+           ! pgam not calculated in this case, so set it to a value likely to
+           ! cause an error if it is accidentally used
+           ! (gamma function undefined for negative integers)
+           pgam(i,k) = -100._r8
+           lamc(i,k) = 0._r8
+        end if
+     end do
   end do
 
 end subroutine size_dist_param_liq_vect
@@ -694,10 +697,8 @@ subroutine size_dist_param_basic_vect(props, qic, nic, lam, vlen, n0)
   ubnd      = props%lambda_bounds(2)
   minMass   = props%min_mean_mass
 
-  do i=1,vlen
-
+  do i = 1, vlen
      if (qic(i) > qsmall) then
-
         ! add upper limit to in-cloud number concentration to prevent
         ! numerical error
         if (limiterActive) then
@@ -720,18 +721,74 @@ subroutine size_dist_param_basic_vect(props, qic, nic, lam, vlen, n0)
      else
         lam(i) = 0._r8
      end if
-
   end do
 
   if (present(n0)) then
-     do i = 1, vlen
+     do i = 1, vlen 
         n0(i) = nic(i) * lam(i)
      end do
   end if
 
 end subroutine size_dist_param_basic_vect
 
-subroutine size_dist_param_basic_vect2(props, qic, nic, shapeC,lbnd,ubnd, lam, vlen, n0)
+subroutine size_dist_param_basic_2D(props, qic, nic, lam, dim1, dim2, n0)
+
+  type (mghydrometeorprops),      intent(in)    :: props
+  integer,                        intent(in)    :: dim1, dim2
+  real(r8), dimension(dim1,dim2), intent(in)    :: qic
+  real(r8), dimension(dim1,dim2), intent(inout) :: nic
+  real(r8), dimension(dim1,dim2), intent(out)   :: lam
+  real(r8), dimension(dim1,dim2), intent(out), optional :: n0
+  integer  :: i, k 
+  logical  :: limiterActive
+  real(r8) :: effDim,shapeCoef,ubnd,lbnd, minMass
+
+  limiterActive = limiter_is_on(props%min_mean_mass)
+  effDim    = props%eff_dim
+  shapeCoef = props%shape_coef
+  lbnd      = props%lambda_bounds(1)
+  ubnd      = props%lambda_bounds(2)
+  minMass   = props%min_mean_mass
+
+  do i = 1, dim1
+     do k = 1, dim2
+        if (qic(i,k) > qsmall) then
+           ! add upper limit to in-cloud number concentration to prevent
+           ! numerical error
+           if (limiterActive) then
+              nic(i,k) = min(nic(i,k), qic(i,k) / minMass)
+           end if
+   
+           ! lambda = (c n/q)^(1/d)
+           lam(i,k) = (shapeCoef * nic(i,k)/qic(i,k))**(1._r8/effDim)
+   
+           ! check for slope
+           ! adjust vars
+           if (lam(i,k) < lbnd) then
+              lam(i,k) = lbnd
+              nic(i,k) = lam(i,k)**(effDim) * qic(i,k)/shapeCoef
+           else if (lam(i,k) > ubnd) then
+              lam(i,k) = ubnd
+              nic(i,k) = lam(i,k)**(effDim) * qic(i,k)/shapeCoef
+           end if
+   
+        else
+           lam(i,k) = 0._r8
+        end if
+     end do
+  end do
+
+  if (present(n0)) then
+     do i = 1, dim1
+        do k = 1, dim2
+           n0(i,k) = nic(i,k) * lam(i,k)
+        end do
+     end do
+  end if
+
+end subroutine size_dist_param_basic_2D
+
+subroutine size_dist_param_basic_vect2(props, qic, nic, shapeC, lbnd, ubnd, lam, vlen, n0)
 
   type (mghydrometeorprops), intent(in)    :: props
   integer,                   intent(in)    :: vlen
@@ -926,7 +983,7 @@ subroutine ice_deposition_sublimation(t, qv, qi, ni, &
   end do
 
   !Get slope and intercept of gamma distn for ice.
-  call size_dist_param_basic_vect(mg_ice_props, qiic, niic, lami, vlen, n0i)
+  call size_dist_param_basic(mg_ice_props, qiic, niic, lami, vlen, n0i)
 
   do i=1,vlen
      if (qi(i)>=qsmall) then
