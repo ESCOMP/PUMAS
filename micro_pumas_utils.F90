@@ -117,6 +117,7 @@ type(MGHydrometeorProps), public :: mg_graupel_props
 type(MGHydrometeorProps), public :: mg_hail_props
 
 interface size_dist_param_liq
+  module procedure size_dist_param_liq_2D
   module procedure size_dist_param_liq_vect
   module procedure size_dist_param_liq_line
 end interface
@@ -582,7 +583,7 @@ end subroutine size_dist_param_liq_line
 
 ! get cloud droplet size distribution parameters
 
-subroutine size_dist_param_liq_vect(props, qcic, ncic, rho, pgam, lamc, dim1, dim2)
+subroutine size_dist_param_liq_2D(props, qcic, ncic, rho, pgam, lamc, dim1, dim2)
 
   type(mghydrometeorprops),       intent(in)    :: props
   integer,                        intent(in)    :: dim1, dim2
@@ -639,6 +640,64 @@ subroutine size_dist_param_liq_vect(props, qcic, ncic, rho, pgam, lamc, dim1, di
            lamc(i,k) = 0._r8
         end if
      end do
+  end do
+
+end subroutine size_dist_param_liq_2D
+
+! get cloud droplet size distribution parameters
+
+subroutine size_dist_param_liq_vect(props, qcic, ncic, rho, pgam, lamc, vlen)
+
+  type(mghydrometeorprops),  intent(in)    :: props
+  integer,                   intent(in)    :: vlen 
+  real(r8), dimension(vlen), intent(in)    :: qcic
+  real(r8), dimension(vlen), intent(inout) :: ncic
+  real(r8), dimension(vlen), intent(in)    :: rho
+  real(r8), dimension(vlen), intent(out)   :: pgam
+  real(r8), dimension(vlen), intent(out)   :: lamc
+
+  ! local variables
+  integer  :: i
+  real(r8) :: tmp(vlen),pgamp1(vlen)
+  real(r8) :: shapeC(vlen),lbnd(vlen),ubnd(vlen)
+
+  do i = 1, vlen
+     if (qcic(i) > qsmall) then
+        ! Get pgam from fit Rotstayn and Liu 2003 (changed from Martin 1994 for CAM6)
+        pgam(i) = 1.0_r8 - 0.7_r8 * exp(-0.008_r8*1.e-6_r8*ncic(i)*rho(i))
+        pgam(i) = 1._r8/(pgam(i)**2) - 1._r8
+        pgam(i) = max(pgam(i), 2._r8)
+        pgamp1(i) = pgam(i)+1._r8
+     end if
+  end do
+
+  ! Set coefficient for use in size_dist_param_basic.
+  ! The 3D case is so common and optimizable that we specialize it:
+  if (props%eff_dim == 3._r8) then
+     call rising_factorial_integer_vec(pgamp1,3,tmp,vlen)
+  else
+     call rising_factorial_r8_vec(pgamp1, props%eff_dim,tmp,vlen)
+  end if
+
+  do i = 1, vlen 
+     if (qcic(i) > qsmall) then
+        shapeC(i) = pi / 6._r8 * props%rho * tmp(i)
+        ! Limit to between 2 and 50 microns mean size.
+        lbnd(i)   = pgamp1(i)*1._r8/50.e-6_r8
+        ubnd(i)   = pgamp1(i)*1._r8/2.e-6_r8
+     end if
+  end do
+
+  call size_dist_param_basic_vect2(props, qcic, ncic, shapeC, lbnd, ubnd, lamc, vlen)
+
+  do i = 1, vlen
+     if (qcic(i) <= qsmall) then
+        ! pgam not calculated in this case, so set it to a value likely to
+        ! cause an error if it is accidentally used
+        ! (gamma function undefined for negative integers)
+        pgam(i) = -100._r8
+        lamc(i) = 0._r8
+     end if
   end do
 
 end subroutine size_dist_param_liq_vect
