@@ -3206,7 +3206,7 @@ subroutine micro_mg_tend ( &
                  nitend(i,k)=(dumni(i,k)*icldm(i,k)-ni(i,k))*rdeltat
               end if
               effi(i,k)   = 1.5_r8/lami(i,k)*1.e6_r8
-              sadice(i,k) = 2._r8*pi*(lami(i,k)**(-3))*dumni0*rho(i,k)*1.e-2_r8  ! m2/m3 -> cm2/cm3
+              sadice(i,k) = 2._r8*pi*(lami(i,k)**(-3))*dumni0A2D(i,k)*rho(i,k)*1.e-2_r8  ! m2/m3 -> cm2/cm3
            else
               effi(i,k)   = 25._r8
               sadice(i,k) = 0._r8
