@@ -3395,13 +3395,14 @@ subroutine micro_mg_tend ( &
 
   ! The avg_diameter_vec call does the actual calculation; other diameter
   ! outputs are just drout2 times constants.
-  call avg_diameter_vec(qrout,nrout,rho,rhow,drout2,mgncol*nlev)
+  ! call avg_diameter_vec(qrout,nrout,rho,rhow,drout2,mgncol*nlev)
 
   do k=1,nlev
      do i=1,mgncol
         if (qrout(i,k) .gt. 1.e-7_r8 .and. nrout(i,k) .gt. 0._r8) then
            qrout2(i,k) = qrout(i,k) * precip_frac(i,k)
            nrout2(i,k) = nrout(i,k) * precip_frac(i,k)
+           drout2 = avg_diameter(qrout,nrout,rho,rhow)
            freqr(i,k) = precip_frac(i,k)
            reff_rain(i,k)=1.5_r8*drout2(i,k)*1.e6_r8
         else
@@ -3423,13 +3424,14 @@ subroutine micro_mg_tend ( &
 
   ! The avg_diameter_vec call does the actual calculation; other diameter
   ! outputs are just dsout2 times constants.
-  call avg_diameter_vec(qsout, nsout, rho, rhosn,dsout2,mgncol*nlev)
+  ! call avg_diameter_vec(qsout, nsout, rho, rhosn,dsout2,mgncol*nlev)
 
   do k=1,nlev
      do i=1,mgncol
         if (qsout(i,k) .gt. 1.e-7_r8 .and. nsout(i,k) .gt. 0._r8) then
            qsout2(i,k) = qsout(i,k) * precip_frac(i,k)
            nsout2(i,k) = nsout(i,k) * precip_frac(i,k)
+           dsout2 = avg_diameter(qsout,nsout,rho,rhosn)
            freqs(i,k) = precip_frac(i,k)      
            dsout(i,k)=3._r8*rhosn/rhows*dsout2(i,k)
            reff_snow(i,k)=1.5_r8*dsout2(i,k)*1.e6_r8
@@ -3453,13 +3455,14 @@ subroutine micro_mg_tend ( &
 
   ! The avg_diameter_vec call does the actual calculation; other diameter
   ! outputs are just dsout2 times constants.
-  call avg_diameter_vec(qgout, ngout, rho, rhogtmp,dgout2,mgncol*nlev)
+  ! call avg_diameter_vec(qgout, ngout, rho, rhogtmp,dgout2,mgncol*nlev)
 
   do k=1,nlev
      do i=1,mgncol
         if (qgout(i,k) .gt. 1.e-7_r8 .and. ngout(i,k) .gt. 0._r8) then
            qgout2(i,k) = qgout(i,k) * precip_frac(i,k)
            ngout2(i,k) = ngout(i,k) * precip_frac(i,k)
+           dgout2 = avg_diameter(qgout, ngout, rho, rhogtmp)
            freqg(i,k) = precip_frac(i,k)
            dgout(i,k)=3._r8*rhogtmp/rhows*dgout2(i,k)
            reff_grau(i,k)=1.5_r8*dgout2(i,k)*1.e6_r8
