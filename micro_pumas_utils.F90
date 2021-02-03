@@ -606,6 +606,8 @@ subroutine size_dist_param_liq_2D(props, qcic, ncic, rho, pgam, lamc, dim1, dim2
            pgam(i,k) = 1._r8/(pgam(i,k)**2) - 1._r8
            pgam(i,k) = max(pgam(i,k), 2._r8)
            pgamp1(i,k) = pgam(i,k)+1._r8
+        else
+           pgamp1(i,k) = 0._r8
         end if
      end do
   end do
@@ -625,6 +627,10 @@ subroutine size_dist_param_liq_2D(props, qcic, ncic, rho, pgam, lamc, dim1, dim2
            ! Limit to between 2 and 50 microns mean size.
            lbnd(i,k)   = pgamp1(i,k)*1._r8/50.e-6_r8
            ubnd(i,k)   = pgamp1(i,k)*1._r8/2.e-6_r8
+        else
+           shapeC(i,k) = 0._r8
+           lbnd(i,k) = 0._r8
+           ubnd(i,k) = 0._r8
         end if
      end do
   end do
@@ -668,6 +674,8 @@ subroutine size_dist_param_liq_vect(props, qcic, ncic, rho, pgam, lamc, vlen)
         pgam(i) = 1._r8/(pgam(i)**2) - 1._r8
         pgam(i) = max(pgam(i), 2._r8)
         pgamp1(i) = pgam(i)+1._r8
+     else
+        pgamp1(i) = 0._r8   
      end if
   end do
 
@@ -685,6 +693,10 @@ subroutine size_dist_param_liq_vect(props, qcic, ncic, rho, pgam, lamc, vlen)
         ! Limit to between 2 and 50 microns mean size.
         lbnd(i)   = pgamp1(i)*1._r8/50.e-6_r8
         ubnd(i)   = pgamp1(i)*1._r8/2.e-6_r8
+     else
+        shapeC(i) = 0._r8
+        lbnd(i) = 0._r8
+        ubnd(i) = 0._r8
      end if
   end do
 
@@ -1038,11 +1050,15 @@ subroutine ice_deposition_sublimation(t, qv, qi, ni, &
         niic(i) = ni(i)/icldm(i)
         !Compute linearized condensational heating correction
         call calc_ab(t(i), qvi(i), xxls, ab(i))
+     else
+        qiic(i) = 0._r8
+        niic(i) = 0._r8
+        ab(i) = 0._r8
      end if
   end do
 
   !Get slope and intercept of gamma distn for ice.
-  call size_dist_param_basic(mg_ice_props, qiic, niic, lami, vlen, n0i)
+  call size_dist_param_basic_vect(mg_ice_props, qiic, niic, lami, vlen, n0i)
 
   do i=1,vlen
      if (qi(i)>=qsmall) then
