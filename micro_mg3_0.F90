@@ -274,7 +274,7 @@ real(r8) :: xxls_squared
 character(len=16)  :: micro_mg_precip_frac_method  ! type of precipitation fraction method
 real(r8)           :: micro_mg_berg_eff_factor     ! berg efficiency factor
 
-logical  :: allow_sed_supersat ! Allow supersaturated conditions after sedimentation loop
+logical  :: remove_supersat ! If true, remove supersaturation after sedimentation loop
 logical  :: do_sb_physics ! do SB 2001 autoconversion or accretion physics
 
 !===============================================================================
@@ -288,7 +288,7 @@ subroutine micro_mg_init( &
      micro_mg_do_hail_in,micro_mg_do_graupel_in, &
      microp_uniform_in, do_cldice_in, use_hetfrz_classnuc_in, &
      micro_mg_precip_frac_method_in, micro_mg_berg_eff_factor_in, &
-     allow_sed_supersat_in, do_sb_physics_in, &
+     remove_supersat_in, do_sb_physics_in, &
      micro_mg_evap_sed_off_in, micro_mg_icenuc_rh_off_in, micro_mg_icenuc_use_meyers_in, &
      micro_mg_evap_scl_ifs_in, micro_mg_evap_rhthrsh_ifs_in, &
      micro_mg_rainfreeze_ifs_in,  micro_mg_ifs_sed_in, micro_mg_precip_fall_corr, &
@@ -332,7 +332,7 @@ subroutine micro_mg_init( &
 
   character(len=16),intent(in)  :: micro_mg_precip_frac_method_in  ! type of precipitation fraction method
   real(r8),         intent(in)  :: micro_mg_berg_eff_factor_in     ! berg efficiency factor
-  logical,  intent(in)  ::  allow_sed_supersat_in ! allow supersaturated conditions after sedimentation loop
+  logical,  intent(in)  ::  remove_supersat_in ! If true, remove supersaturation after sedimentation loop
   logical,  intent(in)  ::  do_sb_physics_in ! do SB autoconversion and accretion physics
 
 ! IFS-like Switches
@@ -381,7 +381,7 @@ subroutine micro_mg_init( &
   rhmini = rhmini_in
   micro_mg_precip_frac_method = micro_mg_precip_frac_method_in
   micro_mg_berg_eff_factor    = micro_mg_berg_eff_factor_in
-  allow_sed_supersat          = allow_sed_supersat_in
+  remove_supersat          = remove_supersat_in
   do_sb_physics               = do_sb_physics_in
 
   nccons = nccons_in
@@ -2096,11 +2096,13 @@ subroutine micro_mg_tend ( &
 
         if (do_cldice) then
            ! freezing of rain to produce ice if mean rain size is smaller than Dcs
-           if (lamr(i,k) > qsmall .and. 1._r8/lamr(i,k) < Dcs) then
-              mnuccri(i,k)= mnuccr(i,k)
-              nnuccri(i,k)= nnuccr(i,k)
-              mnuccr(i,k) = 0._r8
-              nnuccr(i,k) = 0._r8
+           if (lamr(i,k) > qsmall) then
+              if (1._r8/lamr(i,k) < Dcs) then
+                 mnuccri(i,k)=mnuccr(i,k)
+                 nnuccri(i,k)=nnuccr(i,k)
+                 mnuccr(i,k)=0._r8
+                 nnuccr(i,k)=0._r8
+              end if
            end if
         end if
      end do
@@ -2246,7 +2248,7 @@ subroutine micro_mg_tend ( &
         ! for now neglect sublimation of ns
         nsubs(i,k)=0._r8
         if (do_hail .or. do_graupel) then        
-           dum = ((-nsagg(i,k)-nsubs(i,k)+ngracs(i,k))*precip_frac(i,k)-nprci(i,k)*icldm(i,k)-nscng(i,k)*lcldm(i,k))*deltat
+           dum = ((-nsagg(i,k)-nsubs(i,k)+ngracs(i,k))*precip_frac(i,k)-nprci(i,k)*icldm(i,k)+nscng(i,k)*lcldm(i,k))*deltat
         else
            dum = ((-nsagg(i,k)-nsubs(i,k)-nnuccr(i,k))*precip_frac(i,k)-nprci(i,k)*icldm(i,k))*deltat
         end if
@@ -3101,7 +3103,7 @@ subroutine micro_mg_tend ( &
 
      do k=1,nlev
         do i=1,mgncol
-           if (dum_2D(i,k) > qvnA(i,k) .and. qvnA(i,k) > 0 .and. allow_sed_supersat) then
+           if (dum_2D(i,k) > qvnA(i,k) .and. qvnA(i,k) > 0 .and. remove_supersat) then
               ! expression below is approximate since there may be ice deposition
               dum = (dum_2D(i,k)-qvnA(i,k))/(1._r8+xxlv_squared*qvnA(i,k)/(cpp*rv*ttmpA(i,k)**2))*rdeltat
               ! add to output cme
