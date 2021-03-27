@@ -802,7 +802,8 @@ subroutine size_dist_param_basic_line(props, qic, nic, lam, n0)
   real(r8),                 intent(out)           :: lam
   real(r8),                 intent(out), optional :: n0
   
-  logical :: present_n0 = present(n0)
+  logical :: present_n0 
+  present_n0 = present(n0)
 
   !$acc data present (props,qic,nic,lam,n0)
 
@@ -2544,7 +2545,7 @@ subroutine evaporate_sublimate_precip_graupel(t, rho, dv, mu, sc, q, qvl, qvi, &
   logical, intent(in) :: evap_rhthrsh 
 
   real(r8) :: qclr   ! water vapor mixing ratio in clear air
-  real(r8) :: ab, ab, abg    ! correction to account for latent heat
+  real(r8) :: ab, abr, abg    ! correction to account for latent heat
   real(r8) :: eps    ! 1/ sat relaxation timescale
   real(r8), dimension(vlen) :: dum
   integer :: i
