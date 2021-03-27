@@ -1196,10 +1196,12 @@ subroutine ice_deposition_sublimation(t, qv, qi, ni, &
   !$acc parallel vector_length(VLEN) default(present)
   !$acc loop gang vector
   do i = 1,vlen
-     if (qi(i)<qsmall) then
-        qiic(i) = 0._r8
-        niic(i) = 0._r8
-        ab(i) = 0._r8
+     qiic(i) = 0._r8
+     niic(i) = 0._r8
+     ab(i)   = 0._r8
+     if (qi(i)>qsmall) then
+        qiic(i) = qi(i)/icldm(i)
+        niic(i) = ni(i)/icldm(i)
      end if
   end do
   !$acc end parallel
