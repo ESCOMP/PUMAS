@@ -2322,7 +2322,7 @@ subroutine evaporate_sublimate_precip(t, rho, dv, mu, sc, q, qvl, qvi, &
   integer :: i
 
   !$acc data present (t,rho,dv,mu,sc,q,qvl,qvi,lcldm,precip_frac,arn,asn) &
-  !$acc      present (qcic,qiic,qric,qsic,lamr,n0r,lams,n0s,pre,prds,am_evp_st)
+  !$acc      present (qcic,qiic,qric,qsic,lamr,n0r,lams,n0s,pre,prds,am_evp_st) &
   !$acc      create  (dum)
 
   ! set temporary cloud fraction to zero if cloud water + ice is very small
@@ -2439,7 +2439,7 @@ subroutine evaporate_sublimate_precip_mg4(t, rho, dv, mu, sc, q, qvl, qvi, &
   integer :: i
 
   !$acc data present (t,rho,dv,mu,sc,q,qvl,qvi,lcldm,precip_frac,arn) &
-  !$acc      present (qcic,qiic,qric,lamr,n0r,pre,am_evp_st)
+  !$acc      present (qcic,qiic,qric,lamr,n0r,pre,am_evp_st) &
   !$acc      create  (dum)
 
   ! set temporary cloud fraction to zero if cloud water + ice is very small
