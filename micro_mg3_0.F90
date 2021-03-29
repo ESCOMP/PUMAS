@@ -1745,6 +1745,7 @@ subroutine micro_mg_tend ( &
      end do
 
   end if
+  !$acc end parallel
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
   ! get size distribution parameters based on in-cloud cloud water
