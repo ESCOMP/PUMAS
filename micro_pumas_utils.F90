@@ -1289,7 +1289,7 @@ subroutine ice_deposition_sublimation_mg4(t, qv, qi, niic, &
   real(r8), parameter :: thrd = 1._r8/3._r8
   integer :: i
 
-  !$acc data present (t,qv,qi,ni,icldm,rho,dv,qvl) &
+  !$acc data present (t,qv,qi,icldm,rho,dv,qvl) &
   !$acc      present (qvi,vap_dep,ice_sublim,berg) &
   !$acc      present (niic,af1pr5,af1pr14,rhof,mu,sc) &
   !$acc      create  (ab,qiic,lami,n0i)
@@ -1456,6 +1456,8 @@ subroutine sb2001v2_liq_autoconversion(pgam,qc,nc,qr,rho,relvar,au,nprc,nprc1,vl
   real(r8) :: dum, dum1, nu
   integer  :: dumi, i
 
+  !$acc data present (pgam,qc,nc,qr,rho,relvar,au,nprc1,nprc)
+
   !$acc parallel vector_length(VLEN) default(present)
   !$acc loop gang vector private(dumi,nu,dum,dum1)
   do i=1,vlen
@@ -1562,7 +1564,7 @@ subroutine ice_autoconversion(t, qiic, lami, n0i, dcs, prci, nprci, vlen)
   real(r8) :: d_rat
   integer :: i
 
-  !$acc data present (t,qiic,lami,n0i,prci,nprci) &
+  !$acc data present (t,qiic,lami,n0i,prci,nprci)
 
   !$acc parallel vector_length(VLEN) default(present)
   !$acc loop gang vector private(d_rat,m_ip)
@@ -2457,7 +2459,7 @@ subroutine evaporate_sublimate_precip_mg4(t, rho, dv, mu, sc, q, qvl, qvi, &
      end if
   end do
 
-  !$acc loop gang vector private(qclr,eps,abr,ab)
+  !$acc loop gang vector private(qclr,eps,abr)
   do i=1,vlen
      ! only calculate if there is some precip fraction > cloud fraction
      if (precip_frac(i) > dum(i)) then
