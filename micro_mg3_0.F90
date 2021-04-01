@@ -1725,6 +1725,7 @@ subroutine micro_mg_tend ( &
   if (precip_frac_method == MG_PRECIP_FRAC_INCLOUD) then
      !$acc loop seq
      do k=2,nlev
+        !$acc loop gang vector
         do i=1,mgncol
            if (qc(i,k) < qsmall .and. qi(i,k) < qsmall) then
               precip_frac(i,k) = precip_frac(i,k-1)
@@ -1736,7 +1737,10 @@ subroutine micro_mg_tend ( &
 
      ! if rain or snow mix ratios are smaller than threshold,
      ! then leave precip_frac as cloud fraction at current level
+
+     !$acc loop seq
      do k=2,nlev
+        !$acc loop gang vector
         do i=1,mgncol
            if (qr(i,k-1) >= qsmall .or. qs(i,k-1) >= qsmall .or. qg(i,k-1) >= qsmall) then
               precip_frac(i,k)=max(precip_frac(i,k-1),precip_frac(i,k))
@@ -3216,10 +3220,10 @@ subroutine micro_mg_tend ( &
    end do
   !$acc end parallel
 
-   if (do_cldice) then
+  if (do_cldice) then
      !$acc parallel vector_length(VLEN) default(present)
      !$acc loop gang vector collapse(2) private(dum)
-      do k=1,nlev
+     do k=1,nlev
         do i=1,mgncol
            if (t(i,k)+tlat(i,k)/cpp*deltat > tmelt) then
               if (dumi(i,k) > 0._r8) then
@@ -3947,13 +3951,13 @@ subroutine Sedimentation(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,qxtend,nxt
 
       dum1(1) = 0._r8
       if (present_xcldm) then
-         !$acc loop gang vector
+         !$acc loop vector
          do k = 2,nlev
             dum1(k) = xcldm(i,k)/xcldm(i,k-1)
             dum1(k) = min(dum1(k),1._r8)
          end do
       else
-         !$acc loop gang vector
+         !$acc loop vector
          do k=2,nlev
             dum1(k) = 1._r8
          end do
@@ -3964,17 +3968,20 @@ subroutine Sedimentation(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,qxtend,nxt
          faloutx(0)  = 0._r8
          faloutnx(0) = 0._r8
          if (do_cldice) then
+            !$acc loop vector
             do k=1,nlev
                faloutx(k)  = fx(i,k)  * dumx(i,k)
                faloutnx(k) = fnx(i,k) * dumnx(i,k)
             end do
          else
+            !$acc loop vector
             do k=1,nlev
                faloutx(k)  = 0._r8
                faloutnx(k) = 0._r8
             end do
          end if
 
+         !$acc loop vector
          do k = 1,nlev
             ! for cloud liquid and ice, if cloud fraction increases with height
             ! then add flux from above to both vapor and cloud water of current level
