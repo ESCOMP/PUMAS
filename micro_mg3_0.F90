@@ -1045,7 +1045,6 @@ subroutine micro_mg_tend ( &
   deltat  = deltatin
   rdeltat = 1._r8 / deltat
 
-  ! Set ice nucleation timescale to deltat before microphysics loop
   if (trim(micro_mg_precip_frac_method) == 'in_cloud') then
      precip_frac_method =  MG_PRECIP_FRAC_INCLOUD
   else if(trim(micro_mg_precip_frac_method) == 'max_overlap') then
@@ -1053,7 +1052,7 @@ subroutine micro_mg_tend ( &
   endif
 
   !===============================================
-  ! set mtime here to avoid answer-changing
+  ! Set ice nucleation timescale to deltat before microphysics loop 
   mtime=deltat
 
   !......................................................................
