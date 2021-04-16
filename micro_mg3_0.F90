@@ -1045,6 +1045,7 @@ subroutine micro_mg_tend ( &
   deltat  = deltatin
   rdeltat = 1._r8 / deltat
 
+  ! Set ice nucleation timescale to deltat before microphysics loop
   if (trim(micro_mg_precip_frac_method) == 'in_cloud') then
      precip_frac_method =  MG_PRECIP_FRAC_INCLOUD
   else if(trim(micro_mg_precip_frac_method) == 'max_overlap') then
@@ -1068,6 +1069,7 @@ subroutine micro_mg_tend ( &
      rhogtmp = rhog
   end if
 
+  ! set mdust as the number of dust bins for use later in contact freezing subroutine
   mdust = size(rndst,3)
 
 !$acc data copyin  (t,q,qcn,qin,ncn,nin,qrn,qsn,nrn,nsn,qgr,ngr,relvar,         &
