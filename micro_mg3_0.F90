@@ -445,6 +445,8 @@ subroutine micro_mg_init( &
   gamma_bi_plus4=gamma(4._r8+bi)
   gamma_bj_plus1=gamma(1._r8+bj)
   gamma_bj_plus4=gamma(4._r8+bj)
+  gamma_bg_plus1=gamma(1._r8)
+  gamma_bg_plus4=gamma(4._r8)
   if (do_hail) then
      gamma_bg_plus1 = gamma(1._r8+bh)
      gamma_bg_plus4 = gamma(4._r8+bh)
@@ -1046,7 +1048,7 @@ subroutine micro_mg_tend ( &
   rdeltat = 1._r8 / deltat
 
   if (trim(micro_mg_precip_frac_method) == 'in_cloud') then
-     precip_frac_method =  MG_PRECIP_FRAC_INCLOUD
+     precip_frac_method = MG_PRECIP_FRAC_INCLOUD
   else if(trim(micro_mg_precip_frac_method) == 'max_overlap') then
      precip_frac_method = MG_PRECIP_FRAC_OVERLAP
   endif
@@ -3723,8 +3725,21 @@ subroutine micro_mg_tend ( &
   !$acc end parallel
 
   ! The avg_diameter_vec call does the actual calculation; other diameter
-  ! outputs are just dsout2 times constants.
-  call avg_diameter_vec(qgout, ngout, rho, rhogtmp,dgout2,mgncol*nlev)
+  ! outputs are just dgout2 times constants.
+  if (do_hail .or. do_graupel) then
+     call avg_diameter_vec(qgout, ngout, rho, rhogtmp, dgout2, mgncol*nlev)
+  else
+     ! need this if statement for MG2, where rhogtmp = 0
+
+     !$acc parallel vector_length(VLEN) default(present) 
+     !$acc loop gang vector collapse(2)
+     do k=1,nlev
+        do i=1,mgncol
+           dgout2(i,k) = 0._r8
+        end do
+     end do
+     !$acc end parallel
+  end if
 
   !$acc parallel vector_length(VLEN) default(present) 
   !$acc loop gang vector collapse(2)
