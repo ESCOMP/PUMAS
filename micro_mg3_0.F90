@@ -1085,8 +1085,7 @@ subroutine micro_mg_tend ( &
      rhogtmp = rhog
   end if
 
-  ! set mdust as the number of dust bins for use later in contact freezing
-  ! subroutine
+  ! set mdust as the number of dust bins for use later in contact freezing subroutine
   mdust = size(rndst,3)
 
   !$acc data copyin  (t,q,qcn,qin,ncn,nin,qrn,qsn,nrn,nsn,qgr,ngr,relvar, &
@@ -1901,6 +1900,8 @@ subroutine micro_mg_tend ( &
   ! rain
   call size_dist_param_basic(mg_rain_props, qric, nric, lamr, mgncol, nlev, n0=n0r)
 
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
         if (lamr(i,k) >= qsmall) then
@@ -1914,6 +1915,7 @@ subroutine micro_mg_tend ( &
         end if
      end do
   end do
+  !$acc end parallel
 
   !......................................................................
   ! snow
@@ -2683,7 +2685,7 @@ subroutine micro_mg_tend ( &
      end do
   end do
 
-  !$acc loop gang vector collapse(2)
+  !$acc loop gang vector collapse(2) private(tmpfrz)
   do k=1,nlev
      do i=1,mgncol
         nctend(i,k) = nctend(i,k)+&
@@ -3744,7 +3746,7 @@ subroutine micro_mg_tend ( &
   !$acc end parallel
 
   ! The avg_diameter_vec call does the actual calculation; other diameter
-  ! outputs are just dsout2 times constants.
+  ! outputs are just dgout2 times constants.
   if (do_hail .or. do_graupel) then
      call avg_diameter_vec(qgout, ngout, rho, rhogtmp, dgout2, mgncol*nlev)
   else
@@ -3881,7 +3883,7 @@ end subroutine micro_mg_tend
 !========================================================================
 
 subroutine calc_rercld(lamr, n0r, lamc, pgam, qric, qcic, ncic, rercld, vlen)
-  integer, intent(in) :: vlen 
+  integer,                   intent(in) :: vlen 
   real(r8), dimension(vlen), intent(in) :: lamr          ! rain size parameter (slope)
   real(r8), dimension(vlen), intent(in) :: n0r           ! rain size parameter (intercept)
   real(r8), dimension(vlen), intent(in) :: lamc          ! size distribution parameter (slope)
