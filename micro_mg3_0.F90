@@ -277,8 +277,9 @@ real(r8)           :: micro_mg_berg_eff_factor     ! berg efficiency factor
 !++ trude
 real(r8)           :: micro_mg_accre_enhan_fact     ! accretion enhancment factor
 real(r8)           :: micro_mg_autocon_fact     ! autoconversion prefactor
-real(r8)           :: micro_mg_autocon_exp     ! autoconversion exponent factor
-real(r8)           :: micro_mg_homog_size  ! size of freezing homogeneous ice
+real(r8)           :: micro_mg_autocon_nd_exp     ! autoconversion Nd exponent factor
+real(r8)           :: micro_mg_autocon_lwp_exp  !autoconversion LWP exponent
+real(r8)           :: micro_mg_homog_size ! size of freezing homogeneous ice
 real(r8)           :: micro_mg_vtrmi_factor
 real(r8)           :: micro_mg_effi_factor
 real(r8)           :: micro_mg_iaccr_factor
@@ -300,7 +301,7 @@ subroutine micro_mg_init( &
      microp_uniform_in, do_cldice_in, use_hetfrz_classnuc_in, &
      micro_mg_precip_frac_method_in, micro_mg_berg_eff_factor_in, &
      micro_mg_accre_enhan_fact_in, micro_mg_autocon_fact_in, & !++ trude
-     micro_mg_autocon_exp_in, micro_mg_homog_size_in, & !++ trude
+     micro_mg_autocon_nd_exp_in, micro_mg_autocon_lwp_exp_in, micro_mg_homog_size_in, & !++ trude
      micro_mg_vtrmi_factor_in, micro_mg_effi_factor_in,  micro_mg_iaccr_factor_in,& ! ++ trude
      micro_mg_max_nicons_in, & ! ++ trude
      allow_sed_supersat_in, do_sb_physics_in, &
@@ -350,7 +351,8 @@ subroutine micro_mg_init( &
 !++ trude 
   real(r8),         intent(in)  :: micro_mg_accre_enhan_fact_in     !accretion enhancment factor
   real(r8),         intent(in) ::  micro_mg_autocon_fact_in    !autconversion prefactor
-  real(r8),         intent(in) ::  micro_mg_autocon_exp_in    !autconversion exponent factor
+  real(r8),         intent(in) ::  micro_mg_autocon_nd_exp_in !autconversion exponent factor
+  real(r8),         intent(in) ::  micro_mg_autocon_lwp_exp_in    !autconversion exponent factor      
   real(r8),         intent(in) ::  micro_mg_homog_size_in  ! size of homoegenous freezing ice
   real(r8),         intent(in)  :: micro_mg_vtrmi_factor_in    !factor for ice fall velocity
   real(r8),         intent(in)  :: micro_mg_effi_factor_in    !factor for ice effective radius
@@ -410,7 +412,8 @@ subroutine micro_mg_init( &
 ! ++ trude
   micro_mg_accre_enhan_fact   =  micro_mg_accre_enhan_fact_in
   micro_mg_autocon_fact  = micro_mg_autocon_fact_in
-  micro_mg_autocon_exp = micro_mg_autocon_exp_in
+  micro_mg_autocon_nd_exp = micro_mg_autocon_nd_exp_in
+  micro_mg_autocon_lwp_exp = micro_mg_autocon_lwp_exp_in
   micro_mg_homog_size   = micro_mg_homog_size_in
   micro_mg_vtrmi_factor = micro_mg_vtrmi_factor_in
   micro_mg_effi_factor = micro_mg_effi_factor_in
@@ -1689,7 +1692,7 @@ subroutine micro_mg_tend ( &
   ! minimum qc of 1 x 10^-8 prevents floating point error
 
   if (.not. do_sb_physics) then
-    call kk2000_liq_autoconversion(microp_uniform, qcic, ncic, rho, relvar, prc, nprc, nprc1, micro_mg_autocon_fact, micro_mg_autocon_exp, mgncol*nlev)
+    call kk2000_liq_autoconversion(microp_uniform, qcic, ncic, rho, relvar, prc, nprc, nprc1, micro_mg_autocon_fact, micro_mg_autocon_nd_exp, micro_mg_autocon_lwp_exp, mgncol*nlev)
   end if
 
   do k=1,nlev
