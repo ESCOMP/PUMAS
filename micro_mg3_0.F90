@@ -278,6 +278,16 @@ real(r8) :: xxls_squared
 character(len=16)  :: micro_mg_precip_frac_method  ! type of precipitation fraction method
 real(r8)           :: micro_mg_berg_eff_factor     ! berg efficiency factor
 
+real(r8)           :: micro_mg_accre_enhan_fact     ! accretion enhancment factor
+real(r8)           :: micro_mg_autocon_fact     ! autoconversion prefactor
+real(r8)           :: micro_mg_autocon_nd_exp     ! autoconversion Nd exponent factor
+real(r8)           :: micro_mg_autocon_lwp_exp  !autoconversion LWP exponent
+real(r8)           :: micro_mg_homog_size ! size of freezing homogeneous ice
+real(r8)           :: micro_mg_vtrmi_factor
+real(r8)           :: micro_mg_effi_factor
+real(r8)           :: micro_mg_iaccr_factor
+real(r8)           :: micro_mg_max_nicons
+
 logical  :: remove_supersat ! If true, remove supersaturation after sedimentation loop
 logical  :: do_sb_physics ! do SB 2001 autoconversion or accretion physics
 
@@ -305,6 +315,10 @@ subroutine micro_mg_init( &
      micro_mg_do_hail_in,micro_mg_do_graupel_in, &
      microp_uniform_in, do_cldice_in, use_hetfrz_classnuc_in, &
      micro_mg_precip_frac_method_in, micro_mg_berg_eff_factor_in, &
+     micro_mg_accre_enhan_fact_in, micro_mg_autocon_fact_in, & 
+     micro_mg_autocon_nd_exp_in, micro_mg_autocon_lwp_exp_in, micro_mg_homog_size_in, &
+     micro_mg_vtrmi_factor_in, micro_mg_effi_factor_in,  micro_mg_iaccr_factor_in,&
+     micro_mg_max_nicons_in, &
      remove_supersat_in, do_sb_physics_in, &
      micro_mg_evap_sed_off_in, micro_mg_icenuc_rh_off_in, micro_mg_icenuc_use_meyers_in, &
      micro_mg_evap_scl_ifs_in, micro_mg_evap_rhthrsh_ifs_in, &
@@ -349,6 +363,16 @@ subroutine micro_mg_init( &
 
   character(len=16),intent(in)  :: micro_mg_precip_frac_method_in  ! type of precipitation fraction method
   real(r8),         intent(in)  :: micro_mg_berg_eff_factor_in     ! berg efficiency factor
+  real(r8),         intent(in)  :: micro_mg_accre_enhan_fact_in     !accretion enhancment factor
+  real(r8),         intent(in) ::  micro_mg_autocon_fact_in    !autconversion prefactor
+  real(r8),         intent(in) ::  micro_mg_autocon_nd_exp_in !autconversion exponent factor
+  real(r8),         intent(in) ::  micro_mg_autocon_lwp_exp_in    !autconversion exponent factor      
+  real(r8),         intent(in) ::  micro_mg_homog_size_in  ! size of homoegenous freezing ice
+  real(r8),         intent(in)  :: micro_mg_vtrmi_factor_in    !factor for ice fall velocity
+  real(r8),         intent(in)  :: micro_mg_effi_factor_in    !factor for ice effective radius
+  real(r8),         intent(in)  :: micro_mg_iaccr_factor_in  ! ice accretion factor
+  real(r8),         intent(in)  :: micro_mg_max_nicons_in ! maximum number ice crystal allowed 
+
   logical,  intent(in)  ::  remove_supersat_in ! If true, remove supersaturation after sedimentation loop
   logical,  intent(in)  ::  do_sb_physics_in ! do SB autoconversion and accretion physics
 
@@ -398,6 +422,15 @@ subroutine micro_mg_init( &
   rhmini = rhmini_in
   micro_mg_precip_frac_method = micro_mg_precip_frac_method_in
   micro_mg_berg_eff_factor    = micro_mg_berg_eff_factor_in
+  micro_mg_accre_enhan_fact   =  micro_mg_accre_enhan_fact_in
+  micro_mg_autocon_fact  = micro_mg_autocon_fact_in
+  micro_mg_autocon_nd_exp = micro_mg_autocon_nd_exp_in
+  micro_mg_autocon_lwp_exp = micro_mg_autocon_lwp_exp_in
+  micro_mg_homog_size   = micro_mg_homog_size_in
+  micro_mg_vtrmi_factor = micro_mg_vtrmi_factor_in
+  micro_mg_effi_factor = micro_mg_effi_factor_in
+  micro_mg_iaccr_factor = micro_mg_iaccr_factor_in
+  micro_mg_max_nicons = micro_mg_max_nicons_in
   remove_supersat          = remove_supersat_in
   do_sb_physics               = do_sb_physics_in
 
@@ -1445,6 +1478,7 @@ subroutine micro_mg_tend ( &
         pgamrad(i,k)            = 0._r8
         effc_fn(i,k)            = 10._r8
         effi(i,k)               = 25._r8
+        effi(i,k) = effi(i,k)*micro_mg_effi_factor
         sadice(i,k)             = 0._r8
         sadsnow(i,k)            = 0._r8
         deffi(i,k)              = 50._r8
@@ -1569,18 +1603,13 @@ subroutine micro_mg_tend ( &
   end if
 
   !=============================================================================
-
   !$acc loop gang vector collapse(2) private(dum,dum1)
   do k=1,nlev
      do i=1,mgncol
-
         ! calculate instantaneous precip processes (melting and homogeneous freezing)
-
         ! melting of snow at +2 C
-
         if (t(i,k) > snowmelt) then
            if (qs(i,k) > 0._r8) then
-
               ! make sure melting snow doesn't reduce temperature below threshold
               dum = -xlf/cpp*qs(i,k)
               if (t(i,k)+dum < snowmelt) then
@@ -1674,8 +1703,7 @@ subroutine micro_mg_tend ( &
               ! heating tendency
               dum1 = xlf*minstrf(i,k)*rdeltat
               tlat(i,k)=tlat(i,k)+dum1
-              frzrdttot(i,k)=frzrdttot(i,k) + dum1
-
+              frzrdttot(i,k)=frzrdttot(i,k) + dum1                                                                                   
 
               qr(i,k) = max(qr(i,k) - minstrf(i,k), 0._r8)
               nr(i,k) = max(nr(i,k) - ninstrf(i,k), 0._r8)
@@ -1791,7 +1819,7 @@ subroutine micro_mg_tend ( &
   ! minimum qc of 1 x 10^-8 prevents floating point error
 
   if (.not. do_sb_physics) then
-    call kk2000_liq_autoconversion(microp_uniform, qcic, ncic, rho, relvar, prc, nprc, nprc1, mgncol*nlev)
+    call kk2000_liq_autoconversion(microp_uniform, qcic, ncic, rho, relvar, prc, nprc, nprc1, micro_mg_autocon_fact, micro_mg_autocon_nd_exp, micro_mg_autocon_lwp_exp, mgncol*nlev)
   end if
 
   !$acc parallel vector_length(VLENS) default(present)
@@ -1938,6 +1966,7 @@ subroutine micro_mg_tend ( &
               dum_2D(i,k) = lams(i,k)**bs
               ! provisional snow number and mass weighted mean fallspeed (m/s)
               ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*dum_2D(i,k)),1.2_r8*rhof(i,k))
+              ums(i,k) = ums(i,k)*micro_mg_vtrmi_factor
               uns(i,k) = min(asn(i,k)*gamma_bs_plus1/dum_2D(i,k),1.2_r8*rhof(i,k))
            else
               ums(i,k) = 0._r8
@@ -2052,6 +2081,8 @@ subroutine micro_mg_tend ( &
   call accrete_cloud_water_snow(t, rho, asn, uns, mu, qcic, ncic, qsic, pgam, &
                                 lamc, lams, n0s, psacws, npsacws, mgncol*nlev)
 
+  psacws = psacws*micro_mg_iaccr_factor
+  npsacws = npsacws*micro_mg_iaccr_factor
   if (do_cldice) then
      call secondary_ice_production(t, psacws, msacwi, nsacwi, mgncol*nlev)
   else
@@ -2076,6 +2107,9 @@ subroutine micro_mg_tend ( &
   else
      call accrete_cloud_water_rain(microp_uniform, qric, qcic, ncic, relvar, accre_enhan, pra, npra, mgncol*nlev)
   endif
+
+  pra = pra*micro_mg_accre_enhan_fact
+  npra = npra*micro_mg_accre_enhan_fact
 
   call self_collection_rain(rho, qric, nric, nragg, mgncol*nlev)
 
@@ -2134,12 +2168,18 @@ subroutine micro_mg_tend ( &
      call graupel_collecting_snow(qsic, qric, umr, ums, rho, lamr, n0r, lams, n0s, psacr, mgncol*nlev)
 
      call graupel_collecting_cld_water(qgic, qcic, ncic, rho, n0g, lamg, bgtmp, agn, psacwg, npsacwg, mgncol*nlev)
+
+     psacwg = psacwg*micro_mg_iaccr_factor
+     npsacwg = npsacwg*micro_mg_iaccr_factor
      
      call graupel_riming_liquid_snow(psacws, qsic, qcic, nsic, rho, rhosn, rhogtmp, asn, &
                                      lams, n0s, deltat, pgsacw, nscng, mgncol*nlev)
 
      call graupel_collecting_rain(qric, qgic, umg, umr, ung, unr, rho, n0r, &
                                   lamr, n0g, lamg, pracg, npracg, mgncol*nlev)
+
+     pracg = pracg*micro_mg_iaccr_factor
+     npracg = npracg*micro_mg_iaccr_factor
 
 !AG note: Graupel rain riming snow changes  
 !    pracs, npracs, (accretion of rain by snow)  psacr (collection of snow by rain)
@@ -2894,6 +2934,8 @@ subroutine micro_mg_tend ( &
         if (dumi(i,k).ge.qsmall) then
            vtrmi(i,k)=min(ain(i,k)*gamma_bi_plus4/(6._r8*lami(i,k)**bi), &
                 1.2_r8*rhof(i,k))
+           vtrmi(i,k)=vtrmi(i,k)*micro_mg_vtrmi_factor
+
            fi(i,k) = g*rho(i,k)*vtrmi(i,k)
            fni(i,k) = g*rho(i,k)* &
                 min(ain(i,k)*gamma_bi_plus1/lami(i,k)**bi,1.2_r8*rhof(i,k))
@@ -2908,6 +2950,8 @@ subroutine micro_mg_tend ( &
                  (1._r8 - ifrac) * &
                  min(ajn(i,k)*gamma_bj_plus4/(6._r8*lami(i,k)**bj), &
                  1.2_r8*rhof(i,k))
+              vtrmi(i,k)=vtrmi(i,k)*micro_mg_vtrmi_factor     
+
               fi(i,k)  = g*rho(i,k)*vtrmi(i,k)
               fni(i,k) = ifrac * fni(i,k) + & 
                  (1._r8 - ifrac) * &
@@ -2972,6 +3016,8 @@ subroutine micro_mg_tend ( &
            qtmp = lams(i,k)**bs
            ! 'final' values of number and mass weighted mean fallspeed for snow (m/s)
            ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*qtmp),1.2_r8*rhof(i,k))
+           ums(:,k)=ums(:,k)*micro_mg_vtrmi_factor       
+
            fs(i,k)  = g*rho(i,k)*ums(i,k)
            uns(i,k) = min(asn(i,k)*gamma_bs_plus1/qtmp,1.2_r8*rhof(i,k))
            fns(i,k) = g*rho(i,k)*uns(i,k)
@@ -3306,7 +3352,8 @@ subroutine micro_mg_tend ( &
 
                  ! assume 25 micron mean volume radius of homogeneously frozen droplets
                  ! consistent with size of detrained ice in stratiform.F90
-                 nitend(i,k)=nitend(i,k)+dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*1.563e-14_r8*500._r8)*rdeltat
+                 nitend(i,k)=nitend(i,k)+dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*micro_mg_homog_size**3._r8*500._r8)*rdeltat
+
                  qctend(i,k)=((1._r8-dum)*dumc(i,k)-qc(i,k))*rdeltat
                  nctend(i,k)=((1._r8-dum)*dumnc(i,k)-nc(i,k))*rdeltat
                  tlat(i,k)=tlat(i,k)+xlf*dum*dumc(i,k)*rdeltat
@@ -3314,6 +3361,15 @@ subroutine micro_mg_tend ( &
            end if
         end do 
      end do 
+
+     ! ice number limiter                      
+     do k=1,nlev
+        do i=1,mgncol
+            if (do_cldice .and. nitend(i,k).gt.0._r8.and.ni(i,k)+nitend(i,k)*deltat.gt.micro_mg_max_nicons/rho(i,k)) then
+               nitend(i,k)=max(0._r8,(micro_mg_max_nicons/rho(i,k)-ni(i,k))/deltat)
+            end if
+        end do
+     end do
 
      ! remove any excess over-saturation, which is possible due to non-linearity when adding
      ! together all microphysical processes
@@ -3452,9 +3508,13 @@ subroutine micro_mg_tend ( &
                  nitend(i,k)=(dumni(i,k)*icldm(i,k)-ni(i,k))*rdeltat
               end if
               effi(i,k)   = 1.5_r8/lami(i,k)*1.e6_r8
+              effi(i,k) = effi(i,k)*micro_mg_effi_factor      
+
               sadice(i,k) = 2._r8*pi*(lami(i,k)**(-3))*dumni0A2D(i,k)*rho(i,k)*1.e-2_r8  ! m2/m3 -> cm2/cm3
            else
               effi(i,k)   = 25._r8
+              effi(i,k) = effi(i,k)*micro_mg_effi_factor      
+
               sadice(i,k) = 0._r8
            end if
            ! ice effective diameter for david mitchell's optics
@@ -3470,6 +3530,8 @@ subroutine micro_mg_tend ( &
            ! NOTE: If CARMA is doing the ice microphysics, then the ice effective
            ! radius has already been determined from the size distribution.
            effi(i,k)   = re_ice(i,k) * 1.e6_r8      ! m -> um
+           effi(i,k) = effi(i,k)*micro_mg_effi_factor      
+
            deffi(i,k)  = effi(i,k) * 2._r8
            sadice(i,k) = 4._r8*pi*(effi(i,k)**2)*ni(i,k)*rho(i,k)*1e-2_r8
         end do
