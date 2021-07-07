@@ -1348,7 +1348,8 @@ end subroutine ice_deposition_sublimation_mg4
 ! minimum qc of 1 x 10^-8 prevents floating point error
 
 subroutine kk2000_liq_autoconversion(microp_uniform, qcic, &
-     ncic, rho, relvar, prc, nprc, nprc1, micro_mg_autocon_fact,micro_mg_autocon_nd_exp, micro_mg_autocon_lwp_exp, vlen)
+     ncic, rho, relvar, prc, nprc, nprc1, micro_mg_autocon_fact, &
+     micro_mg_autocon_nd_exp, micro_mg_autocon_lwp_exp, vlen)
 
   integer, intent(in) :: vlen
   logical, intent(in) :: microp_uniform
@@ -1366,9 +1367,9 @@ subroutine kk2000_liq_autoconversion(microp_uniform, qcic, &
   real(r8), dimension(vlen) :: prc_coef
   integer :: i
 
-  !++Trude
-   real(r8), intent(in) :: micro_mg_autocon_fact, micro_mg_autocon_nd_exp,micro_mg_autocon_lwp_exp
-
+  real(r8), intent(in) :: micro_mg_autocon_fact
+  real(r8), intent(in) :: micro_mg_autocon_nd_exp
+  real(r8), intent(in) :: micro_mg_autocon_lwp_exp
 
   !$acc data present (qcic,ncic,rho,relvar,prc,nprc,nprc1) &
   !$acc      create  (prc_coef)
@@ -1396,10 +1397,9 @@ subroutine kk2000_liq_autoconversion(microp_uniform, qcic, &
         ! factor related to qcvar below
         ! switch for sub-columns, don't include sub-grid qc
         prc(i)   = prc_coef(i) * &
-!++ trude
-!             0.01_r8 * 1350._r8 * qcic(i)**2.47_r8 * (ncic(i)*1.e-6_r8*rho(i))**(-1.1_r8)
-             micro_mg_autocon_fact * 1350._r8 * qcic(i)**micro_mg_autocon_lwp_exp * (ncic(i)*1.e-6_r8*rho(i))**(micro_mg_autocon_nd_exp)
-!--trude
+             micro_mg_autocon_fact * 1350._r8 * qcic(i)**micro_mg_autocon_lwp_exp * &
+             (ncic(i)*1.e-6_r8*rho(i))**(micro_mg_autocon_nd_exp)
+
         nprc(i)  = prc(i) * (1._r8/droplet_mass_25um)
         nprc1(i) = prc(i)*ncic(i)/qcic(i)
 
@@ -2740,7 +2740,7 @@ subroutine evaporate_sublimate_precip_graupel_mg4(t, rho, dv, mu, sc, q, qvl, qv
            pre(i) = 0._r8
         end if
 
-        !++AG ADD GRAUPEL, do Same with prdg.
+        ! ADD GRAUPEL, do Same with prdg.
         if (qgic(i).ge.qsmall) then
            call calc_ab(t(i), qvi(i), xxls, abg)
            eps = 2._r8*pi*n0g(i)*rho(i)*Dv(i)*                    &
@@ -2757,9 +2757,7 @@ subroutine evaporate_sublimate_precip_graupel_mg4(t, rho, dv, mu, sc, q, qvl, qv
         end if
      else
         pre(i) = 0._r8
-!++ag
         prdg(i) = 0._r8
-!--ag
      end if
   end do
   !$acc end parallel
