@@ -1378,8 +1378,8 @@ real(r8) :: n0s
 integer :: i
 
 !$acc data present (t,qv,qs,ns,precip_frac,rho,dv,qvl) &
-!$acc      present (qvi,asn,mu,sc) &
-!$acc      create  (ab,eps,qsic,nsic,lams,n0s)
+!$acc      present (qvi,asn,mu,sc,vap_deps) 
+
       
 !$acc parallel vector_length(VLENS) default(present)
 !$acc loop gang vector      
