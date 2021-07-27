@@ -291,9 +291,10 @@ real(r8)           :: micro_mg_max_nicons
 logical  :: remove_supersat ! If true, remove supersaturation after sedimentation loop
 logical  :: do_sb_physics ! do SB 2001 autoconversion or accretion physics
 
-real(r8)           :: vfactor = 1.0
-real(r8)           :: vfac_drop = 1.0   ! h1g, 2020-06-18
-real(r8)           :: vfac_ice  = 1.0   ! h1g, 2020-06-18
+real(r8), parameter :: vfactor = 1.0
+real(r8), parameter :: vfac_drop = 1.0   ! h1g, 2020-06-18
+real(r8), parameter :: vfac_ice  = 1.0   ! h1g, 2020-06-18
+
 logical           ::  do_implicit_fall !   = .true. 
 
 logical           :: accre_sees_auto  != .true.
@@ -1047,32 +1048,6 @@ subroutine micro_mg_tend ( &
   real(r8) :: fs(mgncol,nlev)
   real(r8) :: fns(mgncol,nlev)
 
-  real(r8) :: faloutc(nlev)
-  real(r8) :: faloutnc(nlev)
-  real(r8) :: falouti(nlev)
-  real(r8) :: faloutni(nlev)
-
-  real(r8) :: faloutr(nlev)
-  real(r8) :: faloutnr(nlev)
-  real(r8) :: falouts(nlev)
-
-  real(r8) :: faloutns(nlev)
-  real(r8) :: faltndc
-  real(r8) :: faltndnc
-  real(r8) :: faltndi
-  real(r8) :: faltndni
-  real(r8) :: faltndqie
-  real(r8) :: faltndqce
-
-  real(r8) :: faltndr
-  real(r8) :: faltndnr
-  real(r8) :: faltnds
-  real(r8) :: faltndns
-
-  real(r8) :: faloutg(nlev)
-  real(r8) :: faloutng(nlev)
-  real(r8) :: faltndg
-  real(r8) :: faltndng
   real(r8) :: rainrt(mgncol,nlev)     ! rain rate for reflectivity calculation
 
   ! dummy variables
@@ -1125,11 +1100,7 @@ subroutine micro_mg_tend ( &
   real(r8) :: ps,H
       
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-
-  rtmp =0._r8  
-  ctmp =0._r8
-  ntmp =0._r8
-      
+            
   ps=0._r8
   H =0._r8
       
@@ -1204,11 +1175,10 @@ subroutine micro_mg_tend ( &
   !$acc               pracg,psacwg,pgsacw,pgracs,prdg,qmultg,qmultrg,uns, &
   !$acc               unr,ung,arn,asn,agn,acn,ain,ajn,mi0l,esl,esi,esnA,  &
   !$acc               qvl,qvi,qvnA,qvnAI,relhum,fc,fnc,fi,fni,fg,fng,fr,  &
-  !$acc               fnr,fs,fns,faloutc,faloutnc,falouti,faloutni,       &
-  !$acc               faloutr,faloutnr,falouts,faloutns,rainrt,dum1A,     &
+  !$acc               fnr,fs,fns,rainrt,dum1A,     &
   !$acc               dum2A,dum3A,dumni0A2D,dumns0A2D,ttmpA,qtmpAI,dumc,  &
   !$acc               dumnc,dumi,dumni,dumr,dumnr,dums,dumns,dumg,dumng,  &
-  !$acc               dum_2D,pdel_inv)    
+  !$acc               dum_2D,pdel_inv,rtmp,ctmp,ntmp,zhalf,flx)    
 
   ! Copies of input concentrations that may be changed internally.
 
@@ -1421,10 +1391,15 @@ subroutine micro_mg_tend ( &
         sflx(i,k)               = 0._r8
         lflx(i,k)               = 0._r8
         iflx(i,k)               = 0._r8
-        gflx(i,k)               = 0._r8
+        gflx(i,k)               = 0._r8  
      end do
   end do
 
+  !$acc loop gang vector collapse(1)
+  do k=1,nlev
+     flx(k) = 0._r8
+  end do 
+ 
   !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
@@ -1456,7 +1431,15 @@ subroutine micro_mg_tend ( &
         precip_frac(i,k)        = mincld
         lamc(i,k)               = 0._r8
         lamg(i,k)               = 0._r8
-      
+
+        ! Interim variables for accretion
+        rtmp(i,k)               = 0._r8  
+        ctmp(i,k)               = 0._r8  
+        ntmp(i,k)               = 0._r8
+
+        ! Heights for implicit fall speed
+        zhalf(i,k)              = 0._r8
+        
         ! initialize microphysical tendencies
         tlat(i,k)               = 0._r8
         qvlat(i,k)              = 0._r8
@@ -2139,16 +2122,23 @@ subroutine micro_mg_tend ( &
      call sb2001v2_accre_cld_water_rain(qcic, ncic, qric, rho, relvar, pra, npra, mgncol*nlev)     
   else
 
-     rtmp = qric 
-     ctmp = qcic 
-     ntmp = ncic 
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)
+  do k = 1,nlev
+     do i = 1,mgncol 
+        rtmp(i,k) = qric(i,k) 
+        ctmp(i,k) = qcic(i,k) 
+        ntmp(i,k) = ncic(i,k) 
 
-     if (accre_sees_auto) then
-       rtmp = rtmp + prc*deltat
-       ctmp = ctmp - prc*deltat
-       ntmp = ntmp - nprc*deltat    
-     endif 
-      
+        if (accre_sees_auto) then
+          rtmp(i,k) = rtmp(i,k) + prc(i,k)*deltat
+          ctmp(i,k) = ctmp(i,k) - prc(i,k)*deltat
+          ntmp(i,k) = ntmp(i,k) - nprc(i,k)*deltat    
+        endif 
+     end do
+  end do
+  !$acc end parallel
+        
      call accrete_cloud_water_rain(microp_uniform, rtmp, ctmp, ntmp, relvar, accre_enhan, pra, npra, mgncol*nlev)
   endif
 
@@ -2319,7 +2309,7 @@ subroutine micro_mg_tend ( &
         ! first limit ice deposition/nucleation vap_dep + mnuccd + vap_deps
         dum1 = vap_dep(i,k) + mnuccd(i,k) + vap_deps(i,k)
         if (dum1 > 1.e-20_r8) then
-           dum = (q(i,k)-qvi(i,k))/(1._r8 + xxls_squared*qvi(i,k)/(cpp*rv*t(i,k)**2))/deltat
+           dum = (q(i,k)-qvi(i,k))/(1._r8 + xxls_squared*qvi(i,k)/(cpp*rv*t(i,k)**2))*rdeltat
            dum = max(dum,0._r8)
            if (dum1 > dum) then
               ! Allocate the limited "dum" tendency to mnuccd and vap_dep

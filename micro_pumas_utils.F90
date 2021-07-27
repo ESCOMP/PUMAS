@@ -1377,6 +1377,12 @@ real(r8) :: lams
 real(r8) :: n0s
 integer :: i
 
+!$acc data present (t,qv,qs,ns,precip_frac,rho,dv,qvl) &
+!$acc      present (qvi,asn,mu,sc) &
+!$acc      create  (ab,eps,qsic,nsic,lams,n0s)
+      
+!$acc parallel vector_length(VLENS) default(present)
+!$acc loop gang vector      
 do i=1,vlen
    vap_deps(i)=0._r8
    if (qs(i)>=qsmall.and.precip_frac(i)>=0.1) then  
@@ -1412,7 +1418,9 @@ do i=1,vlen
 
    end if !qs>qsmall
 enddo
+!$acc end parallel
 
+!$acc end data
 end subroutine vapor_deposition_onto_snow
       
 !========================================================================
