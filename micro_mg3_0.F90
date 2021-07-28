@@ -291,9 +291,10 @@ real(r8)           :: micro_mg_max_nicons
 logical  :: remove_supersat ! If true, remove supersaturation after sedimentation loop
 logical  :: do_sb_physics ! do SB 2001 autoconversion or accretion physics
 
-real(r8), parameter :: vfactor = 1.0
-real(r8), parameter :: vfac_drop = 1.0   ! h1g, 2020-06-18
-real(r8), parameter :: vfac_ice  = 1.0   ! h1g, 2020-06-18
+!Parameters for Implicit Sedimentation Calculation    
+real(r8), parameter :: vfactor = 1.0        ! Rain/Snow/Graupel Factor
+real(r8), parameter :: vfac_drop = 1.0      ! Cloud Liquid Factor
+real(r8), parameter :: vfac_ice  = 1.0      ! Cloud Ice Factor
 
 logical           ::  do_implicit_fall !   = .true. 
 
@@ -766,11 +767,11 @@ subroutine micro_mg_tend ( &
   real(r8), intent(out) :: msacwitot(mgncol,nlev)       ! mixing ratio tend due to H-M splintering
   real(r8), intent(out) :: psacwstot(mgncol,nlev)       ! collection of cloud water by snow
   real(r8), intent(out) :: bergstot(mgncol,nlev)        ! bergeron process on snow
-  real(r8), intent(out) :: vapdepstot(mgncol,nlev) ! vapor deposition  process onto snow
-  real(r8), intent(out) :: bergtot(mgncol,nlev) ! bergeron process on cloud ice
+  real(r8), intent(out) :: vapdepstot(mgncol,nlev)      ! vapor deposition  process onto snow
+  real(r8), intent(out) :: bergtot(mgncol,nlev)         ! bergeron process on cloud ice
   real(r8), intent(out) :: melttot(mgncol,nlev)         ! melting of cloud ice
-  real(r8), intent(out) :: meltstot(mgncol,nlev)         ! melting of snow
-  real(r8), intent(out) :: meltgtot(mgncol,nlev)         ! melting of graupel
+  real(r8), intent(out) :: meltstot(mgncol,nlev)        ! melting of snow
+  real(r8), intent(out) :: meltgtot(mgncol,nlev)        ! melting of graupel
   real(r8), intent(out) :: mnudeptot(mgncol,nlev)       ! deposition nucleation to ice 
   real(r8), intent(out) :: homotot(mgncol,nlev)         ! homogeneous freezing cloud water
   real(r8), intent(out) :: qcrestot(mgncol,nlev)        ! residual cloud condensation due to removal of excess supersat
@@ -1095,12 +1096,14 @@ subroutine micro_mg_tend ( &
   real(r8) :: ctmp(mgncol,nlev) ! dummy for liq - autoconversion
   real(r8) :: ntmp(mgncol,nlev) ! dummy for liq - autoconversion number
 
-  ! Variables for height calculation
-  real(r8) :: zhalf(mgncol,nlev)  !midpoint height
-  real(r8) :: ps,H
+  ! Variables for height calculation (used in Implicit Fall Speed)
+  real(r8) :: zhalf(mgncol,nlev)  ! midpoint height
+  real(r8) :: ps,H                ! surface pressure and scale height
       
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-            
+
+  ! Initialize surface pressure (ps) and scale height (H) for midpoint height calculation
+  ! needed for Implicit Fall Speed    
   ps=0._r8
   H =0._r8
       
@@ -2121,23 +2124,24 @@ subroutine micro_mg_tend ( &
   if (do_sb_physics) then
      call sb2001v2_accre_cld_water_rain(qcic, ncic, qric, rho, relvar, pra, npra, mgncol*nlev)     
   else
+   
+     !$acc parallel vector_length(VLENS) default(present)
+     !$acc loop gang vector collapse(2)
+     do k = 1,nlev
+        do i = 1,mgncol 
+           rtmp(i,k) = qric(i,k) 
+           ctmp(i,k) = qcic(i,k) 
+           ntmp(i,k) = ncic(i,k) 
 
-  !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector collapse(2)
-  do k = 1,nlev
-     do i = 1,mgncol 
-        rtmp(i,k) = qric(i,k) 
-        ctmp(i,k) = qcic(i,k) 
-        ntmp(i,k) = ncic(i,k) 
-
-        if (accre_sees_auto) then
-          rtmp(i,k) = rtmp(i,k) + prc(i,k)*deltat
-          ctmp(i,k) = ctmp(i,k) - prc(i,k)*deltat
-          ntmp(i,k) = ntmp(i,k) - nprc(i,k)*deltat    
-        endif 
+           !Option: include recently autoconverted rain (prc, nprc) in accretion
+           if (accre_sees_auto) then
+              rtmp(i,k) = rtmp(i,k) + prc(i,k)*deltat
+              ctmp(i,k) = ctmp(i,k) - prc(i,k)*deltat
+              ntmp(i,k) = ntmp(i,k) - nprc(i,k)*deltat    
+           endif 
+        end do
      end do
-  end do
-  !$acc end parallel
+     !$acc end parallel
         
      call accrete_cloud_water_rain(microp_uniform, rtmp, ctmp, ntmp, relvar, accre_enhan, pra, npra, mgncol*nlev)
   endif
@@ -4387,22 +4391,14 @@ subroutine implicit_fall (dt, ktop, kbot, ze, vt, dp, q, precip, m1)
     
     implicit none
     
-    integer, intent (in) :: ktop, kbot
-    
-    real(r8), intent (in) :: dt
-    
-    real(r8), intent (in), dimension (ktop:kbot + 1) :: ze
-    
-    real(r8), intent (in), dimension (ktop:kbot) :: vt, dp
-    
-    real(r8), intent (inout), dimension (ktop:kbot) :: q
-    
-    real(r8), intent (out), dimension (ktop:kbot) :: m1
-    
-    real(r8), intent (out) :: precip
-    
+    integer, intent (in) :: ktop, kbot                        ! Level range (top to bottom)
+    real(r8), intent (in) :: dt                               ! Time step
+    real(r8), intent (in), dimension (ktop:kbot + 1) :: ze    ! Midpoint height (m)
+    real(r8), intent (in), dimension (ktop:kbot) :: vt, dp    ! fall speed and pressure difference across level
+    real(r8), intent (inout), dimension (ktop:kbot) :: q      ! mass
+    real(r8), intent (out), dimension (ktop:kbot) :: m1       ! Surface Flux
+    real(r8), intent (out) :: precip                          ! Surface Precipitation
     real(r8), dimension (ktop:kbot) :: dz, qm, dd
-    
     integer :: k
     
     do k = ktop, kbot

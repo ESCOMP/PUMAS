@@ -1350,18 +1350,18 @@ subroutine vapor_deposition_onto_snow(t, qv, qs, ns, &
 !INPUT VARS:
 !===============================================
 integer,  intent(in) :: vlen
-real(r8), dimension(vlen), intent(in) :: t
-real(r8), dimension(vlen), intent(in) :: qv
-real(r8), dimension(vlen), intent(in) :: qs
-real(r8), dimension(vlen), intent(in) :: ns
-real(r8), dimension(vlen), intent(in) :: precip_frac
-real(r8), dimension(vlen), intent(in) :: rho
-real(r8), dimension(vlen), intent(in) :: dv
-real(r8), dimension(vlen), intent(in) :: qvl
-real(r8), dimension(vlen), intent(in) :: qvi
+real(r8), dimension(vlen), intent(in) :: t     ! Temperature
+real(r8), dimension(vlen), intent(in) :: qv    ! Specific Humidity 
+real(r8), dimension(vlen), intent(in) :: qs    ! Snow Mass Mixing Ratio
+real(r8), dimension(vlen), intent(in) :: ns    ! Snow number concentration
+real(r8), dimension(vlen), intent(in) :: precip_frac ! Precipitation Fraction
+real(r8), dimension(vlen), intent(in) :: rho   ! Air Density
+real(r8), dimension(vlen), intent(in) :: dv    ! diffusivity of water vapor
+real(r8), dimension(vlen), intent(in) :: qvl   ! saturation vapor pressure liq
+real(r8), dimension(vlen), intent(in) :: qvi   ! saturation vapor pressure ice
 real(r8), dimension(vlen), intent(in) :: asn   ! fall speed parameter for snow
-real(r8), dimension(vlen), intent(in) :: mu
-real(r8), dimension(vlen), intent(in) :: sc
+real(r8), dimension(vlen), intent(in) :: mu    ! viscosity
+real(r8), dimension(vlen), intent(in) :: sc    ! schmidt number
 
 !OUTPUT VARS:
 !===============================================
