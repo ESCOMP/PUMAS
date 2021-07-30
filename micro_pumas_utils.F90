@@ -76,6 +76,7 @@ public :: &
      graupel_riming_liquid_snow, &
      graupel_rain_riming_snow, &
      graupel_rime_splintering, &
+     vapor_deposition_onto_snow, &
      evaporate_sublimate_precip_graupel, &
      evaporate_sublimate_precip_mg4, &
      evaporate_sublimate_precip_graupel_mg4, &
@@ -1341,7 +1342,87 @@ subroutine ice_deposition_sublimation_mg4(t, qv, qi, niic, &
 
   !$acc end data
 end subroutine ice_deposition_sublimation_mg4
+            
+subroutine vapor_deposition_onto_snow(t, qv, qs, ns, &
+   precip_frac, rho, dv,qvl, qvi, asn, mu, sc, &
+   vap_deps, vlen)
 
+!INPUT VARS:
+!===============================================
+integer,  intent(in) :: vlen
+real(r8), dimension(vlen), intent(in) :: t     ! Temperature
+real(r8), dimension(vlen), intent(in) :: qv    ! Specific Humidity 
+real(r8), dimension(vlen), intent(in) :: qs    ! Snow Mass Mixing Ratio
+real(r8), dimension(vlen), intent(in) :: ns    ! Snow number concentration
+real(r8), dimension(vlen), intent(in) :: precip_frac ! Precipitation Fraction
+real(r8), dimension(vlen), intent(in) :: rho   ! Air Density
+real(r8), dimension(vlen), intent(in) :: dv    ! diffusivity of water vapor
+real(r8), dimension(vlen), intent(in) :: qvl   ! saturation vapor pressure liq
+real(r8), dimension(vlen), intent(in) :: qvi   ! saturation vapor pressure ice
+real(r8), dimension(vlen), intent(in) :: asn   ! fall speed parameter for snow
+real(r8), dimension(vlen), intent(in) :: mu    ! viscosity
+real(r8), dimension(vlen), intent(in) :: sc    ! schmidt number
+
+!OUTPUT VARS:
+!===============================================
+real(r8), dimension(vlen), intent(out) :: vap_deps !vapor deposition onto snow (cell-ave value)
+
+!INTERNAL VARS:
+!===============================================
+real(r8) :: ab
+real(r8) :: eps
+real(r8) :: qsic
+real(r8) :: nsic
+real(r8) :: lams
+real(r8) :: n0s
+integer :: i
+
+!$acc data present (t,qv,qs,ns,precip_frac,rho,dv,qvl) &
+!$acc      present (qvi,asn,mu,sc,vap_deps) 
+
+      
+!$acc parallel vector_length(VLENS) default(present)
+!$acc loop gang vector      
+do i=1,vlen
+   vap_deps(i)=0._r8
+   if (qs(i)>=qsmall.and.precip_frac(i)>=0.1) then  
+
+!GET IN-CLOUD qs, ns
+!===============================================
+      qsic = qs(i)/precip_frac(i)
+      nsic = ns(i)/precip_frac(i)
+
+!Compute linearized condensational heating correction
+      call calc_ab(t(i), qvi(i), xxls, ab)
+!Get slope and intercept of gamma distn for ice.
+      call size_dist_param_basic_line(mg_snow_props, qsic, nsic, lams, n0s)
+!Get depletion timescale eps
+      eps = 2._r8*pi*n0s*rho(i)*dv(i)* &
+        (f1s/(lams*lams)+ &
+        f2s*(asn(i)*rho(i)/mu(i))**0.5_r8* &
+        sc(i)**(1._r8/3._r8)*gamma_half_bs_plus5/ &
+        (lams**(5._r8/2._r8+bs/2._r8)))
+
+!Compute deposition/sublimation
+      vap_deps(i) = eps/ab*(qv(i) - qvi(i))
+
+!Make this a grid-averaged quantity
+      vap_deps(i)=vap_deps(i)*precip_frac(i)
+
+!Only want deposition
+      if (t(i) < tmelt .and. vap_deps(i)>0._r8) then
+         vap_deps(i)=max(vap_deps(i),0._r8)
+      else
+         vap_deps(i)=0._r8
+      end if   
+
+   end if !qs>qsmall
+enddo
+!$acc end parallel
+
+!$acc end data
+end subroutine vapor_deposition_onto_snow
+      
 !========================================================================
 ! autoconversion of cloud liquid water to rain
 ! formula from Khrouditnov and Kogan (2000), modified for sub-grid distribution of qc
