@@ -1138,50 +1138,49 @@ subroutine micro_mg_tend ( &
   ! set mdust as the number of dust bins for use later in contact freezing subroutine
   mdust = size(rndst,3)
 
-  !$acc data copyin  (t,q,qcn,qin,ncn,nin,qrn,qsn,nrn,nsn,qgr,ngr,relvar, &
-  !$acc               accre_enhan,p,pdel,cldn,liqcldf,icecldf,qsatfac,    &
-  !$acc               naai,npccn,rndst,nacon,tnd_qsnow,tnd_nsnow,re_ice,  &
-  !$acc               frzimm,frzcnt,frzdep,mg_liq_props,mg_ice_props,     &
-  !$acc               mg_rain_props,mg_graupel_props,mg_hail_props,       &
-  !$acc               mg_snow_props)                                      &
-  !$acc      copyout (qcsinksum_rate1ord,tlat,qvlat,qctend,qitend,nctend, &
-  !$acc               nitend,qrtend,qstend,nrtend,nstend,qgtend,ngtend,   &
-  !$acc               effc,effc_fn,effi,sadice,sadsnow,prect,preci,       &
-  !$acc               nevapr,evapsnow,am_evp_st,prain,prodsnow,cmeout,    &
-  !$acc               deffi,pgamrad,lamcrad,qsout,dsout,lflx,iflx,rflx,   &
-  !$acc               sflx,gflx,qrout,reff_rain,reff_snow,reff_grau,      &
-  !$acc               qcsevap,qisevap,qvres,cmeitot,vtrmc,vtrmi,umr,ums,  &
-  !$acc               umg,qgsedten,qcsedten,qisedten,qrsedten,qssedten,   &
-  !$acc               pratot,prctot,mnuccctot,mnuccttot,msacwitot,        &
-  !$acc               psacwstot,bergstot,bergtot,melttot,meltstot,        &
-  !$acc               meltgtot,mnudeptot,homotot,qcrestot,prcitot,        &
-  !$acc               praitot,qirestot,mnuccrtot,mnuccritot,pracstot,     &
-  !$acc               meltsdttot,frzrdttot,mnuccdtot,pracgtot,psacwgtot,  &
-  !$acc               pgsacwtot,pgracstot,prdgtot,qmultgtot,qmultrgtot,   &
-  !$acc               psacrtot,npracgtot,nscngtot,ngracstot,nmultgtot,    &
-  !$acc               nmultrgtot,npsacwgtot,nrout,nsout,refl,arefl,       &
-  !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,rercld,ncai,ncal,  &
-  !$acc               qrout2,qsout2,nrout2,nsout2,drout2,dsout2,freqs,    &
-  !$acc               freqr,nfice,qcrat,qgout,dgout,ngout,qgout2,ngout2,  &
-  !$acc               dgout2,freqg,prer_evap)                             &
-  !$acc      create  (qc,qi,nc,ni,qr,qs,nr,ns,qg,ng,rho,dv,mu,sc,rhof,    &
-  !$acc               precip_frac,cldm,icldm,lcldm,qsfm,qcic,qiic,qsic,   &
-  !$acc               qric,qgic,ncic,niic,nsic,nric,ngic,lami,n0i,  &
-  !$acc               lamc,pgam,lams,n0s,lamr,n0r,lamg,n0g,minstsm,       &
-  !$acc               ninstsm,minstgm,ninstgm,minstrf,ninstrf,vap_dep,    &
-  !$acc               ice_sublim,nnuccd,mnuccd,mnuccc,nnuccc,mnucct,      &
-  !$acc               nnucct,mnudep,nnudep,msacwi,nsacwi,prc,nprc,nprc1,  &
-  !$acc               nsagg,nragg,psacws,npsacws,pracs,npracs,mnuccr,     &
-  !$acc               nnuccr,mnuccri,nnuccri,pra,npra,prci,nprci,prai,    &
-  !$acc               nprai,pre,prds,nsubi,nsubc,nsubs,nsubr,berg,bergs,  &
-  !$acc               npracg,nscng,ngracs,nmultg,nmultrg,npsacwg,psacr,   &
-  !$acc               pracg,psacwg,pgsacw,pgracs,prdg,qmultg,qmultrg,uns, &
-  !$acc               unr,ung,arn,asn,agn,acn,ain,ajn,mi0l,esl,esi,esnA,  &
-  !$acc               qvl,qvi,qvnA,qvnAI,relhum,fc,fnc,fi,fni,fg,fng,fr,  &
-  !$acc               fnr,fs,fns,rainrt,dum1A,     &
-  !$acc               dum2A,dum3A,dumni0A2D,dumns0A2D,ttmpA,qtmpAI,dumc,  &
-  !$acc               dumnc,dumi,dumni,dumr,dumnr,dums,dumns,dumg,dumng,  &
-  !$acc               dum_2D,pdel_inv,rtmp,ctmp,ntmp,zhalf,flx)    
+  !$acc data copyin  (t,q,qcn,qin,ncn,nin,qrn,qsn,nrn,nsn,qgr,ngr,relvar,     &
+  !$acc               accre_enhan,p,pdel,cldn,liqcldf,icecldf,qsatfac,        &
+  !$acc               naai,npccn,rndst,nacon,tnd_qsnow,tnd_nsnow,re_ice,      &
+  !$acc               frzimm,frzcnt,frzdep,mg_liq_props,mg_ice_props,         &
+  !$acc               mg_rain_props,mg_graupel_props,mg_hail_props,           &
+  !$acc               mg_snow_props)                                          &
+  !$acc      copyout (qcsinksum_rate1ord,tlat,qvlat,qctend,qitend,nctend,     &
+  !$acc               nitend,qrtend,qstend,nrtend,nstend,qgtend,ngtend,       &
+  !$acc               effc,effc_fn,effi,sadice,sadsnow,prect,preci,           &
+  !$acc               nevapr,evapsnow,am_evp_st,prain,prodsnow,cmeout,        &
+  !$acc               deffi,pgamrad,lamcrad,qsout,dsout,lflx,iflx,rflx,       &
+  !$acc               sflx,gflx,qrout,reff_rain,reff_snow,reff_grau,          &
+  !$acc               qcsevap,qisevap,qvres,cmeitot,vtrmc,vtrmi,umr,ums,      &
+  !$acc               umg,qgsedten,qcsedten,qisedten,qrsedten,qssedten,       &
+  !$acc               pratot,prctot,mnuccctot,mnuccttot,msacwitot,            &
+  !$acc               psacwstot,bergstot,vapdepstot,bergtot,melttot,          &
+  !$acc               meltstot,meltgtot,mnudeptot,homotot,qcrestot,prcitot,   &
+  !$acc               praitot,qirestot,mnuccrtot,mnuccritot,pracstot,         &
+  !$acc               meltsdttot,frzrdttot,mnuccdtot,pracgtot,psacwgtot,      &
+  !$acc               pgsacwtot,pgracstot,prdgtot,qmultgtot,qmultrgtot,       &
+  !$acc               psacrtot,npracgtot,nscngtot,ngracstot,nmultgtot,        &
+  !$acc               nmultrgtot,npsacwgtot,nrout,nsout,refl,arefl,           &
+  !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,rercld,ncai,ncal,      &
+  !$acc               qrout2,qsout2,nrout2,nsout2,drout2,dsout2,freqs,        &
+  !$acc               freqr,nfice,qcrat,qgout,dgout,ngout,qgout2,ngout2,      &
+  !$acc               dgout2,freqg,prer_evap)                                 &
+  !$acc      create  (qc,qi,nc,ni,qr,qs,nr,ns,qg,ng,rho,dv,mu,sc,rhof,        &
+  !$acc               precip_frac,cldm,icldm,lcldm,qsfm,qcic,qiic,qsic,qric,  &
+  !$acc               qgic,ncic,niic,nsic,nric,ngic,lami,n0i,lamc,pgam,lams,  &
+  !$acc               n0s,lamr,n0r,lamg,n0g,minstsm,ninstsm,minstgm,ninstgm,  &
+  !$acc               minstrf,ninstrf,vap_dep,ice_sublim,vap_deps,nnuccd,     &
+  !$acc               mnuccd,mnuccc,nnuccc,mnucct,nnucct,mnudep,nnudep,       &
+  !$acc               msacwi,nsacwi,prc,nprc,nprc1,nsagg,nragg,psacws,        &
+  !$acc               npsacws,pracs,npracs,mnuccr,nnuccr,mnuccri,nnuccri,pra, &
+  !$acc               npra,prci,nprci,prai,nprai,pre,prds,nsubi,nsubc,nsubs,  &
+  !$acc               nsubr,berg,bergs,npracg,nscng,ngracs,nmultg,nmultrg,    &
+  !$acc               npsacwg,psacr,pracg,psacwg,pgsacw,pgracs,prdg,qmultg,   &
+  !$acc               qmultrg,uns,unr,ung,arn,asn,agn,acn,ain,ajn,mi0l,esl,   &
+  !$acc               esi,esnA,qvl,qvi,qvnA,qvnAI,relhum,fc,fnc,fi,fni,fg,    &
+  !$acc               fng,fr,fnr,fs,fns,rainrt,dum1A,dum2A,dum3A,dumni0A2D,   &
+  !$acc               dumns0A2D,ttmpA,qtmpAI,dumc,dumnc,dumi,dumni,dumr,      &
+  !$acc               dumnr,dums,dumns,dumg,dumng,dum_2D,pdel_inv,rtmp,ctmp,  &
+  !$acc               ntmp,zhalf,flx)    
 
   ! Copies of input concentrations that may be changed internally.
 
