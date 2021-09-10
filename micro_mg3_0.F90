@@ -1396,11 +1396,6 @@ subroutine micro_mg_tend ( &
      end do
   end do
 
-  !$acc loop gang vector collapse(1)
-  do k=1,nlev
-     flx(k) = 0._r8
-  end do 
- 
   !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
