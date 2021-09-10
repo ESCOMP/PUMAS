@@ -4273,6 +4273,10 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumx,fx, &
 
    present_preci = present(preci)
 
+   !$acc data present (zhalf,pdel,dumx,fx,dumnx,fnx,xflx,  &
+   !$acc               qxsedten,qxtend,prect,nxtend,preci) &
+   !$acc      create  (flx,dum_2D,precip)
+
    !$acc parallel vector_length(VLENS) default(present)
    !$acc loop gang vector collapse(2)
    do k=1,nlev
@@ -4282,7 +4286,7 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumx,fx, &
    enddo
    !$acc end parallel        
 
-   call implicit_fall ( deltat, 1, nlev, zhalf, fx, pdel, dum_2D, precip, flx)
+   call implicit_fall ( deltat, mgncol, 1, nlev, zhalf, fx, pdel, dum_2D, precip, flx)
 
    !$acc parallel vector_length(VLENS) default(present)
    !$acc loop gang vector collapse(2)
@@ -4311,13 +4315,18 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumx,fx, &
    enddo
    !$acc end parallel     
 
-   call implicit_fall ( deltat, 1, nlev, zhalf, fnx, pdel, dum_2D, precip, flx)
+   call implicit_fall ( deltat, mgncol, 1, nlev, zhalf, fnx, pdel, dum_2D, precip, flx)
 
+   !$acc parallel vector_length(VLENS) default(present)
+   !$acc loop gang vector collapse(2)
    do k=1,nlev
       do i=1,mgncol
          nxtend(i,k) = nxtend(i,k) + (dum_2D(i,k) - dumnx(i,k))/deltat
       enddo
    enddo
+   !$acc end parallel
+
+   !$acc end data
 
 end subroutine Sedimentation_implicit
 
@@ -4383,61 +4392,97 @@ end subroutine micro_mg_get_cols
 ! developed by sj lin, 2016
 ! =======================================================================
 
-subroutine implicit_fall (dt, ktop, kbot, ze, vt, dp, q, precip, m1)
+subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
     
     implicit none
     
-    integer, intent (in) :: ktop, kbot                        ! Level range (top to bottom)
-    real(r8), intent (in) :: dt                               ! Time step
-    real(r8), intent (in), dimension (ktop:kbot + 1) :: ze    ! Midpoint height (m)
-    real(r8), intent (in), dimension (ktop:kbot) :: vt, dp    ! fall speed and pressure difference across level
-    real(r8), intent (inout), dimension (ktop:kbot) :: q      ! mass
-    real(r8), intent (out), dimension (ktop:kbot) :: m1       ! Surface Flux
-    real(r8), intent (out) :: precip                          ! Surface Precipitation
-    real(r8), dimension (ktop:kbot) :: dz, qm, dd
-    integer :: k
+    integer, intent (in) :: mgncol                                   ! Number of columns in MG      
+    integer, intent (in) :: ktop, kbot                               ! Level range (top to bottom)
+    real(r8), intent (in) :: dt                                      ! Time step
+    real(r8), intent (in), dimension (mgncol,ktop:kbot + 1) :: ze    ! Midpoint height (m)
+    real(r8), intent (in), dimension (mgncol,ktop:kbot) :: vt, dp    ! fall speed and pressure difference across level
+    real(r8), intent (inout), dimension (mgncol,ktop:kbot) :: q      ! mass
+    real(r8), intent (out), dimension (mgncol,ktop:kbot) :: m1       ! Surface Flux
+    real(r8), intent (out) :: precip(mgncol)                         ! Surface Precipitation
+    real(r8), dimension (mgncol,ktop:kbot) :: dz, qm, dd
+    integer :: i,k
     
+    !$acc data present (ze,vt,dp,q,m1,precip,dz,qm,dd)
+
+    !$acc parallel vector_length(VLENS) default(present)
+    !$acc loop gang vector collapse(2)
     do k = ktop, kbot
-        dz (k) = ze (k) - ze (k + 1)
-        dd (k) = dt * vt (k)
-        q (k) = q (k) * dp (k)
+       do i = 1, mgncol
+          dz (i,k) = ze (i,k) - ze (i,k + 1)
+          dd (i,k) = dt * vt (i,k)
+          q (i,k) = q (i,k) * dp (i,k)
+       enddo
     enddo
     
     ! -----------------------------------------------------------------------
     ! sedimentation: non - vectorizable loop
     ! -----------------------------------------------------------------------
-    
-    qm (ktop) = q (ktop) / (dz (ktop) + dd (ktop))
+   
+    !$acc loop gang vector
+    do i = 1, mgncol 
+       qm (i,ktop) = q (i,ktop) / (dz (i,ktop) + dd (i,ktop))
+    enddo
+
+    !$acc loop seq
     do k = ktop + 1, kbot
-        qm (k) = (q (k) + dd (k - 1) * qm (k - 1)) / (dz (k) + dd (k))
+       !$acc loop gang vector
+       do i = 1, mgncol
+          qm (i,k) = (q (i,k) + dd (i,k - 1) * qm (i,k - 1)) / (dz (i,k) + dd (i,k))
+       enddo
     enddo
     
     ! -----------------------------------------------------------------------
     ! qm is density at this stage
     ! -----------------------------------------------------------------------
-    
+   
+    !$acc loop gang vector collapse(2) 
     do k = ktop, kbot
-        qm (k) = qm (k) * dz (k)
+       do i = 1, mgncol
+          qm (i,k) = qm (i,k) * dz (i,k)
+       enddo
     enddo
     
     ! -----------------------------------------------------------------------
     ! output mass fluxes: non - vectorizable loop
     ! -----------------------------------------------------------------------
     
-    m1 (ktop) = q (ktop) - qm (ktop)
-    do k = ktop + 1, kbot
-        m1 (k) = m1 (k - 1) + q (k) - qm (k)
+    !$acc loop gang vector
+    do i = 1, mgncol
+       m1 (i,ktop) = q (i,ktop) - qm (i,ktop)
     enddo
-    precip = m1 (kbot)
-    
+
+    !$acc loop seq
+    do k = ktop + 1, kbot
+       !$acc loop gang vector
+       do i = 1, mgncol
+          m1 (i,k) = m1 (i,k - 1) + q (i,k) - qm (i,k)
+       enddo
+    enddo
+
+    !$acc loop gang vector
+    do i = 1, mgncol
+       precip(i) = m1 (i,kbot)
+    enddo
+ 
     ! -----------------------------------------------------------------------
     ! update:
     ! -----------------------------------------------------------------------
     
+    !$acc loop gang vector collapse(2)
     do k = ktop, kbot
-        q (k) = qm (k) / dp (k)
+       do i = 1, mgncol
+          q (i,k) = qm (i,k) / dp (i,k)
+       enddo
     enddo
-    
+    !$acc end parallel
+
+    !$acc end data
+
 end subroutine implicit_fall
 
       
