@@ -4295,11 +4295,15 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumx,fx, &
          endif
          qxsedten(i,k) = qxsedten(i,k) + (dum_2D(i,k) - dumx(i,k))/deltat
          qxtend(i,k) = qxtend(i,k) + (dum_2D(i,k) - dumx(i,k))/deltat
-         if ( precip(i) .ge. 0.0 ) then !h1g, 2019-11-26, ensure numerical stability
-            prect(i) = prect(i)+precip(i)/g/deltat/1000._r8
-            if (present_preci) preci(i) = preci(i)+precip(i)/g/deltat/1000._r8
-         endif
       enddo
+   enddo
+
+   !$acc loop gang vector
+   do i=1,mgncol
+      if ( precip(i) .ge. 0.0 ) then !h1g, 2019-11-26, ensure numerical stability
+         prect(i) = prect(i)+precip(i)/g/deltat/1000._r8
+         if (present_preci) preci(i) = preci(i)+precip(i)/g/deltat/1000._r8
+      endif
    enddo
 
    !$acc loop gang vector collapse(2)
