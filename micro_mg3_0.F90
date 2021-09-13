@@ -3182,27 +3182,27 @@ if ( do_implicit_fall ) then
  ! cloud water (mass and number) sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumc,fc,dumnc,fnc, &
-                               .False.,lflx,qcsedten,qctend,prect,nctend)
+                               .FALSE.,lflx,qcsedten,qctend,prect,nctend)
 
  ! cloud ice (mass and number) sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumi,fi,dumni,fni, &
-                               .False.,iflx,qisedten,qitend,prect,nitend,preci)
+                               .FALSE.,iflx,qisedten,qitend,prect,nitend,preci)
 
  ! rain water (mass and number) sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumr,fr,dumnr,fnr, &
-                               .True.,rflx,qrsedten,qrtend,prect,nrtend)
+                               .TRUE.,rflx,qrsedten,qrtend,prect,nrtend)
 
  ! snow water (mass and number) sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dums,fs,dumns,fns, &
-                               .True.,sflx,qssedten,qstend,prect,nstend,preci)
+                               .TRUE.,sflx,qssedten,qstend,prect,nstend,preci)
 
  ! graupel (mass and number) sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumg,fg,dumng,fng, &
-                               .True.,gflx,qgsedten,qgtend,prect,ngtend,preci)
+                               .TRUE.,gflx,qgsedten,qgtend,prect,ngtend,preci)
 
 else  
   ! begin sedimentation
