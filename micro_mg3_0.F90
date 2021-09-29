@@ -550,7 +550,7 @@ subroutine micro_mg_tend ( &
      nrn,                          nsn,                          &
      qgr,                          ngr,                          &
      relvar,                       accre_enhan,                  &
-     p,                            pdel,                         &
+     p,                            pdel, pint,                   &
      cldn,    liqcldf,        icecldf,       qsatfac,            &
      qcsinksum_rate1ord,                                         &
      naai,                         npccn,                        &
@@ -682,7 +682,8 @@ subroutine micro_mg_tend ( &
 
   real(r8), intent(in) :: p(mgncol,nlev)        ! air pressure (pa)
   real(r8), intent(in) :: pdel(mgncol,nlev)     ! pressure difference across level (pa)
-
+  real(r8), intent(in) :: pint(mgncol,nlev+1)     ! pressure at interfaces
+  
   real(r8), intent(in) :: cldn(mgncol,nlev)      ! cloud fraction (no units)
   real(r8), intent(in) :: liqcldf(mgncol,nlev)   ! liquid cloud fraction (no units)
   real(r8), intent(in) :: icecldf(mgncol,nlev)   ! ice cloud fraction (no units)
@@ -1097,17 +1098,16 @@ subroutine micro_mg_tend ( &
   real(r8) :: ntmp(mgncol,nlev) ! dummy for liq - autoconversion number
 
   ! Variables for height calculation (used in Implicit Fall Speed)
-  real(r8) :: zhalf(mgncol,nlev)  ! midpoint height
-  real(r8) :: ps,H                ! surface pressure and scale height
-      
+  real(r8) :: zint(mgncol,nlev+1) ! interface height
+  real(r8) :: H   !Scale height 
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-  ! Initialize surface pressure (ps) and scale height (H) for midpoint height calculation
+  ! Initialize scale height (H) for interface height calculation
   ! needed for Implicit Fall Speed    
-  ps=0._r8
   H =0._r8
-      
-  ! Return error message
+  zint(:,:)=0._r8
+  
+  ! Return eror message
   errstring = ' '
 
   ! Process inputs
@@ -1139,7 +1139,7 @@ subroutine micro_mg_tend ( &
   mdust = size(rndst,3)
 
   !$acc data copyin  (t,q,qcn,qin,ncn,nin,qrn,qsn,nrn,nsn,qgr,ngr,relvar, &
-  !$acc               accre_enhan,p,pdel,cldn,liqcldf,icecldf,qsatfac,    &
+  !$acc               accre_enhan,p,pdel,pint,cldn,liqcldf,icecldf,qsatfac,    &
   !$acc               naai,npccn,rndst,nacon,tnd_qsnow,tnd_nsnow,re_ice,  &
   !$acc               frzimm,frzcnt,frzdep,mg_liq_props,mg_ice_props,     &
   !$acc               mg_rain_props,mg_graupel_props,mg_hail_props,       &
@@ -1181,7 +1181,7 @@ subroutine micro_mg_tend ( &
   !$acc               fnr,fs,fns,rainrt,dum1A,     &
   !$acc               dum2A,dum3A,dumni0A2D,dumns0A2D,ttmpA,qtmpAI,dumc,  &
   !$acc               dumnc,dumi,dumni,dumr,dumnr,dums,dumns,dumg,dumng,  &
-  !$acc               dum_2D,pdel_inv,rtmp,ctmp,ntmp,zhalf,flx)    
+  !$acc               dum_2D,pdel_inv,rtmp,ctmp,ntmp,flx)    
 
   ! Copies of input concentrations that may be changed internally.
 
@@ -1439,9 +1439,6 @@ subroutine micro_mg_tend ( &
         rtmp(i,k)               = 0._r8  
         ctmp(i,k)               = 0._r8  
         ntmp(i,k)               = 0._r8
-
-        ! Heights for implicit fall speed
-        zhalf(i,k)              = 0._r8
         
         ! initialize microphysical tendencies
         tlat(i,k)               = 0._r8
@@ -3146,18 +3143,19 @@ subroutine micro_mg_tend ( &
        pdel_inv(i,k) = 1._r8/pdel(i,k)
      enddo
   enddo
+  
+!     calculate interface height for implicit sedimentation
+!     uses Hypsometric equation
 
-!     calculate midpoint height. Hypsometric equation
-!     first estimate midpoint height
   do i=1,mgncol
-     ps = p(i,nlev) + pdel(i,nlev)/2._r8   !pseudo surface pressure   
 
-     zhalf(i,nlev)= r*t(i,nlev-1)/g*log(ps/p(i,nlev))      
-
-     do k = nlev-1,1,-1
-       H = r*t(i,k)/g*log(p(i,k+1)/p(i,k))
-       zhalf(i,k)=zhalf(i,k+1)+H
-     enddo
+    zint(i,nlev+1)=0._r8
+    
+    do k = nlev,1,-1
+       H = r*t(i,k)/g*log(pint(i,k+1)/pint(i,k))
+       zint(i,k)=zint(i,k+1)+H
+    enddo
+    
   enddo
 
 ! Implicit Sedimentation calculation: from Guo et al, 2021, GFDL version. 
@@ -3178,7 +3176,7 @@ if ( do_implicit_fall ) then
  ! cloud water (mass) sedimentation
       do i=1,mgncol
          dum_1D(:) = dumc(i,:)
-         call implicit_fall ( deltat, 1, nlev, zhalf(i,:) , fc(i,:), pdel(i,:), dum_1D, precip, flx)
+         call implicit_fall ( deltat, 1, nlev, zint(i,:) , fc(i,:), pdel(i,:), dum_1D, precip, flx)
          do k=1,nlev
             lflx(i,k+1) = lflx(i,k+1) + flx(k)/g/deltat
             qcsedten(i,k)= qcsedten(i,k) + (dum_1D(k) - dumc(i,k))/deltat
@@ -3192,7 +3190,7 @@ if ( do_implicit_fall ) then
  ! cloud water (number) sedimentation
       do i=1,mgncol
          dum_1D(:) = dumnc(i,:)
-         call implicit_fall ( deltat, 1, nlev, zhalf(i,:) , fnc(i,:), pdel(i,:), dum_1D, precip, flx)
+         call implicit_fall ( deltat, 1, nlev, zint(i,:) , fnc(i,:), pdel(i,:), dum_1D, precip, flx)
          do k=1,nlev
             nctend(i,k)  = nctend(i,k)   + (dum_1D(k) - dumnc(i,k))/deltat
          enddo
@@ -3201,7 +3199,7 @@ if ( do_implicit_fall ) then
  ! cloud ice (mass) sedimentation
       do i=1,mgncol
          dum_1D(:) = dumi(i,:)
-         call implicit_fall ( deltat, 1, nlev, zhalf(i,:) , fi(i,:), pdel(i,:), dum_1D, precip, flx)
+         call implicit_fall ( deltat, 1, nlev, zint(i,:) , fi(i,:), pdel(i,:), dum_1D, precip, flx)
          do k=1,nlev
             iflx(i,k+1) = iflx(i,k+1) + flx(k)/g/deltat
             qisedten(i,k)= qisedten(i,k) + (dum_1D(k) - dumi(i,k))/deltat
@@ -3216,7 +3214,7 @@ if ( do_implicit_fall ) then
 ! cloud ice (number) sedimentation
   do i=1,mgncol
     dum_1D(:) = dumni(i,:)
-    call implicit_fall ( deltat, 1, nlev, zhalf(i,:) , fni(i,:), pdel(i,:), dum_1D, precip, flx)
+    call implicit_fall ( deltat, 1, nlev, zint(i,:) , fni(i,:), pdel(i,:), dum_1D, precip, flx)
     do k=1,nlev
       nitend(i,k)  = nitend(i,k)   + (dum_1D(k) - dumni(i,k))/deltat
     enddo
@@ -3225,7 +3223,7 @@ if ( do_implicit_fall ) then
  ! rain water (mass) sedimentation
   do i=1,mgncol
      dum_1D(:) = dumr(i,:)
-     call implicit_fall ( deltat, 1, nlev, zhalf(i,:) , fr(i,:), pdel(i,:), dum_1D, precip, flx)
+     call implicit_fall ( deltat, 1, nlev, zint(i,:) , fr(i,:), pdel(i,:), dum_1D, precip, flx)
      do k=1,nlev
        if ( flx(k) .ge. qsmall ) rflx(i,k+1) = rflx(i,k+1) + flx(k)/g/deltat !h1g, 2019-11-26, ensure numerical stability
        qrsedten(i,k)= qrsedten(i,k) + (dum_1D(k) - dumr(i,k))/deltat
@@ -3239,7 +3237,7 @@ if ( do_implicit_fall ) then
  ! rain water (number) sedimentation
   do i=1,mgncol
     dum_1D(:) = dumnr(i,:)
-    call implicit_fall ( deltat, 1, nlev, zhalf(i,:) , fnr(i,:), pdel(i,:), dum_1D, precip, flx)
+    call implicit_fall ( deltat, 1, nlev, zint(i,:) , fnr(i,:), pdel(i,:), dum_1D, precip, flx)
     do k=1,nlev
       nrtend(i,k)  = nrtend(i,k)   + (dum_1D(k) - dumnr(i,k))/deltat
     enddo
@@ -3248,7 +3246,7 @@ if ( do_implicit_fall ) then
  ! snow water (mass) sedimentation
   do i=1,mgncol
     dum_1D(:) = dums(i,:)    
-    call implicit_fall ( deltat, 1, nlev, zhalf(i,:) , fs(i,:), pdel(i,:), dum_1D, precip, flx)
+    call implicit_fall ( deltat, 1, nlev, zint(i,:) , fs(i,:), pdel(i,:), dum_1D, precip, flx)
     do k=1,nlev
        if ( flx(k) .ge. qsmall ) sflx(i,k+1) = sflx(i,k+1) + flx(k)/g/deltat !h1g, 2019-11-26, ensure numerical stability
        qssedten(i,k)= qssedten(i,k) + (dum_1D(k) - dums(i,k))/deltat
@@ -3262,7 +3260,7 @@ if ( do_implicit_fall ) then
  ! snow water (number) sedimentation
   do i=1,mgncol
      dum_1D(:) = dumns(i,:)
-     call implicit_fall ( deltat, 1, nlev, zhalf(i,:) , fns(i,:), pdel(i,:), dum_1D, precip, flx)
+     call implicit_fall ( deltat, 1, nlev, zint(i,:) , fns(i,:), pdel(i,:), dum_1D, precip, flx)
      do k=1,nlev
        nstend(i,k)  = nstend(i,k)  + (dum_1D(k) - dumns(i,k))/deltat
      enddo
@@ -3271,7 +3269,7 @@ if ( do_implicit_fall ) then
  ! graupel (mass) sedimentation
   do i=1,mgncol
     dum_1D(:) = dumg(i,:)    
-    call implicit_fall ( deltat, 1, nlev, zhalf(i,:) , fg(i,:), pdel(i,:), dum_1D, precip, flx)
+    call implicit_fall ( deltat, 1, nlev, zint(i,:) , fg(i,:), pdel(i,:), dum_1D, precip, flx)
     do k=1,nlev
        if ( flx(k) .ge. qsmall ) gflx(i,k+1) = gflx(i,k+1) + flx(k)/g/deltat !h1g, 2019-11-26, ensure numerical stability
        qgsedten(i,k)= qgsedten(i,k) + (dum_1D(k) - dumg(i,k))/deltat
@@ -3285,7 +3283,7 @@ if ( do_implicit_fall ) then
  ! graupel (number) sedimentation
   do i=1,mgncol
      dum_1D(:) = dumng(i,:)
-     call implicit_fall ( deltat, 1, nlev, zhalf(i,:) , fng(i,:), pdel(i,:), dum_1D, precip, flx)
+     call implicit_fall ( deltat, 1, nlev, zint(i,:) , fng(i,:), pdel(i,:), dum_1D, precip, flx)
      do k=1,nlev
        ngtend(i,k)  = ngtend(i,k)  + (dum_1D(k) - dumng(i,k))/deltat
      enddo
@@ -4393,7 +4391,7 @@ subroutine implicit_fall (dt, ktop, kbot, ze, vt, dp, q, precip, m1)
     
     integer, intent (in) :: ktop, kbot                        ! Level range (top to bottom)
     real(r8), intent (in) :: dt                               ! Time step
-    real(r8), intent (in), dimension (ktop:kbot + 1) :: ze    ! Midpoint height (m)
+    real(r8), intent (in), dimension (ktop:kbot + 1) :: ze    ! Interface height (m)
     real(r8), intent (in), dimension (ktop:kbot) :: vt, dp    ! fall speed and pressure difference across level
     real(r8), intent (inout), dimension (ktop:kbot) :: q      ! mass
     real(r8), intent (out), dimension (ktop:kbot) :: m1       ! Surface Flux
