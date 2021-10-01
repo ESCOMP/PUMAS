@@ -550,7 +550,7 @@ subroutine micro_mg_tend ( &
      nrn,                          nsn,                          &
      qgr,                          ngr,                          &
      relvar,                       accre_enhan,                  &
-     p,                            pdel,                         &
+     p,                            pdel, pint,                   &
      cldn,    liqcldf,        icecldf,       qsatfac,            &
      qcsinksum_rate1ord,                                         &
      naai,                         npccn,                        &
@@ -682,6 +682,7 @@ subroutine micro_mg_tend ( &
 
   real(r8), intent(in) :: p(mgncol,nlev)        ! air pressure (pa)
   real(r8), intent(in) :: pdel(mgncol,nlev)     ! pressure difference across level (pa)
+  real(r8), intent(in) :: pint(mgncol,nlev+1)   ! pressure at interfaces
 
   real(r8), intent(in) :: cldn(mgncol,nlev)      ! cloud fraction (no units)
   real(r8), intent(in) :: liqcldf(mgncol,nlev)   ! liquid cloud fraction (no units)
@@ -1096,16 +1097,15 @@ subroutine micro_mg_tend ( &
   real(r8) :: ntmp(mgncol,nlev) ! dummy for liq - autoconversion number
 
   ! Variables for height calculation (used in Implicit Fall Speed)
-  real(r8) :: zhalf(mgncol,nlev)  ! midpoint height
-  real(r8) :: ps,H                ! surface pressure and scale height
-      
+  real(r8) :: zint(mgncol,nlev+1) ! interface height
+  real(r8) :: H   !Scale height 
+ 
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-  ! Initialize surface pressure (ps) and scale height (H) for midpoint height calculation
+  ! Initialize scale height (H) for interface height calculation
   ! needed for Implicit Fall Speed    
-  ps=0._r8
-  H =0._r8
-      
+  H=0._r8
+ 
   ! Return error message
   errstring = ' '
 
@@ -1138,7 +1138,7 @@ subroutine micro_mg_tend ( &
   mdust = size(rndst,3)
 
   !$acc data copyin  (t,q,qcn,qin,ncn,nin,qrn,qsn,nrn,nsn,qgr,ngr,relvar,     &
-  !$acc               accre_enhan,p,pdel,cldn,liqcldf,icecldf,qsatfac,        &
+  !$acc               accre_enhan,p,pdel,pint,cldn,liqcldf,icecldf,qsatfac,   &
   !$acc               naai,npccn,rndst,nacon,tnd_qsnow,tnd_nsnow,re_ice,      &
   !$acc               frzimm,frzcnt,frzdep,mg_liq_props,mg_ice_props,         &
   !$acc               mg_rain_props,mg_graupel_props,mg_hail_props,           &
@@ -1179,7 +1179,7 @@ subroutine micro_mg_tend ( &
   !$acc               fng,fr,fnr,fs,fns,rainrt,dum1A,dum2A,dum3A,dumni0A2D,   &
   !$acc               dumns0A2D,ttmpA,qtmpAI,dumc,dumnc,dumi,dumni,dumr,      &
   !$acc               dumnr,dums,dumns,dumg,dumng,dum_2D,pdel_inv,rtmp,ctmp,  &
-  !$acc               ntmp,zhalf)    
+  !$acc               ntmp,zint)    
 
   ! Copies of input concentrations that may be changed internally.
 
@@ -1393,6 +1393,7 @@ subroutine micro_mg_tend ( &
         lflx(i,k)               = 0._r8
         iflx(i,k)               = 0._r8
         gflx(i,k)               = 0._r8  
+        zint(i,k)               = 0._r8
      end do
   end do
 
@@ -1433,9 +1434,6 @@ subroutine micro_mg_tend ( &
         ctmp(i,k)               = 0._r8  
         ntmp(i,k)               = 0._r8
 
-        ! Heights for implicit fall speed
-        zhalf(i,k)              = 0._r8
-        
         ! initialize microphysical tendencies
         tlat(i,k)               = 0._r8
         qvlat(i,k)              = 0._r8
@@ -3141,19 +3139,20 @@ subroutine micro_mg_tend ( &
      enddo
   enddo
 
-!     calculate midpoint height. Hypsometric equation
-!     first estimate midpoint height
+!     calculate interface height for implicit sedimentation
+!     uses Hypsometric equation
 
-  !$acc loop gang vector private(ps,H)
+  !$acc loop gang vector private(H)
   do i=1,mgncol
-     ps = p(i,nlev) + pdel(i,nlev)/2._r8   !pseudo surface pressure   
 
-     zhalf(i,nlev)= r*t(i,nlev-1)/g*log(ps/p(i,nlev))      
+     zint(i,nlev+1)=0._r8
+
      !$acc loop seq
-     do k=nlev-1,1,-1
-       H = r*t(i,k)/g*log(p(i,k+1)/p(i,k))
-       zhalf(i,k) = zhalf(i,k+1)+H
+     do k = nlev,1,-1
+        H = r*t(i,k)/g*log(pint(i,k+1)/pint(i,k))
+        zint(i,k)=zint(i,k+1)+H
      enddo
+
   enddo
   !$acc end parallel
 
@@ -3181,27 +3180,27 @@ if ( do_implicit_fall ) then
 
  ! cloud water (mass and number) sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumc,fc,dumnc,fnc, &
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumc,fc,dumnc,fnc, &
                                .FALSE.,lflx,qcsedten,qctend,prect,nctend)
 
  ! cloud ice (mass and number) sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumi,fi,dumni,fni, &
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumi,fi,dumni,fni, &
                                .FALSE.,iflx,qisedten,qitend,prect,nitend,preci)
 
  ! rain water (mass and number) sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumr,fr,dumnr,fnr, &
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumr,fr,dumnr,fnr, &
                                .TRUE.,rflx,qrsedten,qrtend,prect,nrtend)
 
  ! snow water (mass and number) sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dums,fs,dumns,fns, &
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dums,fs,dumns,fns, &
                                .TRUE.,sflx,qssedten,qstend,prect,nstend,preci)
 
  ! graupel (mass and number) sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumg,fg,dumng,fng, &
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumg,fg,dumng,fng, &
                                .TRUE.,gflx,qgsedten,qgtend,prect,ngtend,preci)
 
 else  
@@ -4241,13 +4240,13 @@ end subroutine Sedimentation
 !========================================================================
 !2021-09-09: Add a new interface for the implicit sedimentation calculation
 !========================================================================
-subroutine Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumx,fx, &
+subroutine Sedimentation_implicit(mgncol,nlev,deltat,pint,pdel,dumx,fx, &
                                   dumnx,fnx,check_qsmall,xflx,qxsedten,  &
                                   qxtend,prect,nxtend,preci)
 
    integer,  intent(in)              :: mgncol,nlev
    real(r8), intent(in)              :: deltat
-   real(r8), intent(in)              :: zhalf(mgncol,nlev)
+   real(r8), intent(in)              :: pint(mgncol,nlev)
    real(r8), intent(in)              :: pdel(mgncol,nlev)
    real(r8), intent(in)              :: dumx(mgncol,nlev)
    real(r8), intent(in)              :: fx(mgncol,nlev)
@@ -4268,7 +4267,7 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumx,fx, &
 
    present_preci = present(preci)
 
-   !$acc data present (zhalf,pdel,dumx,fx,dumnx,fnx,xflx,  &
+   !$acc data present (pint,pdel,dumx,fx,dumnx,fnx,xflx,  &
    !$acc               qxsedten,qxtend,prect,nxtend,preci) &
    !$acc      create  (flx,dum_2D,precip)
 
@@ -4281,7 +4280,7 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumx,fx, &
    enddo
    !$acc end parallel        
 
-   call implicit_fall ( deltat, mgncol, 1, nlev, zhalf, fx, pdel, dum_2D, precip, flx)
+   call implicit_fall ( deltat, mgncol, 1, nlev, pint, fx, pdel, dum_2D, precip, flx)
 
    !$acc parallel vector_length(VLENS) default(present)
    !$acc loop gang vector collapse(2)
@@ -4314,7 +4313,7 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,zhalf,pdel,dumx,fx, &
    enddo
    !$acc end parallel     
 
-   call implicit_fall ( deltat, mgncol, 1, nlev, zhalf, fnx, pdel, dum_2D, precip, flx)
+   call implicit_fall ( deltat, mgncol, 1, nlev, pint, fnx, pdel, dum_2D, precip, flx)
 
    !$acc parallel vector_length(VLENS) default(present)
    !$acc loop gang vector collapse(2)
@@ -4398,7 +4397,7 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
     integer, intent (in) :: mgncol                                   ! Number of columns in MG      
     integer, intent (in) :: ktop, kbot                               ! Level range (top to bottom)
     real(r8), intent (in) :: dt                                      ! Time step
-    real(r8), intent (in), dimension (mgncol,ktop:kbot + 1) :: ze    ! Midpoint height (m)
+    real(r8), intent (in), dimension (mgncol,ktop:kbot + 1) :: ze    ! Interface height (m)
     real(r8), intent (in), dimension (mgncol,ktop:kbot) :: vt, dp    ! fall speed and pressure difference across level
     real(r8), intent (inout), dimension (mgncol,ktop:kbot) :: q      ! mass
     real(r8), intent (out), dimension (mgncol,ktop:kbot) :: m1       ! Surface Flux
