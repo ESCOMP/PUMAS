@@ -296,22 +296,27 @@ real(r8), parameter :: vfactor = 1.0        ! Rain/Snow/Graupel Factor
 real(r8), parameter :: vfac_drop = 1.0      ! Cloud Liquid Factor
 real(r8), parameter :: vfac_ice  = 1.0      ! Cloud Ice Factor
 
-logical           ::  do_implicit_fall !   = .true. 
+logical           :: do_implicit_fall !   = .true. 
 
 logical           :: accre_sees_auto  != .true.
       
-!$acc declare create (nccons,nicons,ngcons,nrcons,nscons,ncnst,ninst,ngnst,   &
-!$acc                 nrnst,nsnst,evap_sed_off,icenuc_rh_off,evap_scl_ifs,    &
-!$acc                 icenuc_use_meyers,evap_rhthrsh_ifs,rainfreeze_ifs,      &
-!$acc                 ifs_sed,precip_fall_corr,dcs,                           &
-!$acc                 g,r,rv,cpp,tmelt,xxlv,xlf,xxls,rhmini,microp_uniform,   &
-!$acc                 do_cldice,use_hetfrz_classnuc,do_hail,do_graupel,rhosu, &
-!$acc                 icenuct,snowmelt,rainfrze,xxlv_squared,xxls_squared,    &
-!$acc                 gamma_br_plus1,gamma_br_plus4,gamma_bs_plus1,           &
-!$acc                 gamma_bs_plus4,gamma_bi_plus1,gamma_bi_plus4,           &
-!$acc                 gamma_bj_plus1,gamma_bj_plus4,gamma_bg_plus1,           &
-!$acc                 gamma_bg_plus4,micro_mg_berg_eff_factor,                &
-!$acc                 remove_supersat,do_sb_physics,do_implicit_fall,accre_sees_auto)
+!$acc declare create (nccons,nicons,ngcons,nrcons,nscons,ncnst,ninst,ngnst,    &
+!$acc                 nrnst,nsnst,evap_sed_off,icenuc_rh_off,evap_scl_ifs,     &
+!$acc                 icenuc_use_meyers,evap_rhthrsh_ifs,rainfreeze_ifs,       &
+!$acc                 ifs_sed,precip_fall_corr,dcs,                            &
+!$acc                 g,r,rv,cpp,tmelt,xxlv,xlf,xxls,rhmini,microp_uniform,    &
+!$acc                 do_cldice,use_hetfrz_classnuc,do_hail,do_graupel,rhosu,  &
+!$acc                 icenuct,snowmelt,rainfrze,xxlv_squared,xxls_squared,     &
+!$acc                 gamma_br_plus1,gamma_br_plus4,gamma_bs_plus1,            &
+!$acc                 gamma_bs_plus4,gamma_bi_plus1,gamma_bi_plus4,            &
+!$acc                 gamma_bj_plus1,gamma_bj_plus4,gamma_bg_plus1,            &
+!$acc                 gamma_bg_plus4,micro_mg_berg_eff_factor,                 &
+!$acc                 remove_supersat,do_sb_physics,                           &
+!$acc                 micro_mg_accre_enhan_fact,micro_mg_autocon_fact,         &
+!$acc                 micro_mg_autocon_nd_exp,micro_mg_autocon_lwp_exp,        &
+!$acc                 micro_mg_homog_size,micro_mg_vtrmi_factor,               &
+!$acc                 micro_mg_effi_factor,micro_mg_iaccr_factor,              &
+!$acc                 micro_mg_max_nicons,do_implicit_fall,accre_sees_auto)
 
 !===============================================================================
 contains
@@ -534,7 +539,12 @@ subroutine micro_mg_init( &
   !$acc                gamma_bs_plus4,gamma_bi_plus1,gamma_bi_plus4,           &
   !$acc                gamma_bj_plus1,gamma_bj_plus4,gamma_bg_plus1,           &
   !$acc                gamma_bg_plus4,micro_mg_berg_eff_factor,                &
-  !$acc                remove_supersat,do_sb_physics,do_implicit_fall,accre_sees_auto)
+  !$acc                remove_supersat,do_sb_physics,                          &
+  !$acc                micro_mg_accre_enhan_fact,micro_mg_autocon_fact,        &
+  !$acc                micro_mg_autocon_nd_exp,micro_mg_autocon_lwp_exp,       &
+  !$acc                micro_mg_homog_size,micro_mg_vtrmi_factor,              &
+  !$acc                micro_mg_effi_factor,micro_mg_iaccr_factor,             &
+  !$acc                micro_mg_max_nicons,do_implicit_fall,accre_sees_auto)
 
 end subroutine micro_mg_init
 
@@ -1492,7 +1502,7 @@ subroutine micro_mg_tend ( &
         pgamrad(i,k)            = 0._r8
         effc_fn(i,k)            = 10._r8
         effi(i,k)               = 25._r8
-        effi(i,k) = effi(i,k)*micro_mg_effi_factor
+        effi(i,k)               = effi(i,k)*micro_mg_effi_factor
         sadice(i,k)             = 0._r8
         sadsnow(i,k)            = 0._r8
         deffi(i,k)              = 50._r8
@@ -2091,8 +2101,16 @@ subroutine micro_mg_tend ( &
   call accrete_cloud_water_snow(t, rho, asn, uns, mu, qcic, ncic, qsic, pgam, &
                                 lamc, lams, n0s, psacws, npsacws, mgncol*nlev)
 
-  psacws = psacws*micro_mg_iaccr_factor
-  npsacws = npsacws*micro_mg_iaccr_factor
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)
+  do k=1,nlev
+     do i=1,mgncol
+        psacws(i,k) = psacws(i,k)*micro_mg_iaccr_factor
+        npsacws(i,k) = npsacws(i,k)*micro_mg_iaccr_factor
+     end do
+  end do
+  !$acc end parallel
+
   if (do_cldice) then
      call secondary_ice_production(t, psacws, msacwi, nsacwi, mgncol*nlev)
   else
@@ -2137,8 +2155,15 @@ subroutine micro_mg_tend ( &
      call accrete_cloud_water_rain(microp_uniform, rtmp, ctmp, ntmp, relvar, accre_enhan, pra, npra, mgncol*nlev)
   endif
 
-  pra = pra*micro_mg_accre_enhan_fact
-  npra = npra*micro_mg_accre_enhan_fact
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)
+  do k=1,nlev
+     do i=1,mgncol
+        pra(i,k) = pra(i,k)*micro_mg_accre_enhan_fact
+        npra(i,k) = npra(i,k)*micro_mg_accre_enhan_fact
+     end do
+  end do
+  !$acc end parallel
 
   call self_collection_rain(rho, qric, nric, nragg, mgncol*nlev)
 
@@ -2203,17 +2228,31 @@ subroutine micro_mg_tend ( &
 
      call graupel_collecting_cld_water(qgic, qcic, ncic, rho, n0g, lamg, bgtmp, agn, psacwg, npsacwg, mgncol*nlev)
 
-     psacwg = psacwg*micro_mg_iaccr_factor
-     npsacwg = npsacwg*micro_mg_iaccr_factor
-     
+     !$acc parallel vector_length(VLENS) default(present)
+     !$acc loop gang vector collapse(2)
+     do k=1,nlev
+        do i=1,mgncol
+           psacwg(i,k) = psacwg(i,k)*micro_mg_iaccr_factor
+           npsacwg(i,k) = npsacwg(i,k)*micro_mg_iaccr_factor
+        end do
+     end do
+     !$acc end parallel
+
      call graupel_riming_liquid_snow(psacws, qsic, qcic, nsic, rho, rhosn, rhogtmp, asn, &
                                      lams, n0s, deltat, pgsacw, nscng, mgncol*nlev)
 
      call graupel_collecting_rain(qric, qgic, umg, umr, ung, unr, rho, n0r, &
                                   lamr, n0g, lamg, pracg, npracg, mgncol*nlev)
 
-     pracg = pracg*micro_mg_iaccr_factor
-     npracg = npracg*micro_mg_iaccr_factor
+     !$acc parallel vector_length(VLENS) default(present)
+     !$acc loop gang vector collapse(2)
+     do k=1,nlev
+        do i=1,mgncol
+           pracg(i,k) = pracg(i,k)*micro_mg_iaccr_factor
+           npracg(i,k) = npracg(i,k)*micro_mg_iaccr_factor
+        end do
+     end do
+     !$acc end parallel
 
 !AG note: Graupel rain riming snow changes  
 !    pracs, npracs, (accretion of rain by snow)  psacr (collection of snow by rain)
@@ -3056,7 +3095,7 @@ subroutine micro_mg_tend ( &
            qtmp = lams(i,k)**bs
            ! 'final' values of number and mass weighted mean fallspeed for snow (m/s)
            ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*qtmp),1.2_r8*rhof(i,k))
-           ums(:,k)=ums(:,k)*micro_mg_vtrmi_factor       
+           ums(i,k) = ums(i,k)*micro_mg_vtrmi_factor       
 
            fs(i,k)  = g*rho(i,k)*ums(i,k)
            uns(i,k) = min(asn(i,k)*gamma_bs_plus1/qtmp,1.2_r8*rhof(i,k))
@@ -3142,17 +3181,14 @@ subroutine micro_mg_tend ( &
 !     calculate interface height for implicit sedimentation
 !     uses Hypsometric equation
 
-  !$acc loop gang vector private(H)
+  !$acc loop gang vector
   do i=1,mgncol
-
      zint(i,nlev+1)=0._r8
-
      !$acc loop seq
      do k = nlev,1,-1
         H = r*t(i,k)/g*log(pint(i,k+1)/pint(i,k))
         zint(i,k)=zint(i,k+1)+H
      enddo
-
   enddo
   !$acc end parallel
 
@@ -4240,13 +4276,13 @@ end subroutine Sedimentation
 !========================================================================
 !2021-09-09: Add a new interface for the implicit sedimentation calculation
 !========================================================================
-subroutine Sedimentation_implicit(mgncol,nlev,deltat,pint,pdel,dumx,fx, &
+subroutine Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumx,fx, &
                                   dumnx,fnx,check_qsmall,xflx,qxsedten,  &
                                   qxtend,prect,nxtend,preci)
 
    integer,  intent(in)              :: mgncol,nlev
    real(r8), intent(in)              :: deltat
-   real(r8), intent(in)              :: pint(mgncol,nlev)
+   real(r8), intent(in)              :: zint(mgncol,nlev+1)
    real(r8), intent(in)              :: pdel(mgncol,nlev)
    real(r8), intent(in)              :: dumx(mgncol,nlev)
    real(r8), intent(in)              :: fx(mgncol,nlev)
@@ -4267,7 +4303,7 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,pint,pdel,dumx,fx, &
 
    present_preci = present(preci)
 
-   !$acc data present (pint,pdel,dumx,fx,dumnx,fnx,xflx,  &
+   !$acc data present (zint,pdel,dumx,fx,dumnx,fnx,xflx,  &
    !$acc               qxsedten,qxtend,prect,nxtend,preci) &
    !$acc      create  (flx,dum_2D,precip)
 
@@ -4280,7 +4316,7 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,pint,pdel,dumx,fx, &
    enddo
    !$acc end parallel        
 
-   call implicit_fall ( deltat, mgncol, 1, nlev, pint, fx, pdel, dum_2D, precip, flx)
+   call implicit_fall ( deltat, mgncol, 1, nlev, zint, fx, pdel, dum_2D, precip, flx)
 
    !$acc parallel vector_length(VLENS) default(present)
    !$acc loop gang vector collapse(2)
@@ -4313,7 +4349,7 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,pint,pdel,dumx,fx, &
    enddo
    !$acc end parallel     
 
-   call implicit_fall ( deltat, mgncol, 1, nlev, pint, fnx, pdel, dum_2D, precip, flx)
+   call implicit_fall ( deltat, mgncol, 1, nlev, zint, fnx, pdel, dum_2D, precip, flx)
 
    !$acc parallel vector_length(VLENS) default(present)
    !$acc loop gang vector collapse(2)
@@ -4395,17 +4431,18 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
     implicit none
     
     integer, intent (in) :: mgncol                                   ! Number of columns in MG      
-    integer, intent (in) :: ktop, kbot                               ! Level range (top to bottom)
+    integer, intent (in) :: ktop,kbot                                ! Level range (top to bottom)
     real(r8), intent (in) :: dt                                      ! Time step
-    real(r8), intent (in), dimension (mgncol,ktop:kbot + 1) :: ze    ! Interface height (m)
+    real(r8), intent (in), dimension (mgncol,ktop:kbot+1) :: ze      ! Interface height (m)
     real(r8), intent (in), dimension (mgncol,ktop:kbot) :: vt, dp    ! fall speed and pressure difference across level
     real(r8), intent (inout), dimension (mgncol,ktop:kbot) :: q      ! mass
     real(r8), intent (out), dimension (mgncol,ktop:kbot) :: m1       ! Surface Flux
-    real(r8), intent (out) :: precip(mgncol)                         ! Surface Precipitation
+    real(r8), intent (out), dimension (mgncol) :: precip             ! Surface Precipitation
     real(r8), dimension (mgncol,ktop:kbot) :: dz, qm, dd
     integer :: i,k
     
-    !$acc data present (ze,vt,dp,q,m1,precip,dz,qm,dd)
+    !$acc data present (ze,vt,dp,q,m1,precip) &
+    !$acc      create  (dz,qm,dd)
 
     !$acc parallel vector_length(VLENS) default(present)
     !$acc loop gang vector collapse(2)
@@ -4416,7 +4453,7 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
           q (i,k) = q (i,k) * dp (i,k)
        enddo
     enddo
-    
+ 
     ! -----------------------------------------------------------------------
     ! sedimentation: non - vectorizable loop
     ! -----------------------------------------------------------------------
@@ -4454,10 +4491,14 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
        m1 (i,ktop) = q (i,ktop) - qm (i,ktop)
     enddo
 
-    !$acc loop seq
-    do k = ktop + 1, kbot
-       !$acc loop gang vector
-       do i = 1, mgncol
+    ! -----------------------------------------------------------------------
+    ! JS - 10/02/2021 : the column loop has to be done first somehow; 
+    !                   otherwise NBFB results on Cheyenne compared to v1.18; 
+    ! -----------------------------------------------------------------------
+    !$acc loop gang vector
+    do i = 1, mgncol
+       !$acc loop seq
+       do k = ktop + 1, kbot
           m1 (i,k) = m1 (i,k - 1) + q (i,k) - qm (i,k)
        enddo
     enddo
