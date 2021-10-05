@@ -4463,10 +4463,14 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
        qm (i,ktop) = q (i,ktop) / (dz (i,ktop) + dd (i,ktop))
     enddo
 
-    !$acc loop seq
-    do k = ktop + 1, kbot
-       !$acc loop gang vector
-       do i = 1, mgncol
+    ! -----------------------------------------------------------------------
+    ! JS, 10/04/2021 : do not put 'loop gang vector' inside 'loop seq';
+    !                  otherwise the GPU run crashes;
+    ! -----------------------------------------------------------------------
+    !$acc loop gang vector
+    do i = 1, mgncol
+       !$acc loop seq
+       do k = ktop + 1, kbot
           qm (i,k) = (q (i,k) + dd (i,k - 1) * qm (i,k - 1)) / (dz (i,k) + dd (i,k))
        enddo
     enddo
@@ -4485,15 +4489,16 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
     ! -----------------------------------------------------------------------
     ! output mass fluxes: non - vectorizable loop
     ! -----------------------------------------------------------------------
-    
+
     !$acc loop gang vector
     do i = 1, mgncol
        m1 (i,ktop) = q (i,ktop) - qm (i,ktop)
     enddo
 
     ! -----------------------------------------------------------------------
-    ! JS - 10/02/2021 : the column loop has to be done first somehow; 
-    !                   otherwise NBFB results on Cheyenne compared to v1.18; 
+    ! JS, 10/04/2021 : the column loop has to be done first somehow; 
+    !                  otherwise NBFB results on Cheyenne;
+    !                  could be a compiler issue?
     ! -----------------------------------------------------------------------
     !$acc loop gang vector
     do i = 1, mgncol
