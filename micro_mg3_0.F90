@@ -4464,17 +4464,18 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
     enddo
 
     ! -----------------------------------------------------------------------
-    ! JS, 10/04/2021 : do not put 'loop gang vector' inside 'loop seq';
-    !                  otherwise the GPU run crashes;
+    ! JS, 10/09/2021 : run the column and level loops sequentially on GPU; 
+    !                  otherwise the GPU run crashes; 
+    !                  do not know why?
     ! -----------------------------------------------------------------------
-    !$acc loop gang vector
-    do i = 1, mgncol
-       !$acc loop seq
-       do k = ktop + 1, kbot
+    !$acc loop seq
+    do k = ktop + 1, kbot
+       !$acc loop seq 
+       do i = 1, mgncol
           qm (i,k) = (q (i,k) + dd (i,k - 1) * qm (i,k - 1)) / (dz (i,k) + dd (i,k))
        enddo
     enddo
-    
+
     ! -----------------------------------------------------------------------
     ! qm is density at this stage
     ! -----------------------------------------------------------------------
@@ -4485,7 +4486,7 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
           qm (i,k) = qm (i,k) * dz (i,k)
        enddo
     enddo
-    
+
     ! -----------------------------------------------------------------------
     ! output mass fluxes: non - vectorizable loop
     ! -----------------------------------------------------------------------
@@ -4496,11 +4497,11 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
     enddo
 
     ! -----------------------------------------------------------------------
-    ! JS, 10/04/2021 : the column loop has to be done first somehow; 
-    !                  otherwise NBFB results on Cheyenne;
-    !                  could be a compiler issue?
+    ! JS, 10/09/2021 : the column loop has to be done first; 
+    !                  otherwise NBFB results on CPU (Cheyenne);
+    !                  do not know why?
     ! -----------------------------------------------------------------------
-    !$acc loop gang vector
+    !$acc loop seq 
     do i = 1, mgncol
        !$acc loop seq
        do k = ktop + 1, kbot
