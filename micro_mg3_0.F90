@@ -4444,8 +4444,8 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
     ! -----------------------------------------------------------------------
     ! JS, 10/18/2021 : do not push column loop further into each level loop;
     !                  cause NBFB result on Cheyenne (CPU) and crash GPU run;
-    !                  do not know why - issue comes from level-dependent qm 
-    !                  and m1 calculation but they should be column-independent
+    !                  NEEDS TO BE REVISITED - issue comes from level-dependent 
+    !                  qm and m1 calculation but they are column-independent
     ! -----------------------------------------------------------------------
  
     !$acc data present (ze,vt,dp,q,m1,precip) &
