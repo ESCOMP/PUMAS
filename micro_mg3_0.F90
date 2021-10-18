@@ -4440,87 +4440,66 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1)
     real(r8), intent (out), dimension (mgncol) :: precip             ! Surface Precipitation
     real(r8), dimension (mgncol,ktop:kbot) :: dz, qm, dd
     integer :: i,k
-    
+   
+    ! -----------------------------------------------------------------------
+    ! JS, 10/18/2021 : do not push column loop further into each level loop;
+    !                  cause NBFB result on Cheyenne (CPU) and crash GPU run;
+    !                  do not know why - issue comes from level-dependent qm 
+    !                  and m1 calculation but they should be column-independent
+    ! -----------------------------------------------------------------------
+ 
     !$acc data present (ze,vt,dp,q,m1,precip) &
     !$acc      create  (dz,qm,dd)
 
     !$acc parallel vector_length(VLENS) default(present)
-    !$acc loop gang vector collapse(2)
-    do k = ktop, kbot
-       do i = 1, mgncol
+    !$acc loop gang vector
+    do i = 1, mgncol
+       !$acc loop gang vector
+       do k = ktop, kbot
           dz (i,k) = ze (i,k) - ze (i,k + 1)
           dd (i,k) = dt * vt (i,k)
           q (i,k) = q (i,k) * dp (i,k)
        enddo
-    enddo
  
-    ! -----------------------------------------------------------------------
-    ! sedimentation: non - vectorizable loop
-    ! -----------------------------------------------------------------------
+       ! -----------------------------------------------------------------------
+       ! sedimentation: non - vectorizable loop
+       ! -----------------------------------------------------------------------
    
-    !$acc loop gang vector
-    do i = 1, mgncol 
        qm (i,ktop) = q (i,ktop) / (dz (i,ktop) + dd (i,ktop))
-    enddo
 
-    ! -----------------------------------------------------------------------
-    ! JS, 10/09/2021 : run the column and level loops sequentially on GPU; 
-    !                  otherwise the GPU run crashes; 
-    !                  do not know why?
-    ! -----------------------------------------------------------------------
-    !$acc loop seq
-    do k = ktop + 1, kbot
-       !$acc loop seq 
-       do i = 1, mgncol
+       !$acc loop seq
+       do k = ktop + 1, kbot
           qm (i,k) = (q (i,k) + dd (i,k - 1) * qm (i,k - 1)) / (dz (i,k) + dd (i,k))
        enddo
-    enddo
 
-    ! -----------------------------------------------------------------------
-    ! qm is density at this stage
-    ! -----------------------------------------------------------------------
+       ! -----------------------------------------------------------------------
+       ! qm is density at this stage
+       ! -----------------------------------------------------------------------
    
-    !$acc loop gang vector collapse(2) 
-    do k = ktop, kbot
-       do i = 1, mgncol
+       !$acc loop gang vector
+       do k = ktop, kbot
           qm (i,k) = qm (i,k) * dz (i,k)
        enddo
-    enddo
 
-    ! -----------------------------------------------------------------------
-    ! output mass fluxes: non - vectorizable loop
-    ! -----------------------------------------------------------------------
-
-    !$acc loop gang vector
-    do i = 1, mgncol
+       ! -----------------------------------------------------------------------
+       ! output mass fluxes: non - vectorizable loop
+       ! -----------------------------------------------------------------------
+   
        m1 (i,ktop) = q (i,ktop) - qm (i,ktop)
-    enddo
 
-    ! -----------------------------------------------------------------------
-    ! JS, 10/09/2021 : the column loop has to be done first; 
-    !                  otherwise NBFB results on CPU (Cheyenne);
-    !                  do not know why?
-    ! -----------------------------------------------------------------------
-    !$acc loop seq 
-    do i = 1, mgncol
        !$acc loop seq
        do k = ktop + 1, kbot
           m1 (i,k) = m1 (i,k - 1) + q (i,k) - qm (i,k)
        enddo
-    enddo
 
-    !$acc loop gang vector
-    do i = 1, mgncol
        precip(i) = m1 (i,kbot)
-    enddo
  
-    ! -----------------------------------------------------------------------
-    ! update:
-    ! -----------------------------------------------------------------------
+       ! -----------------------------------------------------------------------
+       ! update:
+       ! -----------------------------------------------------------------------
     
-    !$acc loop gang vector collapse(2)
-    do k = ktop, kbot
-       do i = 1, mgncol
+       !$acc loop gang vector
+       do k = ktop, kbot
           q (i,k) = qm (i,k) / dp (i,k)
        enddo
     enddo
