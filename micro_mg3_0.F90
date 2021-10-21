@@ -1093,7 +1093,8 @@ subroutine micro_mg_tend ( &
   integer i, k, n
 
   ! number of sub-steps for loops over "n" (for sedimentation)
-  integer nstep
+  integer nstep(mgncol)
+  real(r8) :: rnstep(mgncol)
   integer mdust
   integer :: precip_frac_method
 
@@ -1189,7 +1190,7 @@ subroutine micro_mg_tend ( &
   !$acc               fng,fr,fnr,fs,fns,rainrt,dum1A,dum2A,dum3A,dumni0A2D,   &
   !$acc               dumns0A2D,ttmpA,qtmpAI,dumc,dumnc,dumi,dumni,dumr,      &
   !$acc               dumnr,dums,dumns,dumg,dumng,dum_2D,pdel_inv,rtmp,ctmp,  &
-  !$acc               ntmp,zint)    
+  !$acc               ntmp,zint,nstep,rnstep) 
 
   ! Copies of input concentrations that may be changed internally.
 
@@ -3214,51 +3215,130 @@ if ( do_implicit_fall ) then
    enddo     
    !$acc end parallel
 
- ! cloud water (mass and number) sedimentation
+ ! cloud water mass sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumc,fc,dumnc,fnc, &
-                               .FALSE.,lflx,qcsedten,qctend,prect,nctend)
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumc,fc,.FALSE., &
+                               xflx=lflx,qxsedten=qcsedten,qxtend=qctend,prect=prect)
 
- ! cloud ice (mass and number) sedimentation
+ ! cloud water number sedimentation
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnc,fnc,.FALSE.,nxtend=nctend)
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumi,fi,dumni,fni, &
-                               .FALSE.,iflx,qisedten,qitend,prect,nitend,preci)
+ ! cloud ice mass sedimentation
 
- ! rain water (mass and number) sedimentation
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumi,fi,.FALSE., &
+                               xflx=iflx,qxsedten=qisedten,qxtend=qitend,prect=prect,preci=preci)
+ 
+ ! cloud ice number sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumr,fr,dumnr,fnr, &
-                               .TRUE.,rflx,qrsedten,qrtend,prect,nrtend)
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumni,fni,.FALSE.,nxtend=nitend)
 
- ! snow water (mass and number) sedimentation
+ ! rain water mass sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dums,fs,dumns,fns, &
-                               .TRUE.,sflx,qssedten,qstend,prect,nstend,preci)
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumr,fr,.TRUE., &
+                               xflx=rflx,qxsedten=qrsedten,qxtend=qrtend,prect=prect)
 
- ! graupel (mass and number) sedimentation
+ ! rain water number sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumg,fg,dumng,fng, &
-                               .TRUE.,gflx,qgsedten,qgtend,prect,ngtend,preci)
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnr,fnr,.TRUE.,nxtend=nrtend)
+
+ ! snow water mass sedimentation
+
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dums,fs,.TRUE., &
+                               xflx=sflx,qxsedten=qssedten,qxtend=qstend,prect=prect,preci=preci)
+
+ ! snow water number sedimentation
+
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumns,fns,.TRUE.,nxtend=nstend)
+
+ ! graupel mass sedimentation
+
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumg,fg,.TRUE., &
+                               xflx=gflx,qxsedten=qgsedten,qxtend=qgtend,prect=prect,preci=preci)
+
+ ! graupel number sedimentation
+
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumng,fng,.TRUE.,nxtend=ngtend)
 
 else  
   ! begin sedimentation
-  ! ice
-  call Sedimentation(mgncol,nlev,do_cldice,deltat,fi,fni,pdel_inv, &
-                       qitend,nitend,qisedten,dumi,dumni,prect,iflx, &
-                       xxlx=xxls,qxsevap=qisevap,tlat=tlat,qvlat=qvlat, &
-                       xcldm=icldm,preci=preci)
-  ! liq
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,fc,fnc,pdel_inv, &
-                       qctend,nctend,qcsedten,dumc,dumnc,prect,lflx, &
-                       xxlx=xxlv,qxsevap=qcsevap,tlat=tlat,qvlat=qvlat,xcldm=lcldm)
-  ! rain
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,fr,fnr,pdel_inv, &
-                       qrtend,nrtend,qrsedten,dumr,dumnr,prect,rflx)
-  ! snow
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,fs,fns,pdel_inv, &
-                       qstend,nstend,qssedten,dums,dumns,prect,sflx,preci=preci)
-  ! graupel
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,fg,fng,pdel_inv, &
-                       qgtend,ngtend,qgsedten,dumg,dumng,prect,gflx,preci=preci)
+ 
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector
+  do i = 1, mgncol
+     nstep(i) = 1 + int( max( maxval( fi(i,:)*pdel_inv(i,:) ), maxval( fni(i,:)*pdel_inv(i,:) ) ) * deltat )
+     rnstep(i) = 1._r8/real(nstep(i))
+  end do
+  !$acc end parallel
+
+  ! ice mass sediment
+  call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep,rnstep,fi,dumi,pdel_inv, &
+                     qxtend=qitend,qxsedten=qisedten,prect=prect,xflx=iflx,xxlx=xxls, & 
+                     qxsevap=qisevap,tlat=tlat,qvlat=qvlat,xcldm=icldm,preci=preci)
+
+  ! ice number sediment
+  call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep,rnstep,fni,dumni,pdel_inv,xcldm=icldm,nxtend=nitend)
+
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector
+  do i = 1, mgncol
+     nstep(i) = 1 + int( max( maxval( fc(i,:)*pdel_inv(i,:) ), maxval( fnc(i,:)*pdel_inv(i,:) ) ) * deltat )
+     rnstep(i) = 1._r8/real(nstep(i))
+  end do
+  !$acc end parallel
+
+  ! liq mass sediment
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fc,dumc,pdel_inv, &
+                     qxtend=qctend,qxsedten=qcsedten,prect=prect,xflx=lflx,xxlx=xxlv, &
+                     qxsevap=qcsevap,tlat=tlat,qvlat=qvlat,xcldm=lcldm)
+
+  ! liq number sediment
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fnc,dumnc,pdel_inv,xcldm=lcldm,nxtend=nctend)
+
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector
+  do i = 1, mgncol
+     nstep(i) = 1 + int( max( maxval( fr(i,:)*pdel_inv(i,:) ), maxval( fnr(i,:)*pdel_inv(i,:) ) ) * deltat )
+     rnstep(i) = 1._r8/real(nstep(i))
+  end do
+  !$acc end parallel
+
+  ! rain mass sediment
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fr,dumr,pdel_inv, &
+                     qxtend=qrtend,qxsedten=qrsedten,prect=prect,xflx=rflx)
+
+  ! rain number sediment
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fnr,dumnr,pdel_inv,nxtend=nrtend)
+
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector
+  do i = 1, mgncol
+     nstep(i) = 1 + int( max( maxval( fs(i,:)*pdel_inv(i,:) ), maxval( fns(i,:)*pdel_inv(i,:) ) ) * deltat )
+     rnstep(i) = 1._r8/real(nstep(i))
+  end do
+  !$acc end parallel
+
+  ! snow mass sediment
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fs,dums,pdel_inv, &
+                     qxtend=qstend,qxsedten=qssedten,prect=prect,xflx=sflx,preci=preci)
+
+  ! snow number sediment
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fns,dumns,pdel_inv,nxtend=nstend)
+
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector
+  do i = 1, mgncol
+     nstep(i) = 1 + int( max( maxval( fg(i,:)*pdel_inv(i,:) ), maxval( fng(i,:)*pdel_inv(i,:) ) ) * deltat )
+     rnstep(i) = 1._r8/real(nstep(i))
+  end do
+  !$acc end parallel
+
+  ! graupel mass sediment
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fg,dumg,pdel_inv, &
+                     qxtend=qgtend,qxsedten=qgsedten,prect=prect,xflx=gflx,preci=preci)
+
+  ! graupel number sediment
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fng,dumng,pdel_inv,nxtend=ngtend)
+
 end if  ! end sedimentation
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -4150,55 +4230,63 @@ end subroutine calc_rercld
 
 !========================================================================
 !2020-09-15: Follow John Dennis's version to generate a new interface 
-!            to update tendency in the sedimentation loop
+!            to update tendency in the sedimentation loop;
+!2021-10-19: Separate the mass and ice sediment for each class;
 !========================================================================
-subroutine Sedimentation(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,qxtend,nxtend, &
-                            qxsedten,dumx,dumnx,prect,xflx,xxlx,qxsevap,xcldm,tlat,qvlat,preci)
+subroutine Sedimentation(mgncol,nlev,do_cldice,deltat,nstep,rnstep,fx,dumx,pdel_inv, &
+                         qxtend,qxsedten,prect,xflx,xxlx,qxsevap,tlat,qvlat,xcldm,preci,nxtend)
 
    integer, intent(in)               :: mgncol,nlev
    logical, intent(in)               :: do_cldice
    real(r8),intent(in)               :: deltat
+   integer, intent(in)               :: nstep(mgncol)
+   real(r8), intent(in)              :: rnstep(mgncol)
    real(r8), intent(in)              :: fx(mgncol,nlev)
-   real(r8), intent(in)              :: fnx(mgncol,nlev)
-   real(r8), intent(in)              :: pdel_inv(mgncol,nlev)
-   real(r8), intent(inout)           :: qxtend(mgncol,nlev)
-   real(r8), intent(inout)           :: nxtend(mgncol,nlev)
-   real(r8), intent(inout)           :: qxsedten(mgncol,nlev)
    real(r8), intent(inout)           :: dumx(mgncol,nlev)
-   real(r8), intent(inout)           :: dumnx(mgncol,nlev)
-   real(r8), intent(inout)           :: prect(mgncol)
-   real(r8), intent(inout)           :: xflx(mgncol,nlev+1)
+   real(r8), intent(in)              :: pdel_inv(mgncol,nlev)
+   real(r8), intent(inout), optional :: qxtend(mgncol,nlev)
+   real(r8), intent(inout), optional :: qxsedten(mgncol,nlev)
+   real(r8), intent(inout), optional :: prect(mgncol)
+   real(r8), intent(inout), optional :: xflx(mgncol,nlev+1)
    real(r8), intent(in)   , optional :: xxlx
    real(r8), intent(inout), optional :: qxsevap(mgncol,nlev)
    real(r8), intent(in)   , optional :: xcldm(mgncol,nlev)
    real(r8), intent(inout), optional :: tlat(mgncol,nlev)
    real(r8), intent(inout), optional :: qvlat(mgncol,nlev)
    real(r8), intent(inout), optional :: preci(mgncol)
-   integer  :: i,k,n,nstep
-   real(r8) :: faltndx,faltndnx,rnstep,faltndqxe
-   real(r8) :: dum1(mgncol,nlev),faloutx(mgncol,0:nlev),faloutnx(mgncol,0:nlev)
-   logical  :: present_tlat,present_qvlat, present_xcldm,present_qxsevap, present_preci
+   real(r8), intent(inout), optional :: nxtend(mgncol,nlev)
 
-   present_tlat    = present(tlat)
-   present_qvlat   = present(qvlat)
-   present_xcldm   = present(xcldm)
-   present_qxsevap = present(qxsevap)
-   present_preci   = present(preci)
+   ! local variables
+   integer  :: i,k,n,nstepmax
+   real(r8) :: faltndx,rnstepmax,faltndqxe
+   real(r8) :: dum1(mgncol,nlev),faloutx(mgncol,0:nlev)
+   logical  :: present_tlat, present_qvlat, present_xcldm, present_qxsevap, &
+               present_prect, present_preci, present_qxtend, present_qxsedten, &
+               present_xflx, present_nxtend
+
+   present_tlat     = present(tlat)
+   present_qvlat    = present(qvlat)
+   present_xcldm    = present(xcldm)
+   present_qxsevap  = present(qxsevap)
+   present_preci    = present(preci)
+   present_prect    = present(prect)
+   present_qxtend   = present(qxtend)
+   present_qxsedten = present(qxsedten)
+   present_nxtend   = present(nxtend)
+   present_xflx     = present(xflx)
 
    ! loop over sedimentation sub-time step to ensure stability
    !==============================================================
 
-   !$acc data present (fx,fnx,pdel_inv,qxtend,nxtend,qxsedten,dumx,dumnx) &
-   !$acc      present (prect,xflx,xxlx,qxsevap,xcldm,tlat,qvlat,preci) &
-   !$acc      create  (faloutx,faloutnx,dum1)
+   !$acc data present (fx,pdel_inv,qxtend,nxtend,qxsedten,dumx,prect, &
+   !$acc               xflx,xxlx,qxsevap,xcldm,tlat,qvlat,preci) &
+   !$acc      create  (faloutx,dum1)
 
    !$acc parallel vector_length(VLENS) default(present)
-   !$acc loop gang vector private(faltndx,faltndnx,faltndqxe,nstep,rnstep)
+   !$acc loop gang vector private(faltndx,faltndqxe,nstepmax,rnstepmax)
    do i = 1,mgncol
-      nstep   = 1 + int( max( maxval( fx(i,:)*pdel_inv(i,:) ), &
-                              maxval( fnx(i,:)*pdel_inv(i,:) ) ) &
-                              * deltat )
-      rnstep  = 1._r8/real(nstep)
+      nstepmax = nstep(i)
+      rnstepmax = rnstep(i)
 
       dum1(i,1) = 0._r8
       if (present_xcldm) then
@@ -4215,20 +4303,17 @@ subroutine Sedimentation(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,qxtend,nxt
       end if
 
       !$acc loop seq
-      do n = 1,nstep
+      do n = 1,nstepmax
          faloutx(i,0)  = 0._r8
-         faloutnx(i,0) = 0._r8
          if (do_cldice) then
             !$acc loop vector
             do k=1,nlev
                faloutx(i,k)  = fx(i,k)  * dumx(i,k)
-               faloutnx(i,k) = fnx(i,k) * dumnx(i,k)
             end do
          else
             !$acc loop vector
             do k=1,nlev
                faloutx(i,k)  = 0._r8
-               faloutnx(i,k) = 0._r8
             end do
          end if
 
@@ -4239,33 +4324,33 @@ subroutine Sedimentation(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,qxtend,nxt
             ! this means that flux entering clear portion of cell from above evaporates
             ! instantly
             ! note: this is not an issue with precip, since we assume max overlap
-            faltndx       = (faloutx(i,k)  - dum1(i,k)*faloutx(i,k-1))*pdel_inv(i,k)
-            faltndnx      = (faloutnx(i,k) - dum1(i,k)*faloutnx(i,k-1))*pdel_inv(i,k)
+            faltndx = (faloutx(i,k) - dum1(i,k)*faloutx(i,k-1))*pdel_inv(i,k)
             ! add fallout terms to eulerian tendencies
-            qxtend(i,k)   = qxtend(i,k)-faltndx*rnstep
-            nxtend(i,k)   = nxtend(i,k)-faltndnx*rnstep
+            if (present_qxtend) qxtend(i,k) = qxtend(i,k)-faltndx*rnstepmax
+            if (present_nxtend) nxtend(i,k) = nxtend(i,k)-faltndx*rnstepmax
             ! sedimentation tendency for output
-            qxsedten(i,k) = qxsedten(i,k)-faltndx*rnstep
+            if (present_qxsedten) qxsedten(i,k) = qxsedten(i,k)-faltndx*rnstepmax
             ! add terms to to evap/sub of cloud water
-            dumx(i,k)     = dumx(i,k)  - faltndx*deltat*rnstep
-            dumnx(i,k)    = dumnx(i,k) - faltndnx*deltat*rnstep
+            dumx(i,k) = dumx(i,k) - faltndx*deltat*rnstepmax
    
             if (k>1) then
-               faltndqxe     = (faloutx(i,k)-faloutx(i,k-1))*pdel_inv(i,k)
-               ! for output
-               if(present_qxsevap) qxsevap(i,k)= qxsevap(i,k) - (faltndqxe-faltndx)*rnstep
-               if(present_qvlat)   qvlat(i,k)  = qvlat(i,k) - (faltndqxe-faltndx)*rnstep
-               if(present_tlat)    tlat(i,k)   = tlat(i,k) + (faltndqxe-faltndx)*xxlx*rnstep
+               if (present_qxsevap .or. present_qvlat .or. present_tlat) then
+                  faltndqxe = (faloutx(i,k)-faloutx(i,k-1))*pdel_inv(i,k)
+                  ! for output
+                  if (present_qxsevap) qxsevap(i,k) = qxsevap(i,k) - (faltndqxe-faltndx)*rnstepmax
+                  if (present_qvlat) qvlat(i,k) = qvlat(i,k) - (faltndqxe-faltndx)*rnstepmax
+                  if (present_tlat) tlat(i,k) = tlat(i,k) + (faltndqxe-faltndx)*xxlx*rnstepmax
+               end if
             end if 
    
-            xflx(i,k+1) = xflx(i,k+1) + faloutx(i,k) / g * rnstep
+            if (present_xflx) xflx(i,k+1) = xflx(i,k+1) + faloutx(i,k) / g * rnstepmax
          end do
 
          ! units below are m/s
          ! sedimentation flux at surface is added to precip flux at surface
          ! to get total precip (cloud + precip water) rate
-         prect(i) = prect(i)+faloutx(i,nlev)/g*rnstep/1000._r8
-         if(present_preci) preci(i) = preci(i)+faloutx(i,nlev)/g*rnstep/1000._r8
+         if (present_prect) prect(i) = prect(i)+faloutx(i,nlev)/g*rnstepmax/1000._r8
+         if (present_preci) preci(i) = preci(i)+faloutx(i,nlev)/g*rnstepmax/1000._r8
       end do  ! n loop of 1, nstep
    end do  ! i loop of 1, mgncol
    !$acc end parallel
@@ -4274,11 +4359,11 @@ subroutine Sedimentation(mgncol,nlev,do_cldice,deltat,fx,fnx,pdel_inv,qxtend,nxt
 end subroutine Sedimentation
 
 !========================================================================
-!2021-09-09: Add a new interface for the implicit sedimentation calculation
+!2021-10-19: Add a new interface for the implicit sedimentation calculation;
+!            Separate number/mass sediment for each class;
 !========================================================================
-subroutine Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumx,fx, &
-                                  dumnx,fnx,check_qsmall,xflx,qxsedten,  &
-                                  qxtend,prect,nxtend,preci)
+subroutine Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumx,fx,check_qsmall, &
+                                  xflx,qxsedten,qxtend,prect,preci,nxtend)
 
    integer,  intent(in)              :: mgncol,nlev
    real(r8), intent(in)              :: deltat
@@ -4286,24 +4371,29 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumx,fx, &
    real(r8), intent(in)              :: pdel(mgncol,nlev)
    real(r8), intent(in)              :: dumx(mgncol,nlev)
    real(r8), intent(in)              :: fx(mgncol,nlev)
-   real(r8), intent(in)              :: dumnx(mgncol,nlev)
-   real(r8), intent(in)              :: fnx(mgncol,nlev)
    logical,  intent(in)              :: check_qsmall 
-   real(r8), intent(inout)           :: xflx(mgncol,nlev+1)
-   real(r8), intent(inout)           :: qxsedten(mgncol,nlev)
-   real(r8), intent(inout)           :: qxtend(mgncol,nlev)
-   real(r8), intent(inout)           :: prect(mgncol)
-   real(r8), intent(inout)           :: nxtend(mgncol,nlev)
+   real(r8), intent(inout), optional :: xflx(mgncol,nlev+1)
+   real(r8), intent(inout), optional :: qxsedten(mgncol,nlev)
+   real(r8), intent(inout), optional :: qxtend(mgncol,nlev)
+   real(r8), intent(inout), optional :: prect(mgncol)
+   real(r8), intent(inout), optional :: nxtend(mgncol,nlev)
    real(r8), intent(inout), optional :: preci(mgncol)
 
    ! Local variables
    integer  :: i,k
    real(r8) :: dum_2D(mgncol,nlev),flx(mgncol,nlev),precip(mgncol)
-   logical  :: present_preci
+   logical  :: present_preci, present_check_qsmall, present_xflx, &
+               present_qxsedten, present_qxtend, present_prect, &
+               present_nxtend
 
    present_preci = present(preci)
-
-   !$acc data present (zint,pdel,dumx,fx,dumnx,fnx,xflx,  &
+   present_xflx = present(xflx)
+   present_qxsedten = present(qxsedten)
+   present_qxtend = present(qxtend)
+   present_prect = present(prect)
+   present_nxtend = present(nxtend)
+   
+   !$acc data present (zint,pdel,dumx,fx,xflx, &
    !$acc               qxsedten,qxtend,prect,nxtend,preci) &
    !$acc      create  (flx,dum_2D,precip)
 
@@ -4324,39 +4414,22 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumx,fx, &
       do i=1,mgncol
          if ( check_qsmall ) then
             !h1g, 2019-11-26, ensure numerical stability
-            if ( flx(i,k) .ge. qsmall ) xflx(i,k+1) = xflx(i,k+1) + flx(i,k)/g/deltat
+            if ( flx(i,k) .ge. qsmall .and. present_xflx ) xflx(i,k+1) = xflx(i,k+1) + flx(i,k)/g/deltat
          else
-            xflx(i,k+1) = xflx(i,k+1) + flx(i,k)/g/deltat
-         endif
-         qxsedten(i,k) = qxsedten(i,k) + (dum_2D(i,k) - dumx(i,k))/deltat
-         qxtend(i,k) = qxtend(i,k) + (dum_2D(i,k) - dumx(i,k))/deltat
+            if ( present_xflx ) xflx(i,k+1) = xflx(i,k+1) + flx(i,k)/g/deltat
+         end if
+         if ( present_qxsedten) qxsedten(i,k) = qxsedten(i,k) + (dum_2D(i,k) - dumx(i,k))/deltat
+         if ( present_qxtend ) qxtend(i,k) = qxtend(i,k) + (dum_2D(i,k) - dumx(i,k))/deltat
+         if ( present_nxtend ) nxtend(i,k) = nxtend(i,k) + (dum_2D(i,k) - dumx(i,k))/deltat 
       enddo
    enddo
-
+   
    !$acc loop gang vector
    do i=1,mgncol
       if ( precip(i) .ge. 0.0 ) then !h1g, 2019-11-26, ensure numerical stability
-         prect(i) = prect(i)+precip(i)/g/deltat/1000._r8
-         if (present_preci) preci(i) = preci(i)+precip(i)/g/deltat/1000._r8
+         if ( present_prect ) prect(i) = prect(i)+precip(i)/g/deltat/1000._r8
+         if ( present_preci ) preci(i) = preci(i)+precip(i)/g/deltat/1000._r8
       endif
-   enddo
-
-   !$acc loop gang vector collapse(2)
-   do k=1,nlev
-      do i=1,mgncol
-         dum_2D(i,k) = dumnx(i,k)
-      enddo
-   enddo
-   !$acc end parallel     
-
-   call implicit_fall ( deltat, mgncol, 1, nlev, zint, fnx, pdel, dum_2D, precip, flx)
-
-   !$acc parallel vector_length(VLENS) default(present)
-   !$acc loop gang vector collapse(2)
-   do k=1,nlev
-      do i=1,mgncol
-         nxtend(i,k) = nxtend(i,k) + (dum_2D(i,k) - dumnx(i,k))/deltat
-      enddo
    enddo
    !$acc end parallel
 
