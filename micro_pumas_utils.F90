@@ -1379,7 +1379,6 @@ integer :: i
 
 !$acc data present (t,qv,qs,ns,precip_frac,rho,dv,qvl) &
 !$acc      present (qvi,asn,mu,sc,vap_deps) 
-
       
 !$acc parallel vector_length(VLENS) default(present)
 !$acc loop gang vector      
@@ -1445,12 +1444,12 @@ subroutine kk2000_liq_autoconversion(microp_uniform, qcic, &
   real(r8), dimension(vlen), intent(out) :: nprc
   real(r8), dimension(vlen), intent(out) :: nprc1
 
-  real(r8), dimension(vlen) :: prc_coef
-  integer :: i
-
   real(r8), intent(in) :: micro_mg_autocon_fact
   real(r8), intent(in) :: micro_mg_autocon_nd_exp
   real(r8), intent(in) :: micro_mg_autocon_lwp_exp
+
+  real(r8), dimension(vlen) :: prc_coef
+  integer :: i
 
   !$acc data present (qcic,ncic,rho,relvar,prc,nprc,nprc1) &
   !$acc      create  (prc_coef)

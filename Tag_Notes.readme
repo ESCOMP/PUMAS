@@ -1,0 +1,6 @@
+====================================
+.. pumas_cam-release_v1.19
+Oct 26, 2021 - This tag depends on changes to cam_development that have not been brought to a PR 
+(or merged) yet. To use this code, you must include the changes from the gettelman_pumas_update0821
+branch of https://github.com/PUMASDevelopment/CAM at commit 2f2346bb92.
+====================================
