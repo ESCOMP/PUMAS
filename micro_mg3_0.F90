@@ -3095,8 +3095,7 @@ subroutine micro_mg_tend ( &
 
         if (lams(i,k).ge.qsmall) then
            qtmp = lams(i,k)**bs
-           ! 'final' values of number and mass weighted mean fallspeed for snow
-           ! (m/s)
+           ! 'final' values of number and mass weighted mean fallspeed for snow (m/s)
            ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*qtmp),1.2_r8*rhof(i,k))
            ums(i,k) = ums(i,k)*micro_mg_vtrmi_factor
 
@@ -3124,8 +3123,7 @@ subroutine micro_mg_tend ( &
 
         if (lamg(i,k).ge.qsmall) then
            qtmp = lamg(i,k)**bgtmp
-           ! 'final' values of number and mass weighted mean fallspeed for
-           ! graupel (m/s)
+           ! 'final' values of number and mass weighted mean fallspeed for graupel (m/s)
            umg(i,k) = min(agn(i,k)*gamma_bg_plus4/(6._r8*qtmp),20._r8*rhof(i,k))
            fg(i,k) = g*rho(i,k)*umg(i,k)
            ung(i,k) = min(agn(i,k)*gamma_bg_plus1/qtmp,20._r8*rhof(i,k))
