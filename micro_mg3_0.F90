@@ -3065,9 +3065,10 @@ subroutine micro_mg_tend ( &
   end if
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector collapse(2) private(qtmp)
-  do k=1,nlev
-     do i=1,mgncol
+  !$acc loop gang vector private(qtmp)
+  do i=1,mgncol
+     !$acc loop seq
+     do k=1,nlev
         if (lamr(i,k).ge.qsmall) then
            qtmp = lamr(i,k)**br
            ! 'final' values of number and mass weighted mean fallspeed for rain (m/s)
@@ -3078,6 +3079,18 @@ subroutine micro_mg_tend ( &
         else
            fr(i,k)=0._r8
            fnr(i,k)=0._r8
+        end if
+
+        ! Fallspeed correction to ensure non-zero if rain in the column
+        ! from updated Morrison (WRFv3.3) and P3 schemes
+        ! If fallspeed exists at a higher level, apply it below to eliminate    
+        if (precip_fall_corr) then
+           if (k.gt.2) then
+              if (fr(i,k).lt.1.e-10_r8) then
+                 fr(i,k)=fr(i,k-1)
+                 fnr(i,k)=fnr(i,k-1)
+              end if
+           end if
         end if
 
         if (lams(i,k).ge.qsmall) then
@@ -3100,6 +3113,15 @@ subroutine micro_mg_tend ( &
            fns(i,k)=0._r8
         end if
 
+        if (precip_fall_corr) then
+           if (k.gt.2) then
+              if (fs(i,k).lt.1.e-10_r8) then
+                 fs(i,k)=fs(i,k-1)
+                 fns(i,k)=fns(i,k-1)
+              end if
+           end if
+        end if
+
         if (lamg(i,k).ge.qsmall) then
            qtmp = lamg(i,k)**bgtmp
            ! 'final' values of number and mass weighted mean fallspeed for
@@ -3112,26 +3134,9 @@ subroutine micro_mg_tend ( &
            fg(i,k)=0._r8
            fng(i,k)=0._r8
         end if
-     end do
-  end do
 
-  !$acc loop gang vector
-  do i=1,mgncol
-     !$acc loop seq
-     do k=1,nlev
-        ! Fallspeed correction to ensure non-zero if rain in the column
-        ! from updated Morrison (WRFv3.3) and P3 schemes
-        ! If fallspeed exists at a higher level, apply it below to eliminate    
-        if (precip_fall_corr) then 
+        if (precip_fall_corr) then
            if (k.gt.2) then
-              if (fr(i,k).lt.1.e-10_r8) then
-                 fr(i,k)=fr(i,k-1)
-                 fnr(i,k)=fnr(i,k-1)
-              end if
-              if (fs(i,k).lt.1.e-10_r8) then
-                 fs(i,k)=fs(i,k-1)
-                 fns(i,k)=fns(i,k-1)
-              end if
               if (fg(i,k).lt.1.e-10_r8) then
                  fg(i,k)=fg(i,k-1)
                  fng(i,k)=fng(i,k-1)
