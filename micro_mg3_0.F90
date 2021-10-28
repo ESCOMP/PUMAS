@@ -3080,23 +3080,12 @@ subroutine micro_mg_tend ( &
            fnr(i,k)=0._r8
         end if
 
-        ! Fallspeed correction to ensure non-zero if rain in the column
-        ! from updated Morrison (WRFv3.3) and P3 schemes
-        ! If fallspeed exists at a higher level, apply it below to eliminate    
-        if (precip_fall_corr) then 
-           if (k.gt.2) then
-              if (fr(i,k).lt.1.e-10_r8) then
-                 fr(i,k)=fr(i,k-1)
-                 fnr(i,k)=fnr(i,k-1)
-              end if
-           end if
-        end if
-
         if (lams(i,k).ge.qsmall) then
            qtmp = lams(i,k)**bs
-           ! 'final' values of number and mass weighted mean fallspeed for snow (m/s)
+           ! 'final' values of number and mass weighted mean fallspeed for snow
+           ! (m/s)
            ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*qtmp),1.2_r8*rhof(i,k))
-           ums(i,k) = ums(i,k)*micro_mg_vtrmi_factor       
+           ums(i,k) = ums(i,k)*micro_mg_vtrmi_factor
 
            fs(i,k)  = g*rho(i,k)*ums(i,k)
            uns(i,k) = min(asn(i,k)*gamma_bs_plus1/qtmp,1.2_r8*rhof(i,k))
@@ -3111,18 +3100,10 @@ subroutine micro_mg_tend ( &
            fns(i,k)=0._r8
         end if
 
-        if (precip_fall_corr) then
-           if (k.gt.2) then
-              if (fs(i,k).lt.1.e-10_r8) then
-                 fs(i,k)=fs(i,k-1)
-                 fns(i,k)=fns(i,k-1)
-              end if
-           end if
-        end if
-
         if (lamg(i,k).ge.qsmall) then
            qtmp = lamg(i,k)**bgtmp
-           ! 'final' values of number and mass weighted mean fallspeed for graupel (m/s)
+           ! 'final' values of number and mass weighted mean fallspeed for
+           ! graupel (m/s)
            umg(i,k) = min(agn(i,k)*gamma_bg_plus4/(6._r8*qtmp),20._r8*rhof(i,k))
            fg(i,k) = g*rho(i,k)*umg(i,k)
            ung(i,k) = min(agn(i,k)*gamma_bg_plus1/qtmp,20._r8*rhof(i,k))
@@ -3131,9 +3112,26 @@ subroutine micro_mg_tend ( &
            fg(i,k)=0._r8
            fng(i,k)=0._r8
         end if
+     end do
+  end do
 
-        if (precip_fall_corr) then
+  !$acc loop gang vector
+  do i=1,mgncol
+     !$acc loop seq
+     do k=1,nlev
+        ! Fallspeed correction to ensure non-zero if rain in the column
+        ! from updated Morrison (WRFv3.3) and P3 schemes
+        ! If fallspeed exists at a higher level, apply it below to eliminate    
+        if (precip_fall_corr) then 
            if (k.gt.2) then
+              if (fr(i,k).lt.1.e-10_r8) then
+                 fr(i,k)=fr(i,k-1)
+                 fnr(i,k)=fnr(i,k-1)
+              end if
+              if (fs(i,k).lt.1.e-10_r8) then
+                 fs(i,k)=fs(i,k-1)
+                 fns(i,k)=fns(i,k-1)
+              end if
               if (fg(i,k).lt.1.e-10_r8) then
                  fg(i,k)=fg(i,k-1)
                  fng(i,k)=fng(i,k-1)
