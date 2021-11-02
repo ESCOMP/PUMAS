@@ -3596,6 +3596,7 @@ end if  ! end sedimentation
      end do 
 
      ! ice number limiter                      
+     !$acc loop gang vector collapse(2)
      do k=1,nlev
         do i=1,mgncol
             if (do_cldice .and. nitend(i,k).gt.0._r8.and.ni(i,k)+nitend(i,k)*deltat.gt.micro_mg_max_nicons*icldm(i,k)/rho(i,k)) then
