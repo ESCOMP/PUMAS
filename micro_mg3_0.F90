@@ -3065,9 +3065,10 @@ subroutine micro_mg_tend ( &
   end if
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector collapse(2) private(qtmp)
-  do k=1,nlev
-     do i=1,mgncol
+  !$acc loop gang vector private(qtmp)
+  do i=1,mgncol
+     !$acc loop seq
+     do k=1,nlev
         if (lamr(i,k).ge.qsmall) then
            qtmp = lamr(i,k)**br
            ! 'final' values of number and mass weighted mean fallspeed for rain (m/s)
@@ -3083,7 +3084,7 @@ subroutine micro_mg_tend ( &
         ! Fallspeed correction to ensure non-zero if rain in the column
         ! from updated Morrison (WRFv3.3) and P3 schemes
         ! If fallspeed exists at a higher level, apply it below to eliminate    
-        if (precip_fall_corr) then 
+        if (precip_fall_corr) then
            if (k.gt.2) then
               if (fr(i,k).lt.1.e-10_r8) then
                  fr(i,k)=fr(i,k-1)
@@ -3096,7 +3097,7 @@ subroutine micro_mg_tend ( &
            qtmp = lams(i,k)**bs
            ! 'final' values of number and mass weighted mean fallspeed for snow (m/s)
            ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*qtmp),1.2_r8*rhof(i,k))
-           ums(i,k) = ums(i,k)*micro_mg_vtrmi_factor       
+           ums(i,k) = ums(i,k)*micro_mg_vtrmi_factor
 
            fs(i,k)  = g*rho(i,k)*ums(i,k)
            uns(i,k) = min(asn(i,k)*gamma_bs_plus1/qtmp,1.2_r8*rhof(i,k))
@@ -3595,6 +3596,7 @@ end if  ! end sedimentation
      end do 
 
      ! ice number limiter                      
+     !$acc loop gang vector collapse(2)
      do k=1,nlev
         do i=1,mgncol
             if (do_cldice .and. nitend(i,k).gt.0._r8.and.ni(i,k)+nitend(i,k)*deltat.gt.micro_mg_max_nicons*icldm(i,k)/rho(i,k)) then
