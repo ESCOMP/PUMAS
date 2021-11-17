@@ -1050,7 +1050,7 @@ subroutine micro_mg_tend ( &
   real(r8) :: fs(mgncol,nlev)
   real(r8) :: fns(mgncol,nlev)
 
-  real(r8) :: rainrt(mgncol,nlev)     ! rain rate for reflectivity calculation
+  real(r8) :: rthrsh     ! rain threshold for reflectivity calculation
 
   ! dummy variables
   real(r8) :: dum, dum1, dum2, dum3, dum4, qtmp
@@ -1178,7 +1178,7 @@ subroutine micro_mg_tend ( &
   !$acc               pracg,psacwg,pgsacw,pgracs,prdg,qmultg,qmultrg,uns, &
   !$acc               unr,ung,arn,asn,agn,acn,ain,ajn,mi0l,esl,esi,esnA,  &
   !$acc               qvl,qvi,qvnA,qvnAI,relhum,fc,fnc,fi,fni,fg,fng,fr,  &
-  !$acc               fnr,fs,fns,rainrt,dum1A,     &
+  !$acc               fnr,fs,fns,dum1A,     &
   !$acc               dum2A,dum3A,dumni0A2D,dumns0A2D,ttmpA,qtmpAI,dumc,  &
   !$acc               dumnc,dumi,dumni,dumr,dumnr,dums,dumns,dumg,dumng,  &
   !$acc               dum_2D,pdel_inv,rtmp,ctmp,ntmp,flx)    
@@ -1414,9 +1414,6 @@ subroutine micro_mg_tend ( &
         qgout(i,k)              = 0._r8
         ngout(i,k)              = 0._r8
 
-        ! for refl calc
-        rainrt(i,k)             = 0._r8
-      
         ! initialize rain size
         rercld(i,k)             = 0._r8
       
@@ -4072,14 +4069,18 @@ end if  ! end sedimentation
         end if
         refl(i,k)=dum+dum1
 
-        ! add rain rate, but for 37 GHz formulation instead of 94 GHz
-        ! formula approximated from data of Matrasov (2007)
+        ! add rain rate, 
         ! rainrt is the rain rate in mm/hr
         ! reflectivity (dum) is in DBz
-        if (rainrt(i,k).ge.0.001_r8) then
-           dum=log10(rainrt(i,k)**6._r8)+16._r8
-           ! convert from DBz to mm^6/m^3
-           dum = 10._r8**(dum/10._r8)
+
+        ! New (Nov 2021) version Aircraft cloud values of
+        ! Z=a*R^b (R in mm/hr) from Comstock et al 2004
+
+        rthrsh=0.0001_r8/3600._r8
+        if (rflx(i,k+1).ge.rthrsh) then
+          
+           dum=32._r8*(rflx(i,k+1)*3600._r8)**1.4_r8
+
         else
            ! don't include rain rate in R calculation for values less than 0.001 mm/hr
            dum=0._r8
