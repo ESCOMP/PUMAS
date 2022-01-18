@@ -1,4 +1,4 @@
-module micro_mg_data
+module micro_pumas_data
 
 !
 ! Packing and time averaging for the MG interface.
@@ -547,4 +547,4 @@ subroutine MGPostProc_copy(lhs, rhs)
   lhs%field_procs = rhs%field_procs
 end subroutine MGPostProc_copy
 
-end module micro_mg_data
+end module micro_pumas_data
