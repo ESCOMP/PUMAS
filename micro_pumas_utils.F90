@@ -1,4 +1,4 @@
-module micro_mg_utils
+module micro_pumas_utils
 
 !--------------------------------------------------------------------------
 !
@@ -44,7 +44,7 @@ private
 save
 
 public :: &
-     micro_mg_utils_init, &
+     micro_pumas_utils_init, &
      size_dist_param_liq, &
      size_dist_param_basic, &
      avg_diameter, &
@@ -268,7 +268,7 @@ private :: itab,itabcoll
 ! Constants set in initialization
 !=========================================================
 
-! Set using arguments to micro_mg_init
+! Set using arguments to micro_pumas_init
 real(r8) :: rv          ! water vapor gas constant
 real(r8) :: cpp         ! specific heat of dry air
 real(r8) :: tmelt       ! freezing point of water (K)
@@ -323,7 +323,7 @@ contains
 !
 ! Check the list at the top of this module for descriptions of all other
 ! arguments.
-subroutine micro_mg_utils_init( kind, rair, rh2o, cpair, tmelt_in, latvap, &
+subroutine micro_pumas_utils_init( kind, rair, rh2o, cpair, tmelt_in, latvap, &
      latice, dcs, errstring)
 
   integer,  intent(in)  :: kind
@@ -346,7 +346,7 @@ subroutine micro_mg_utils_init( kind, rair, rh2o, cpair, tmelt_in, latvap, &
   errstring = ' '
 
   if( kind .ne. r8 ) then
-     errstring = 'micro_mg_init: KIND of reals does not match'
+     errstring = 'micro_pumas_init: KIND of reals does not match'
      return
   endif
 
@@ -390,7 +390,7 @@ subroutine micro_mg_utils_init( kind, rair, rh2o, cpair, tmelt_in, latvap, &
   !$acc                gamma_half_br_plus5,gamma_half_bs_plus5, &
   !$acc                gamma_2bs_plus2)
 
-end subroutine micro_mg_utils_init
+end subroutine micro_pumas_utils_init
 
 ! Constructor for a constituent property object.
 function NewMGHydrometeorProps(rho, eff_dim, lambda_bounds, min_mean_mass) &
@@ -2882,7 +2882,7 @@ subroutine graupel_collecting_cld_water(qgic,qcic,ncic,rho,n0g,lamg,bg,agn, &
   real(r8), dimension(vlen), intent(in) :: lamg
   real(r8), dimension(vlen), intent(in) :: n0g
   ! fallspeed parameters for graupel
-  ! Set AGN and BG  as input (in micro_mg3_0.F90)  (select hail or graupel as appropriate)
+  ! Set AGN and BG  as input (in micro_pumas_v1.F90)  (select hail or graupel as appropriate)
   real(r8),                  intent(in) :: bg
   real(r8), dimension(vlen), intent(in) :: agn
   ! Output tendencies
@@ -3255,7 +3255,7 @@ end subroutine graupel_rime_splintering
 !  real(r8), dimension(vlen), intent(in) :: sc   ! schmidt number
 !
 !  ! fallspeed parameters for graupel
-!  ! Set AGN and BG  as input (in micro_mg3_0.F90)  (select hail or graupel as appropriate)
+!  ! Set AGN and BG  as input (in micro_pumas_v1.F90)  (select hail or graupel as appropriate)
 !  real(r8),                    intent(in) :: bg
 !  real(r8), dimension(vlen), intent(in) :: agn
 !
@@ -3526,4 +3526,4 @@ pure function limiter_is_on(lim)
 
 end function limiter_is_on
 
-end module micro_mg_utils
+end module micro_pumas_utils

@@ -1,4 +1,4 @@
-module micro_mg3_0
+module micro_pumas_v1
 !---------------------------------------------------------------------------------
 ! Purpose:
 !   MG microphysics version 3.0 - Update of MG microphysics with
@@ -74,9 +74,9 @@ module micro_mg3_0
 ! General code structure:
 !
 ! Code is divided into two main subroutines:
-!   subroutine micro_mg_init --> initializes microphysics routine, should be called
+!   subroutine micro_pumas_init --> initializes microphysics routine, should be called
 !                                  once at start of simulation
-!   subroutine micro_mg_tend --> main microphysics routine to be called each time step
+!   subroutine micro_pumas_tend --> main microphysics routine to be called each time step
 !                                this also calls several smaller subroutines to calculate
 !                                microphysical processes and other utilities
 !
@@ -103,7 +103,7 @@ module micro_mg3_0
 !                 nucleating ice                                  -
 ! .........................................................................
 ! NOTE: List of all inputs/outputs passed through the call/subroutine statement
-!       for micro_mg_tend is given below at the start of subroutine micro_mg_tend.
+!       for micro_pumas_tend is given below at the start of subroutine micro_pumas_tend.
 !---------------------------------------------------------------------------------
 
 ! Procedures required:
@@ -120,7 +120,7 @@ use wv_sat_methods, only: &
      qsat_ice => wv_sat_qsat_ice_vect
 
 ! Parameters from the utilities module.
-use micro_mg_utils, only: &
+use micro_pumas_utils, only: &
      r8, &
      pi, &
      omsm, &
@@ -146,9 +146,9 @@ private
 save
 
 public :: &
-     micro_mg_init, &
-     micro_mg_get_cols, &
-     micro_mg_tend
+     micro_pumas_init, &
+     micro_pumas_get_cols, &
+     micro_pumas_tend
 
 ! Switches for specification rather than prediction of droplet and crystal number
 ! note: number will be adjusted as needed to keep mean size within bounds,
@@ -233,7 +233,7 @@ integer, parameter :: VLENS = 128  ! vector length of a GPU compute kernel
 ! Constants set in initialization
 !=========================================================
 
-! Set using arguments to micro_mg_init
+! Set using arguments to micro_pumas_init
 real(r8) :: g           ! gravity
 real(r8) :: r           ! dry air gas constant
 real(r8) :: rv          ! water vapor gas constant
@@ -308,7 +308,7 @@ logical  :: do_sb_physics ! do SB 2001 autoconversion or accretion physics
 contains
 !===============================================================================
 
-subroutine micro_mg_init( &
+subroutine micro_pumas_init( &
      kind, gravit, rair, rh2o, cpair,    &
      tmelt_in, latvap, latice,           &
      rhmini_in, micro_mg_dcs,            &
@@ -327,7 +327,7 @@ subroutine micro_mg_init( &
      nrcons_in, nrnst_in, nscons_in, nsnst_in, &
      errstring)
 
-  use micro_mg_utils, only: micro_mg_utils_init
+  use micro_pumas_utils, only: micro_pumas_utils_init
 
   !-----------------------------------------------------------------------
   !
@@ -407,7 +407,7 @@ subroutine micro_mg_init( &
   dcs = micro_mg_dcs
 
   ! Initialize subordinate utilities module.
-  call micro_mg_utils_init(kind, rair, rh2o, cpair, tmelt_in, latvap, latice, &
+  call micro_pumas_utils_init(kind, rair, rh2o, cpair, tmelt_in, latvap, latice, &
        dcs, errstring)
 
   if (trim(errstring) /= "") return
@@ -518,12 +518,12 @@ subroutine micro_mg_init( &
   !$acc                gamma_bg_plus4,micro_mg_berg_eff_factor,                &
   !$acc                remove_supersat,do_sb_physics)
 
-end subroutine micro_mg_init
+end subroutine micro_pumas_init
 
 !===============================================================================
 !microphysics routine for each timestep goes here...
 
-subroutine micro_mg_tend ( &
+subroutine micro_pumas_tend ( &
      mgncol,             nlev,               deltatin,           &
      t,                            q,                            &
      qcn,                          qin,                          &
@@ -592,7 +592,7 @@ subroutine micro_mg_tend ( &
      frzimm,             frzcnt,             frzdep)
 
   ! Constituent properties.
-  use micro_mg_utils, only: &
+  use micro_pumas_utils, only: &
        mg_liq_props, &
        mg_ice_props, &
        mg_rain_props, &
@@ -601,14 +601,14 @@ subroutine micro_mg_tend ( &
        mg_snow_props
 
   ! Size calculation functions.
-  use micro_mg_utils, only: &
+  use micro_pumas_utils, only: &
        size_dist_param_liq, &
        size_dist_param_basic, &
        avg_diameter, &
        avg_diameter_vec
 
   ! Microphysical processes.
-  use micro_mg_utils, only: &
+  use micro_pumas_utils, only: &
        ice_deposition_sublimation, &
        sb2001v2_liq_autoconversion,&
        sb2001v2_accre_cld_water_rain,&       
@@ -3938,7 +3938,7 @@ subroutine micro_mg_tend ( &
 
   !$acc end data
 
-end subroutine micro_mg_tend
+end subroutine micro_pumas_tend
 
 !========================================================================
 !OUTPUT CALCULATIONS
@@ -4126,7 +4126,7 @@ end subroutine Sedimentation
 !========================================================================
 
 
-pure subroutine micro_mg_get_cols(ncol, nlev, top_lev, mgncol, mgcols, &
+pure subroutine micro_pumas_get_cols(ncol, nlev, top_lev, mgncol, mgcols, &
      qcn, qin, qrn, qsn, qgr)
 
   ! Determines which columns microphysics should operate over by
@@ -4176,6 +4176,6 @@ pure subroutine micro_mg_get_cols(ncol, nlev, top_lev, mgncol, mgcols, &
      end if
   end do
 
-end subroutine micro_mg_get_cols
-
-end module micro_mg3_0
+end subroutine micro_pumas_get_cols
+      
+end module micro_pumas_v1
