@@ -1,4 +1,8 @@
 ====================================
+.. pumas_cam-release_v1.22
+Jan 19, 2022 - Renames for pumas_v1 and use in cam_dev from here on. All changes required to run 
+the head of pumas/cam/release will be integrated into cam_dev physics in cam6_3_046, most likely.
+====================================
 .. pumas_cam-release_v1.21
 Nov 29, 2021 - Rain reflectivity bug fix. Notes from v1.19 still apply.
 ====================================
