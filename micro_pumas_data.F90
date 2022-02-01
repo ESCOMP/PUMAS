@@ -56,6 +56,8 @@ use shr_log_mod, only: &
      errMsg => shr_log_errMsg, &
      OOBMsg => shr_log_OOBMsg
 use shr_sys_mod, only: shr_sys_abort
+use shr_infnan_mod, only: shr_infnan_isnan, shr_infnan_isinf
+use cam_logfile, only: iulog
 
 implicit none
 private
@@ -392,6 +394,19 @@ subroutine MGFieldPostProc_accumulate(self)
                 size(self%packed_2D, 1),size(self%packed_2D, 2)))
            self%buffer_2D = 0._r8
         end if
+        if( any( shr_infnan_isnan( self%packed_2D))) then
+!     call shr_sys_abort(errMsg(__FILE__, __LINE__) // " Packed 2D Array contains a NaN")
+           write(iulog,*) "MICRO_PUMAS_DATA.F90 WARNING:"
+           write(iulog,*) "Packed 2D Array contains a Nan"
+           where(shr_infnan_isnan(self%packed_2D)) self%packed_2D = 0._r8
+        end if
+        if( any( shr_infnan_isinf( self%packed_2D))) then
+!     call shr_sys_abort(errMsg(__FILE__, __LINE__) // " Packed 2D Array contains an INF")
+           write(iulog,*) "MICRO_PUMAS_DATA.F90 WARNING:"
+           write(iulog,*) "Packed 2D Array contains an INF"
+           where(shr_infnan_isinf(self%packed_2D)) self%packed_2D = 0._r8
+        end if
+
         self%buffer_2D = self%buffer_2D + self%packed_2D
      case default
         call shr_sys_abort(errMsg(__FILE__, __LINE__) // &
