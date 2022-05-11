@@ -574,6 +574,7 @@ subroutine micro_pumas_tend ( &
      effc,               effc_fn,            effi,               &
      sadice,                       sadsnow,                      &
      prect,                        preci,                        &
+! CAC - The variables will be removed and have proc_rates in the argument list instead
      nevapr,                       evapsnow,                     &
      am_evp_st,                                                  &
      prain,                        prodsnow,                     &
@@ -663,6 +664,8 @@ subroutine micro_pumas_tend ( &
        vapor_deposition_onto_snow, &
        evaporate_sublimate_precip_graupel
 
+  use micro_pumas_diags, only: proc_rates_type
+
   !Authors: Hugh Morrison, Andrew Gettelman, NCAR, Peter Caldwell, LLNL
   ! e-mail: morrison@ucar.edu, andrew@ucar.edu
 
@@ -735,10 +738,11 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: prect(mgncol)             ! surface precip rate (m/s)
   real(r8), intent(out) :: preci(mgncol)             ! cloud ice/snow precip rate (m/s)
   real(r8), intent(out) :: nevapr(mgncol,nlev)       ! evaporation rate of rain + snow (1/s)
-  real(r8), intent(out) :: evapsnow(mgncol,nlev)     ! sublimation rate of snow (1/s)
+  type (proc_rates_type) :: proc_rates
+!  real(r8), intent(out) :: evapsnow(mgncol,nlev)     ! sublimation rate of snow (1/s)
   real(r8), intent(out) :: am_evp_st(mgncol,nlev)    ! stratiform evaporation area (frac)
   real(r8), intent(out) :: prain(mgncol,nlev)        ! production of rain + snow (1/s)
-  real(r8), intent(out) :: prodsnow(mgncol,nlev)     ! production of snow (1/s)
+!  real(r8), intent(out) :: prodsnow(mgncol,nlev)     ! production of snow (1/s)
   real(r8), intent(out) :: cmeout(mgncol,nlev)       ! evap/sub of cloud (1/s)
   real(r8), intent(out) :: deffi(mgncol,nlev)        ! ice effective diameter for optics (radiation) (micron)
   real(r8), intent(out) :: pgamrad(mgncol,nlev)      ! ice gamma parameter for optics (radiation) (no units)
@@ -1157,7 +1161,7 @@ subroutine micro_pumas_tend ( &
   !$acc      copyout (qcsinksum_rate1ord,tlat,qvlat,qctend,qitend,nctend,     &
   !$acc               nitend,qrtend,qstend,nrtend,nstend,qgtend,ngtend,       &
   !$acc               effc,effc_fn,effi,sadice,sadsnow,prect,preci,           &
-  !$acc               nevapr,evapsnow,am_evp_st,prain,prodsnow,cmeout,        &
+  !$acc               nevapr,proc_rates%evapsnow,am_evp_st,prain,proc_rates%prodsnow,cmeout,        &
   !$acc               deffi,pgamrad,lamcrad,qsout,dsout,lflx,iflx,rflx,       &
   !$acc               sflx,gflx,qrout,reff_rain,reff_snow,reff_grau,          &
   !$acc               qcsevap,qisevap,qvres,cmeitot,vtrmc,vtrmi,umr,ums,      &
@@ -1428,10 +1432,10 @@ subroutine micro_pumas_tend ( &
         ! initialize variables for trop_mozart
         nevapr(i,k)             = 0._r8
         prer_evap(i,k)          = 0._r8
-        evapsnow(i,k)           = 0._r8
+        proc_rates%evapsnow(i,k)           = 0._r8
         am_evp_st(i,k)          = 0._r8
         prain(i,k)              = 0._r8
-        prodsnow(i,k)           = 0._r8
+        proc_rates%prodsnow(i,k)           = 0._r8
         cmeout(i,k)             = 0._r8
 
         precip_frac(i,k)        = mincld
@@ -2740,7 +2744,7 @@ subroutine micro_pumas_tend ( &
         !-------------------------------------------------------------------
         ! evaporation/sublimation is stored here as positive term
         ! Add to evapsnow via prdg
-        evapsnow(i,k) = (-prds(i,k)-prdg(i,k))*precip_frac(i,k)
+        proc_rates%evapsnow(i,k) = (-prds(i,k)-prdg(i,k))*precip_frac(i,k)
         nevapr(i,k) = -pre(i,k)*precip_frac(i,k)
         prer_evap(i,k) = -pre(i,k)*precip_frac(i,k)
         ! change to make sure prain is positive: do not remove snow from
@@ -2748,10 +2752,10 @@ subroutine micro_pumas_tend ( &
         prain(i,k) = (pra(i,k)+prc(i,k))*lcldm(i,k)+(-pracs(i,k)- &
              mnuccr(i,k)-mnuccri(i,k))*precip_frac(i,k)
         if (do_hail .or. do_graupel) then
-           prodsnow(i,k) = (prai(i,k)+prci(i,k))*icldm(i,k)+(psacws(i,k)+bergs(i,k))*lcldm(i,k)+(&
+           proc_rates%prodsnow(i,k) = (prai(i,k)+prci(i,k))*icldm(i,k)+(psacws(i,k)+bergs(i,k))*lcldm(i,k)+(&
                 pracs(i,k))*precip_frac(i,k)+vap_deps(i,k)
         else
-           prodsnow(i,k) = (prai(i,k)+prci(i,k))*icldm(i,k)+(psacws(i,k)+bergs(i,k))*lcldm(i,k)+(&
+           proc_rates%prodsnow(i,k) = (prai(i,k)+prci(i,k))*icldm(i,k)+(psacws(i,k)+bergs(i,k))*lcldm(i,k)+(&
                 pracs(i,k)+mnuccr(i,k))*precip_frac(i,k)+vap_deps(i,k)
         end if
         ! following are used to calculate 1st order conversion rate of cloud water
@@ -2917,8 +2921,8 @@ subroutine micro_pumas_tend ( &
         !.............................................................................
         !================================================================================
         ! modify to include snow. in prain & evap (diagnostic here: for wet dep)
-        nevapr(i,k) = nevapr(i,k) + evapsnow(i,k)
-        prain(i,k) = prain(i,k) + prodsnow(i,k)
+        nevapr(i,k) = nevapr(i,k) + proc_rates%evapsnow(i,k)
+        prain(i,k) = prain(i,k) + proc_rates%prodsnow(i,k)
      end do
   end do
 
