@@ -495,7 +495,7 @@ subroutine rising_factorial_integer_vec(x, n, res,vlen)
         res(i) = res(i) * factor
      elseif (n == 2) then
         res(i) = res(i) * factor
-        factor = factor(i) + 1._r8
+        factor = factor + 1._r8
         res(i) = res(i) * factor
      else
        !$acc loop seq
