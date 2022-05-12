@@ -378,7 +378,7 @@ subroutine micro_pumas_utils_init( kind, rair, rh2o, cpair, tmelt_in, latvap, &
   ! Mean ice diameter can not grow bigger than twice the autoconversion
   ! threshold for snow.
   ice_lambda_bounds(1) = 1._r8/2._r8*dcs
-  ice_lambda_bounds(2) = 1._r8/1.e-6_r8]
+  ice_lambda_bounds(2) = 1._r8/1.e-6_r8
 
   mg_ice_props = MGHydrometeorProps(rhoi, dsph, &
        ice_lambda_bounds, min_mean_mass_ice)
