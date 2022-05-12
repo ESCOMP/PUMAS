@@ -1018,6 +1018,8 @@ subroutine var_coef_r8_vect(relvar, a, res, vlen)
      res(i) = tmpA(i)/relvar(i)**a
   end do
   !$acc end parallel
+
+  !$acc end data
 end subroutine var_coef_r8_vect
 
 subroutine var_coef_integer(relvar, a, res)
@@ -1055,6 +1057,7 @@ subroutine var_coef_integer_vect(relvar, a, res, vlen)
   end do
   !$acc end parallel
 
+  !$acc end data
 end subroutine var_coef_integer_vect
 
 !========================================================================
