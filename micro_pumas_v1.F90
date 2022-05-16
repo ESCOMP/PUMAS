@@ -1212,10 +1212,12 @@ subroutine micro_pumas_tend ( &
   !$acc               npsacwg,psacr,pracg,psacwg,pgsacw,pgracs,prdg,qmultg,   &
   !$acc               qmultrg,uns,unr,ung,arn,asn,agn,acn,ain,ajn,mi0l,esl,   &
   !$acc               esi,esnA,qvl,qvi,qvnA,qvnAI,relhum,fc,fnc,fi,fni,fg,    &
-  !$acc               fng,fr,fnr,fs,fns,dum1A,dum2A,dum3A,dumni0A2D,   &
+  !$acc               fng,fr,fnr,fs,fns,dum1A,dum2A,dum3A,dumni0A2D,          &
   !$acc               dumns0A2D,ttmpA,qtmpAI,dumc,dumnc,dumi,dumni,dumr,      &
   !$acc               dumnr,dums,dumns,dumg,dumng,dum_2D,pdel_inv,rtmp,ctmp,  &
-  !$acc               ntmp,zint,nstep,rnstep) 
+  !$acc               ntmp,zint,nstep,rnstep,prect_i,tlat_i,qvlat_i,preci_i,  &
+  !$acc               prect_l,tlat_l,qvlat_l,prect_r,prect_s,preci_s,prect_g, &
+  !$acc               preci_g)
 
   ! Copies of input concentrations that may be changed internally.
 
