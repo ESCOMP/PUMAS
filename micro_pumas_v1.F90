@@ -1098,9 +1098,6 @@ subroutine micro_pumas_tend ( &
   ! "n" is used for other looping (currently just sedimentation)
   integer i, k, n
 
-  ! number of sub-steps for loops over "n" (for sedimentation)
-  integer nstep(mgncol)
-  real(r8) :: rnstep(mgncol)
   integer mdust
   integer :: precip_frac_method
 
@@ -1135,6 +1132,23 @@ subroutine micro_pumas_tend ( &
   ! graupel
   real(r8) :: prect_g(mgncol)  
   real(r8) :: preci_g(mgncol)
+
+  ! number of sub-steps for loops over "n" (for sedimentation)
+  ! ice
+  integer nstep_i(mgncol)
+  real(r8) :: rnstep_i(mgncol)
+  ! liq
+  integer nstep_l(mgncol)
+  real(r8) :: rnstep_l(mgncol)
+  ! rain
+  integer nstep_r(mgncol)
+  real(r8) :: rnstep_r(mgncol)
+  ! snow
+  integer nstep_s(mgncol)
+  real(r8) :: rnstep_s(mgncol)
+  ! graupel
+  integer nstep_g(mgncol)
+  real(r8) :: rnstep_g(mgncol)
  
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
@@ -1215,9 +1229,10 @@ subroutine micro_pumas_tend ( &
   !$acc               fng,fr,fnr,fs,fns,dum1A,dum2A,dum3A,dumni0A2D,          &
   !$acc               dumns0A2D,ttmpA,qtmpAI,dumc,dumnc,dumi,dumni,dumr,      &
   !$acc               dumnr,dums,dumns,dumg,dumng,dum_2D,pdel_inv,rtmp,ctmp,  &
-  !$acc               ntmp,zint,nstep,rnstep,prect_i,tlat_i,qvlat_i,preci_i,  &
-  !$acc               prect_l,tlat_l,qvlat_l,prect_r,prect_s,preci_s,prect_g, &
-  !$acc               preci_g)
+  !$acc               ntmp,zint,nstep_i,rnstep_i,nstep_l,rnstep_l,nstep_r,    &
+  !$acc               rnstep_r,nstep_s,rnstep_s,nstep_g,rnstep_g,prect_i,     &
+  !$acc               tlat_i,qvlat_i,preci_i,prect_l,tlat_l,qvlat_l,prect_r,  &
+  !$acc               prect_s,preci_s,prect_g,preci_g)
 
   ! Copies of input concentrations that may be changed internally.
 
@@ -2992,6 +3007,23 @@ subroutine micro_pumas_tend ( &
      call size_dist_param_basic(mg_graupel_props, dumg, dumng, lamg, mgncol, nlev)
   end if
 
+  if ( do_implicit_fall ) then
+!    calculate interface height for implicit sedimentation
+!    uses Hypsometric equation
+
+     !$acc parallel vector_length(VLENS) default(present)
+     !$acc loop gang vector
+     do i=1,mgncol
+        zint(i,nlev+1)=0._r8
+        !$acc loop seq
+        do k = nlev,1,-1
+           H = r*t(i,k)/g*log(pint(i,k+1)/pint(i,k))
+           zint(i,k)=zint(i,k+1)+H
+        enddo
+     enddo
+     !$acc end parallel
+  end if
+
   !$acc parallel vector_length(VLENS) default(present) async(LQUEUE)
   !$acc loop gang vector collapse(2)
   do k=1,nlev
@@ -3203,21 +3235,6 @@ if ( do_implicit_fall ) then
 
 ! Implicit Sedimentation calculation: from Guo et al, 2021, GFDL version. 
 
-!     calculate interface height for implicit sedimentation
-!     uses Hypsometric equation
-
-  !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector
-  do i=1,mgncol
-     zint(i,nlev+1)=0._r8
-     !$acc loop seq
-     do k = nlev,1,-1
-        H = r*t(i,k)/g*log(pint(i,k+1)/pint(i,k))
-        zint(i,k)=zint(i,k+1)+H
-     enddo
-  enddo
-  !$acc end parallel
-
   !$acc parallel vector_length(VLENS) default(present) async(LQUEUE)
   !$acc loop gang vector collapse(2)
   do k=1,nlev
@@ -3319,79 +3336,79 @@ else
   !$acc parallel vector_length(VLENS) default(present) async(IQUEUE)
   !$acc loop gang vector
   do i = 1, mgncol
-     nstep(i) = 1 + int( max( maxval( fi(i,:)*pdel_inv(i,:) ), maxval( fni(i,:)*pdel_inv(i,:) ) ) * deltat )
-     rnstep(i) = 1._r8/real(nstep(i))
+     nstep_i(i) = 1 + int( max( maxval( fi(i,:)*pdel_inv(i,:) ), maxval( fni(i,:)*pdel_inv(i,:) ) ) * deltat )
+     rnstep_i(i) = 1._r8/real(nstep_i(i))
   end do
   !$acc end parallel
 
   ! ice mass sediment
-  call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep,rnstep,fi,dumi,pdel_inv, &
+  call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep_i,rnstep_i,fi,dumi,pdel_inv, &
                      qitend,IQUEUE,qxsedten=qisedten,prect=prect_i,xflx=iflx,xxlx=xxls, & 
                      qxsevap=qisevap,tlat=tlat_i,qvlat=qvlat_i,xcldm=icldm,preci=preci_i)
 
   ! ice number sediment
-  call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep,rnstep,fni,dumni,pdel_inv,nitend,IQUEUE,xcldm=icldm)
+  call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep_i,rnstep_i,fni,dumni,pdel_inv,nitend,IQUEUE,xcldm=icldm)
 
   !$acc parallel vector_length(VLENS) default(present) async(LQUEUE) 
   !$acc loop gang vector
   do i = 1, mgncol
-     nstep(i) = 1 + int( max( maxval( fc(i,:)*pdel_inv(i,:) ), maxval( fnc(i,:)*pdel_inv(i,:) ) ) * deltat )
-     rnstep(i) = 1._r8/real(nstep(i))
+     nstep_l(i) = 1 + int( max( maxval( fc(i,:)*pdel_inv(i,:) ), maxval( fnc(i,:)*pdel_inv(i,:) ) ) * deltat )
+     rnstep_l(i) = 1._r8/real(nstep_l(i))
   end do
   !$acc end parallel
 
   ! liq mass sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fc,dumc,pdel_inv, &
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_l,rnstep_l,fc,dumc,pdel_inv, &
                      qctend,LQUEUE,qxsedten=qcsedten,prect=prect_l,xflx=lflx,xxlx=xxlv, &
                      qxsevap=qcsevap,tlat=tlat_l,qvlat=qvlat_l,xcldm=lcldm)
 
   ! liq number sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fnc,dumnc,pdel_inv,nctend,LQUEUE,xcldm=lcldm)
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_l,rnstep_l,fnc,dumnc,pdel_inv,nctend,LQUEUE,xcldm=lcldm)
 
   !$acc parallel vector_length(VLENS) default(present) async(RQUEUE)
   !$acc loop gang vector
   do i = 1, mgncol
-     nstep(i) = 1 + int( max( maxval( fr(i,:)*pdel_inv(i,:) ), maxval( fnr(i,:)*pdel_inv(i,:) ) ) * deltat )
-     rnstep(i) = 1._r8/real(nstep(i))
+     nstep_r(i) = 1 + int( max( maxval( fr(i,:)*pdel_inv(i,:) ), maxval( fnr(i,:)*pdel_inv(i,:) ) ) * deltat )
+     rnstep_r(i) = 1._r8/real(nstep_r(i))
   end do
   !$acc end parallel
 
   ! rain mass sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fr,dumr,pdel_inv, &
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_r,rnstep_r,fr,dumr,pdel_inv, &
                      qrtend,RQUEUE,qxsedten=qrsedten,prect=prect_r,xflx=rflx)
 
   ! rain number sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fnr,dumnr,pdel_inv,nrtend,RQUEUE)
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_r,rnstep_r,fnr,dumnr,pdel_inv,nrtend,RQUEUE)
 
   !$acc parallel vector_length(VLENS) default(present) async(SQUEUE)
   !$acc loop gang vector
   do i = 1, mgncol
-     nstep(i) = 1 + int( max( maxval( fs(i,:)*pdel_inv(i,:) ), maxval( fns(i,:)*pdel_inv(i,:) ) ) * deltat )
-     rnstep(i) = 1._r8/real(nstep(i))
+     nstep_s(i) = 1 + int( max( maxval( fs(i,:)*pdel_inv(i,:) ), maxval( fns(i,:)*pdel_inv(i,:) ) ) * deltat )
+     rnstep_s(i) = 1._r8/real(nstep_s(i))
   end do
   !$acc end parallel
 
   ! snow mass sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fs,dums,pdel_inv, &
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_s,rnstep_s,fs,dums,pdel_inv, &
                      qstend,SQUEUE,qxsedten=qssedten,prect=prect_s,xflx=sflx,preci=preci_s)
 
   ! snow number sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fns,dumns,pdel_inv,nstend,SQUEUE)
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_s,rnstep_s,fns,dumns,pdel_inv,nstend,SQUEUE)
 
   !$acc parallel vector_length(VLENS) default(present) async(GQUEUE)
   !$acc loop gang vector
   do i = 1, mgncol
-     nstep(i) = 1 + int( max( maxval( fg(i,:)*pdel_inv(i,:) ), maxval( fng(i,:)*pdel_inv(i,:) ) ) * deltat )
-     rnstep(i) = 1._r8/real(nstep(i))
+     nstep_g(i) = 1 + int( max( maxval( fg(i,:)*pdel_inv(i,:) ), maxval( fng(i,:)*pdel_inv(i,:) ) ) * deltat )
+     rnstep_g(i) = 1._r8/real(nstep_g(i))
   end do
   !$acc end parallel
 
   ! graupel mass sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fg,dumg,pdel_inv, &
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_g,rnstep_g,fg,dumg,pdel_inv, &
                      qgtend,GQUEUE,qxsedten=qgsedten,prect=prect_g,xflx=gflx,preci=preci_g)
 
   ! graupel number sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fng,dumng,pdel_inv,ngtend,GQUEUE)
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_g,rnstep_g,fng,dumng,pdel_inv,ngtend,GQUEUE)
 
 end if  ! end sedimentation
 
