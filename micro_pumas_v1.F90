@@ -4522,54 +4522,79 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1, que
     !$acc enter data create (dz,qm,dd) async(queue)
 
     !$acc parallel vector_length(VLENS) default(present) async(queue)
-    !$acc loop gang vector
+    !$acc loop gang vector collapse(2)
     do i = 1, mgncol
        do k = ktop, kbot
           dz (i,k) = ze (i,k) - ze (i,k + 1)
           dd (i,k) = dt * vt (i,k)
           q (i,k) = q (i,k) * dp (i,k)
-       enddo
- 
-       ! -----------------------------------------------------------------------
-       ! sedimentation: non - vectorizable loop
-       ! -----------------------------------------------------------------------
-   
+       end do
+    end do
+    !$acc end parallel
+
+    ! -----------------------------------------------------------------------
+    ! sedimentation: non - vectorizable loop
+    ! -----------------------------------------------------------------------
+  
+    !$acc parallel vector_length(VLENS) default(present) async(queue)
+    !$acc loop gang vector
+    do i = 1, mgncol
        qm (i,ktop) = q (i,ktop) / (dz (i,ktop) + dd (i,ktop))
 
        !$acc loop seq
        do k = ktop + 1, kbot
           qm (i,k) = (q (i,k) + dd (i,k - 1) * qm (i,k - 1)) / (dz (i,k) + dd (i,k))
-       enddo
+       end do
+    end do
+    !$acc end parallel
 
-       ! -----------------------------------------------------------------------
-       ! qm is density at this stage
-       ! -----------------------------------------------------------------------
-   
+    ! -----------------------------------------------------------------------
+    ! qm is density at this stage
+    ! -----------------------------------------------------------------------
+  
+    !$acc parallel vector_length(VLENS) default(present) async(queue)
+    !$acc loop gang vector collapse(2)
+    do i = 1, mgncol 
        do k = ktop, kbot
           qm (i,k) = qm (i,k) * dz (i,k)
-       enddo
+       end do
+    end do
+    !$acc end parallel
 
-       ! -----------------------------------------------------------------------
-       ! output mass fluxes: non - vectorizable loop
-       ! -----------------------------------------------------------------------
-   
+    ! -----------------------------------------------------------------------
+    ! output mass fluxes: non - vectorizable loop
+    ! -----------------------------------------------------------------------
+  
+    !$acc parallel vector_length(VLENS) default(present) async(queue)
+    !$acc loop gang vector
+    do i = 1, mgncol 
        m1 (i,ktop) = q (i,ktop) - qm (i,ktop)
 
        !$acc loop seq
        do k = ktop + 1, kbot
           m1 (i,k) = m1 (i,k - 1) + q (i,k) - qm (i,k)
-       enddo
+       end do
+    end do
+    !$acc end parallel
 
+    !$acc parallel vector_length(VLENS) default(present) async(queue)
+    !$acc loop gang vector
+    do i = 1, mgncol
        precip(i) = m1 (i,kbot)
- 
-       ! -----------------------------------------------------------------------
-       ! update:
-       ! -----------------------------------------------------------------------
-    
+    end do
+    !$acc end parallel
+
+    ! -----------------------------------------------------------------------
+    ! update:
+    ! -----------------------------------------------------------------------
+
+    !$acc parallel vector_length(VLENS) default(present) async(queue)
+    !$acc loop gang vector collapse(2)
+    do i = 1, mgncol    
        do k = ktop, kbot
           q (i,k) = qm (i,k) / dp (i,k)
-       enddo
-    enddo
+       end do
+    end do
     !$acc end parallel
 
     !$acc exit data delete (dz,qm,dd) async(queue)
