@@ -4308,12 +4308,10 @@ subroutine Sedimentation(mgncol,nlev,do_cldice,deltat,nstep,rnstep,fx,dumx,pdel_
       do n = 1,nstepmax
          faloutx(i,0)  = 0._r8
          if (do_cldice) then
-            !$acc loop vector
             do k=1,nlev
                faloutx(i,k)  = fx(i,k)  * dumx(i,k)
             end do
          else
-            !$acc loop vector
             do k=1,nlev
                faloutx(i,k)  = 0._r8
             end do
@@ -4512,13 +4510,6 @@ subroutine implicit_fall (dt, mgncol, ktop, kbot, ze, vt, dp, q, precip, m1, que
     real(r8), dimension (mgncol,ktop:kbot) :: dz, qm, dd
     integer :: i,k
    
-    ! -----------------------------------------------------------------------
-    ! JS, 10/18/2021 : do not push column loop further into each level loop;
-    !                  cause NBFB result on Cheyenne (CPU) and crash GPU run;
-    !                  NEEDS TO BE REVISITED - issue comes from level-dependent 
-    !                  qm and m1 calculation but they are column-independent
-    ! -----------------------------------------------------------------------
- 
     !$acc enter data create (dz,qm,dd) async(queue)
 
     !$acc parallel vector_length(VLENS) default(present) async(queue)
