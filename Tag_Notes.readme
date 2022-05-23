@@ -1,4 +1,9 @@
 ====================================
+.. pumas_cam-release_v1.23
+May 23, 2022 - Adding new output arguments for number tendencies. This changes the PUMAS_tend 
+interface, so the correct CAM tag will need to run with this. The CAM changes are currently in
+https://github.com/ESCOMP/CAM/pull/597 
+====================================
 .. pumas_cam-release_v1.22
 Jan 19, 2022 - Renames for pumas_v1 and use in cam_dev from here on. All changes required to run 
 the head of pumas/cam/release will be integrated into cam_dev physics in cam6_3_046, most likely.
