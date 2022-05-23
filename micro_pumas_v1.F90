@@ -603,6 +603,14 @@ subroutine micro_pumas_tend ( &
      qmultgtot,          qmultrgtot,         psacrtot,           &
      npracgtot,          nscngtot,           ngracstot,          &
      nmultgtot,          nmultrgtot,         npsacwgtot,         & 
+     nnuccctot,          nnuccttot,          nnuccdtot,          &
+     nnudeptot,          nhomotot,           nnuccrtot,          &
+     nnuccritot,         nsacwitot,          npratot,            &
+     npsacwstot,         npraitot,           npracstot,          &
+     nprctot,            nprcitot,           ncsedten,           &
+     nisedten,           nrsedten,           nssedten,           &
+     ngsedten,           nmelttot,           nmeltstot,          &
+     nmeltgtot, &
      nrout,                        nsout,                        &
      refl,               arefl,              areflz,             &
      frefl,              csrfl,              acsrfl,             &
@@ -809,7 +817,30 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: nmultgtot(mgncol,nlev)       ! ice mult due to acc droplets by graupel  (lcldm)
   real(r8), intent(out) :: nmultrgtot(mgncol,nlev)      ! ice mult due to acc rain by graupel  (precipf)
   real(r8), intent(out) :: npsacwgtot(mgncol,nlev)      ! change n collection droplets by graupel (lcldm?)
-  real(r8), intent(out) :: nrout(mgncol,nlev)        ! rain number concentration (1/m3)
+  real(r8), intent(out) :: nnuccctot(mgncol,nlev)        ! change n  due to Immersion freezing of cloud water 
+  real(r8), intent(out) :: nnuccttot(mgncol,nlev)        ! change n  due to Contact freezing of cloud water
+  real(r8), intent(out) :: nnuccdtot(mgncol,nlev)        ! change n  due to Ice nucleation
+  real(r8), intent(out) :: nnudeptot(mgncol,nlev)        ! change n  due to Deposition Nucleation
+  real(r8), intent(out) :: nhomotot(mgncol,nlev)         ! change n  due to Homogeneous freezing of cloud water
+  real(r8), intent(out) :: nnuccrtot(mgncol,nlev)        ! change n  due to heterogeneous freezing of rain to snow (1/s)
+  real(r8), intent(out) :: nnuccritot(mgncol,nlev)       ! change n  due to Heterogeneous freezing of rain to ice 
+  real(r8), intent(out) :: nsacwitot(mgncol,nlev)        ! change n  due to Conversion of cloud water [to cloud ice] 
+                                                         !                  from rime-splintering
+  real(r8), intent(out) :: npratot(mgncol,nlev)          ! change n  due to Accretion of cloud water by rain
+  real(r8), intent(out) :: npsacwstot(mgncol,nlev)       ! change n  due to Accretion of cloud water by snow 
+  real(r8), intent(out) :: npraitot(mgncol,nlev)         ! change n  due to Accretion of cloud ice to snow 
+  real(r8), intent(out) :: npracstot(mgncol,nlev)        ! change n  due to Accretion of rain by snow 
+  real(r8), intent(out) :: nprctot(mgncol,nlev)          ! change n  due to Autoconversion of cloud water [to rain] 
+  real(r8), intent(out) :: nprcitot(mgncol,nlev)         ! change n  due to Autoconversion of cloud ice to snow
+  real(r8), intent(out) :: ncsedten(mgncol,nlev)         ! change n  due to cloud liquid sedimentation
+  real(r8), intent(out) :: nisedten(mgncol,nlev)         ! change n  due to cloud ice sedimentation
+  real(r8), intent(out) :: nrsedten(mgncol,nlev)         ! change n  due to rain sedimentation
+  real(r8), intent(out) :: nssedten(mgncol,nlev)         ! change n  due to snow sedimentation
+  real(r8), intent(out) :: ngsedten(mgncol,nlev)         ! change n  due to graupel sedimentation
+  real(r8), intent(out) :: nmelttot(mgncol,nlev)         ! change n  due to Melting of cloud ice 
+  real(r8), intent(out) :: nmeltstot(mgncol,nlev)        ! change n  due to Melting of snow
+  real(r8), intent(out) :: nmeltgtot(mgncol,nlev)        ! change n  due to Melting of graupel       
+  real(r8), intent(out) :: nrout(mgncol,nlev) ! rain number concentration (1/m3)
   real(r8), intent(out) :: nsout(mgncol,nlev)        ! snow number concentration (1/m3)
   real(r8), intent(out) :: refl(mgncol,nlev)         ! analytic radar reflectivity
   real(r8), intent(out) :: arefl(mgncol,nlev)        ! average reflectivity will zero points outside valid range
@@ -1173,7 +1204,12 @@ subroutine micro_pumas_tend ( &
   !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,rercld,ncai,ncal,      &
   !$acc               qrout2,qsout2,nrout2,nsout2,drout2,dsout2,freqs,        &
   !$acc               freqr,nfice,qcrat,qgout,dgout,ngout,qgout2,ngout2,      &
-  !$acc               dgout2,freqg,prer_evap)                                 &
+  !$acc               dgout2,freqg,prer_evap,                                 &
+  !$acc               nnuccctot,nnuccttot,nnuccdtot,nnudeptot,nhomotot,       &
+  !$acc               nnuccrtot,nnuccritot,nsacwitot,npratot,npsacwstot,      &
+  !$acc               npraitot,npracstot,nprctot,nprcitot,ncsedten,nisedten,  &
+  !$acc               nrsedten,nssedten,ngsedten,nmelttot,nmeltstot,          &
+  !$acc               nmeltgtot)  
   !$acc      create  (qc,qi,nc,ni,qr,qs,nr,ns,qg,ng,rho,dv,mu,sc,rhof,        &
   !$acc               precip_frac,cldm,icldm,lcldm,qsfm,qcic,qiic,qsic,qric,  &
   !$acc               qgic,ncic,niic,nsic,nric,ngic,lami,n0i,lamc,pgam,lams,  &
@@ -1378,6 +1414,29 @@ subroutine micro_pumas_tend ( &
         nmultrgtot(i,k)         = 0._r8
         npsacwgtot(i,k)         = 0._r8
 
+        nnuccctot(i,k)          = 0._r8
+        nnuccttot(i,k)          = 0._r8
+        nnuccdtot(i,k)          = 0._r8
+        nnudeptot(i,k)          = 0._r8
+        nhomotot(i,k)           = 0._r8
+        nnuccrtot(i,k)          = 0._r8
+        nnuccritot(i,k)         = 0._r8
+        nsacwitot(i,k)          = 0._r8
+        npratot(i,k)            = 0._r8
+        npsacwstot(i,k)         = 0._r8
+        npraitot(i,k)           = 0._r8
+        npracstot(i,k)          = 0._r8
+        nprctot(i,k)            = 0._r8
+        nprcitot(i,k)           = 0._r8
+        ncsedten(i,k)           = 0._r8
+        nisedten(i,k)           = 0._r8
+        nrsedten(i,k)           = 0._r8
+        nssedten(i,k)           = 0._r8
+        ngsedten(i,k)           = 0._r8
+        nmelttot(i,k)           = 0._r8
+        nmeltstot(i,k)          = 0._r8
+        nmeltgtot(i,k)          = 0._r8
+        
 !need to zero these out to be totally switchable (for conservation)
         psacr(i,k)              = 0._r8
         pracg(i,k)              = 0._r8
@@ -1483,6 +1542,10 @@ subroutine micro_pumas_tend ( &
   !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
+        ! initialize vapor_deposition
+        vap_dep(i,k)            = 0._r8
+        vap_deps(i,k)           = 0._r8
+
         ! initialize precip fallspeeds to zero
         ums(i,k)                = 0._r8
         uns(i,k)                = 0._r8
@@ -1554,7 +1617,7 @@ subroutine micro_pumas_tend ( &
      do i=1,mgncol
         if (qc(i,k) >= qsmall) then
            nc(i,k) = max(nc(i,k) + npccn(i,k)*deltat, 0._r8)
-           ncal(i,k) = nc(i,k)*rho(i,k)/lcldm(i,k) ! sghan minimum in #/cm3
+           ncal(i,k) = npccn(i,k) 
         else
            ncal(i,k) = 0._r8
         end if
@@ -2023,7 +2086,7 @@ subroutine micro_pumas_tend ( &
   !$acc end parallel
  
   if (do_cldice) then
-     if (.not. use_hetfrz_classnuc) then
+
         ! heterogeneous freezing of cloud water
         !----------------------------------------------
         call immersion_freezing(microp_uniform, t, pgam, lamc, qcic, ncic, relvar, mnuccc, nnuccc, mgncol*nlev)
@@ -2040,12 +2103,15 @@ subroutine micro_pumas_tend ( &
                   ! scale mixing ratio of droplet freezing with limit
                   mnuccc(i,k)=mnuccc(i,k)*(nnuccd(i,k)/(nnuccc(i,k)*lcldm(i,k)))
                   nnuccc(i,k)=nnuccd(i,k)/lcldm(i,k)
+              else
+                  mnuccc(i,k)=0._r8
+                  nnuccc(i,k)=0._r8
               end if
-              mnudep(i,k)=0._r8
-              nnudep(i,k)=0._r8
            end do
         end do
         !$acc end parallel
+
+     if (.not. use_hetfrz_classnuc) then
 
         call contact_freezing(microp_uniform, t, p, rndst, nacon, pgam, lamc, qcic, ncic, &
                               relvar, mnucct, nnucct, mgncol*nlev, mdust)
@@ -2061,15 +2127,11 @@ subroutine micro_pumas_tend ( &
               mi0l(i,k) = qcic(i,k)/max(ncic(i,k), 1.0e6_r8/rho(i,k))
               mi0l(i,k) = max(mi0l_min, mi0l(i,k))
               if (qcic(i,k) >= qsmall) then
-                 nnuccc(i,k) = frzimm(i,k)*1.0e6_r8/rho(i,k)
-                 mnuccc(i,k) = nnuccc(i,k)*mi0l(i,k)
                  nnucct(i,k) = frzcnt(i,k)*1.0e6_r8/rho(i,k)
                  mnucct(i,k) = nnucct(i,k)*mi0l(i,k)
                  nnudep(i,k) = frzdep(i,k)*1.0e6_r8/rho(i,k)
                  mnudep(i,k) = nnudep(i,k)*mi0
               else
-                 nnuccc(i,k) = 0._r8
-                 mnuccc(i,k) = 0._r8
                  nnucct(i,k) = 0._r8
                  mnucct(i,k) = 0._r8
                  nnudep(i,k) = 0._r8
@@ -2340,6 +2402,10 @@ subroutine micro_pumas_tend ( &
         ! for conservation yet
 
         ! first limit ice deposition/nucleation vap_dep + mnuccd + vap_deps
+        mnuccd(i,k) = max(0._r8,mnuccd(i,k))
+        vap_dep(i,k) = max(0._r8,vap_dep(i,k))
+        vap_deps(i,k) = max(0._r8,vap_deps(i,k))
+      
         dum1 = vap_dep(i,k) + mnuccd(i,k) + vap_deps(i,k)
         if (dum1 > 1.e-20_r8) then
            dum = (q(i,k)-qvi(i,k))/(1._r8 + xxls_squared*qvi(i,k)/(cpp*rv*t(i,k)**2))*rdeltat
@@ -2348,22 +2414,11 @@ subroutine micro_pumas_tend ( &
               ! Allocate the limited "dum" tendency to mnuccd and vap_dep
               ! processes. Don't divide by cloud fraction; these are grid-
               ! mean rates.
-               dum1 = mnuccd(i,k) / (vap_dep(i,k)+mnuccd(i,k)+vap_deps(i,k))
-               mnuccd(i,k) = dum*dum1
-               mnuccd(i,k) = max(0._r8,mnuccd(i,k))
-               dum1 = vap_dep(i,k)/(vap_dep(i,k)+mnuccd(i,k)+vap_deps(i,k))
-               if (dum1 > 0._r8) then
-                  vap_dep(i,k) = dum*vap_dep(i,k)/dum1
-                  vap_dep(i,k) = max(0._r8,vap_dep(i,k))
-                  dum1 = vap_dep(i,k)+mnuccd(i,k)+vap_deps(i,k)
-                  if (dum1 > 0._r8) then
-                     vap_deps(i,k) = dum*vap_deps(i,k)/dum1
-                     vap_deps(i,k) = max(0._r8,vap_deps(i,k))
-                  end if
-               end if
-
+               mnuccd(i,k) = dum*mnuccd(i,k)/dum1
+               vap_dep(i,k) = dum*vap_dep(i,k)/dum1
+               vap_deps(i,k) = dum*vap_deps(i,k)/dum1
            end if
-        end if    
+        end if
 
      end do
   end do
@@ -2810,6 +2865,28 @@ subroutine micro_pumas_tend ( &
      end do
   end do
 
+  !$acc loop gang vector collapse(2)
+  do k=1,nlev
+     do i=1,mgncol
+        nnuccctot(i,k) = nnuccc(i,k)*lcldm(i,k)
+        nnuccttot(i,k) = nnucct(i,k)*lcldm(i,k)
+        nnuccdtot(i,k) = nnuccd(i,k)*icldm(i,k)
+        nnudeptot(i,k) = nnudep(i,k)*lcldm(i,k)
+        nnuccrtot(i,k) = nnuccr(i,k)*precip_frac(i,k)
+        nnuccritot(i,k) = nnuccri(i,k)*precip_frac(i,k)
+        nsacwitot(i,k) = nsacwi(i,k)*lcldm(i,k)
+        npratot(i,k) = npra(i,k)*lcldm(i,k)
+        npsacwstot(i,k) = npsacws(i,k)*lcldm(i,k)
+        npraitot(i,k) = nprai(i,k)*icldm(i,k)
+        npracstot(i,k) = npracs(i,k)*precip_frac(i,k)
+        nprctot(i,k) = nprc(i,k)*lcldm(i,k)
+        nprcitot(i,k) = nprci(i,k)*icldm(i,k)
+        nmeltstot(i,k)=ninstsm(i,k)/deltat
+        nmeltgtot(i,k)=ninstgm(i,k)/deltat
+     end do
+  end do
+
+      
   !$acc loop gang vector collapse(2) private(tmpfrz)
   do k=1,nlev
      do i=1,mgncol
@@ -3220,8 +3297,9 @@ if ( do_implicit_fall ) then
                                xflx=lflx,qxsedten=qcsedten,prect=prect)
 
  ! cloud water number sedimentation
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnc,fnc,.FALSE.,nctend)
-
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnc,fnc,.FALSE.,nctend, &
+                               qxsedten=ncsedten)
+      
  ! cloud ice mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumi,fi,.FALSE.,qitend, &
@@ -3229,17 +3307,19 @@ if ( do_implicit_fall ) then
  
  ! cloud ice number sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumni,fni,.FALSE.,nitend)
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumni,fni,.FALSE.,nitend, &
+                               qxsedten=nisedten)
 
- ! rain water mass sedimentation
+! rain water mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumr,fr,.TRUE.,qrtend, &
                                xflx=rflx,qxsedten=qrsedten,prect=prect)
 
  ! rain water number sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnr,fnr,.TRUE.,nrtend)
-
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnr,fnr,.TRUE.,nrtend, &
+                               qxsedten=nrsedten)
+      
  ! snow water mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dums,fs,.TRUE.,qstend, &
@@ -3247,8 +3327,9 @@ if ( do_implicit_fall ) then
 
  ! snow water number sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumns,fns,.TRUE.,nstend)
-
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumns,fns,.TRUE.,nstend, &
+                               qxsedten=nssedten)
+      
  ! graupel mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumg,fg,.TRUE.,qgtend, &
@@ -3256,9 +3337,10 @@ if ( do_implicit_fall ) then
 
  ! graupel number sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumng,fng,.TRUE.,ngtend)
+   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumng,fng,.TRUE.,ngtend, &
+                               qxsedten=ngsedten)
 
-else  
+ else  
   ! begin sedimentation
  
   !$acc parallel vector_length(VLENS) default(present)
@@ -3275,7 +3357,8 @@ else
                      qxsevap=qisevap,tlat=tlat,qvlat=qvlat,xcldm=icldm,preci=preci)
 
   ! ice number sediment
-  call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep,rnstep,fni,dumni,pdel_inv,nitend,xcldm=icldm)
+  call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep,rnstep,fni,dumni,pdel_inv,nitend,xcldm=icldm, &
+                     qxsedten=nisedten)
 
   !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector
@@ -3291,8 +3374,9 @@ else
                      qxsevap=qcsevap,tlat=tlat,qvlat=qvlat,xcldm=lcldm)
 
   ! liq number sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fnc,dumnc,pdel_inv,nctend,xcldm=lcldm)
-
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fnc,dumnc,pdel_inv,nctend,xcldm=lcldm, &
+                     qxsedten=ncsedten)
+      
   !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector
   do i = 1, mgncol
@@ -3306,8 +3390,9 @@ else
                      qrtend,qxsedten=qrsedten,prect=prect,xflx=rflx)
 
   ! rain number sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fnr,dumnr,pdel_inv,nrtend)
-
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fnr,dumnr,pdel_inv,nrtend,&
+                     qxsedten=nrsedten)
+      
   !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector
   do i = 1, mgncol
@@ -3321,8 +3406,9 @@ else
                      qstend,qxsedten=qssedten,prect=prect,xflx=sflx,preci=preci)
 
   ! snow number sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fns,dumns,pdel_inv,nstend)
-
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fns,dumns,pdel_inv,nstend, &
+                     qxsedten=nssedten)
+      
   !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector
   do i = 1, mgncol
@@ -3336,8 +3422,9 @@ else
                      qgtend,qxsedten=qgsedten,prect=prect,xflx=gflx,preci=preci)
 
   ! graupel number sediment
-  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fng,dumng,pdel_inv,ngtend)
-
+  call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fng,dumng,pdel_inv,ngtend, &
+                     qxsedten=ngsedten)
+      
 end if  ! end sedimentation
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -3547,8 +3634,10 @@ end if  ! end sedimentation
 
                  ! assume melting ice produces droplet
                  ! mean volume radius of 8 micron
-                 nctend(i,k)=nctend(i,k)+3._r8*dum*dumi(i,k)*rdeltat/ &
+
+                 nmelttot(i,k)=3._r8*dum*dumi(i,k)*rdeltat/ &
                       (4._r8*pi*5.12e-16_r8*rhow)
+                 nctend(i,k)=nctend(i,k)+nmelttot(i,k)
 
                  qitend(i,k)=((1._r8-dum)*dumi(i,k)-qi(i,k))*rdeltat
                  nitend(i,k)=((1._r8-dum)*dumni(i,k)-ni(i,k))*rdeltat
@@ -3583,7 +3672,8 @@ end if  ! end sedimentation
 
                  ! assume 25 micron mean volume radius of homogeneously frozen droplets
                  ! consistent with size of detrained ice in stratiform.F90
-                 nitend(i,k)=nitend(i,k)+dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*micro_mg_homog_size**3._r8*500._r8)*rdeltat
+                 nhomotot(i,k)=dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*micro_mg_homog_size**3._r8*500._r8)*rdeltat
+                 nitend(i,k)=nitend(i,k)+nhomotot(i,k)
 
                  qctend(i,k)=((1._r8-dum)*dumc(i,k)-qc(i,k))*rdeltat
                  nctend(i,k)=((1._r8-dum)*dumnc(i,k)-nc(i,k))*rdeltat
