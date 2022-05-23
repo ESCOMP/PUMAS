@@ -603,7 +603,6 @@ subroutine micro_pumas_tend ( &
      qmultgtot,          qmultrgtot,         psacrtot,           &
      npracgtot,          nscngtot,           ngracstot,          &
      nmultgtot,          nmultrgtot,         npsacwgtot,         & 
-!++ag
      nnuccctot,          nnuccttot,          nnuccdtot,  &
      nnudeptot,          nhomotot,           nnuccrtot,  &
      nnuccritot,         nsacwitot,          npratot, &
@@ -612,7 +611,6 @@ subroutine micro_pumas_tend ( &
      nisedten,           nrsedten,           nssedten, &
      ngsedten,           nmelttot,           nmeltstot, &
      nmeltgtot, &
-!--ag
      nrout,                        nsout,                        &
      refl,               arefl,              areflz,             &
      frefl,              csrfl,              acsrfl,             &
@@ -819,7 +817,6 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: nmultgtot(mgncol,nlev)       ! ice mult due to acc droplets by graupel  (lcldm)
   real(r8), intent(out) :: nmultrgtot(mgncol,nlev)      ! ice mult due to acc rain by graupel  (precipf)
   real(r8), intent(out) :: npsacwgtot(mgncol,nlev)      ! change n collection droplets by graupel (lcldm?)
-!++ag
   real(r8), intent(out) :: nnuccctot(mgncol,nlev)        ! change n  due to Immersion freezing of cloud water 
   real(r8), intent(out) :: nnuccttot(mgncol,nlev)        ! change n  due to Contact freezing of cloud water
   real(r8), intent(out) :: nnuccdtot(mgncol,nlev)        ! change n  due to Ice nucleation
@@ -827,7 +824,8 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: nhomotot(mgncol,nlev)         ! change n  due to Homogeneous freezing of cloud water
   real(r8), intent(out) :: nnuccrtot(mgncol,nlev)        ! change n  due to heterogeneous freezing of rain to snow (1/s)
   real(r8), intent(out) :: nnuccritot(mgncol,nlev)       ! change n  due to Heterogeneous freezing of rain to ice 
-  real(r8), intent(out) :: nsacwitot(mgncol,nlev)        ! change n  due to Conversion of cloud water [to cloud ice] from rime-splintering
+  real(r8), intent(out) :: nsacwitot(mgncol,nlev)        ! change n  due to Conversion of cloud water [to cloud ice] 
+                                                         !                  from rime-splintering
   real(r8), intent(out) :: npratot(mgncol,nlev)          ! change n  due to Accretion of cloud water by rain
   real(r8), intent(out) :: npsacwstot(mgncol,nlev)       ! change n  due to Accretion of cloud water by snow 
   real(r8), intent(out) :: npraitot(mgncol,nlev)         ! change n  due to Accretion of cloud ice to snow 
@@ -842,7 +840,6 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: nmelttot(mgncol,nlev)         ! change n  due to Melting of cloud ice 
   real(r8), intent(out) :: nmeltstot(mgncol,nlev)        ! change n  due to Melting of snow
   real(r8), intent(out) :: nmeltgtot(mgncol,nlev)        ! change n  due to Melting of graupel       
-!--ag
   real(r8), intent(out) :: nrout(mgncol,nlev) ! rain number concentration (1/m3)
   real(r8), intent(out) :: nsout(mgncol,nlev)        ! snow number concentration (1/m3)
   real(r8), intent(out) :: refl(mgncol,nlev)         ! analytic radar reflectivity
@@ -1417,7 +1414,6 @@ subroutine micro_pumas_tend ( &
         nmultrgtot(i,k)         = 0._r8
         npsacwgtot(i,k)         = 0._r8
 
-!++ag
         nnuccctot(i,k)          = 0._r8
         nnuccttot(i,k)          = 0._r8
         nnuccdtot(i,k)          = 0._r8
@@ -1440,7 +1436,6 @@ subroutine micro_pumas_tend ( &
         nmelttot(i,k)           = 0._r8
         nmeltstot(i,k)          = 0._r8
         nmeltgtot(i,k)          = 0._r8
-!--ag
         
 !need to zero these out to be totally switchable (for conservation)
         psacr(i,k)              = 0._r8
@@ -2113,8 +2108,6 @@ subroutine micro_pumas_tend ( &
                   mnuccc(i,k)=0._r8
                   nnuccc(i,k)=0._r8
               end if
-!              mnudep(i,k)=0._r8
-!              nnudep(i,k)=0._r8
            end do
         end do
         !$acc end parallel
@@ -2135,15 +2128,11 @@ subroutine micro_pumas_tend ( &
               mi0l(i,k) = qcic(i,k)/max(ncic(i,k), 1.0e6_r8/rho(i,k))
               mi0l(i,k) = max(mi0l_min, mi0l(i,k))
               if (qcic(i,k) >= qsmall) then
- !                nnuccc(i,k) = frzimm(i,k)*1.0e6_r8/rho(i,k)
- !                mnuccc(i,k) = nnuccc(i,k)*mi0l(i,k)
                  nnucct(i,k) = frzcnt(i,k)*1.0e6_r8/rho(i,k)
                  mnucct(i,k) = nnucct(i,k)*mi0l(i,k)
                  nnudep(i,k) = frzdep(i,k)*1.0e6_r8/rho(i,k)
                  mnudep(i,k) = nnudep(i,k)*mi0
               else
-!                 nnuccc(i,k) = 0._r8
-!                 mnuccc(i,k) = 0._r8
                  nnucct(i,k) = 0._r8
                  mnucct(i,k) = 0._r8
                  nnudep(i,k) = 0._r8
