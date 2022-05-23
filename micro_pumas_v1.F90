@@ -1617,7 +1617,6 @@ subroutine micro_pumas_tend ( &
      do i=1,mgncol
         if (qc(i,k) >= qsmall) then
            nc(i,k) = max(nc(i,k) + npccn(i,k)*deltat, 0._r8)
-!           ncal(i,k) = nc(i,k)*rho(i,k)/lcldm(i,k) ! sghan minimum in #/cm3
            ncal(i,k) = npccn(i,k) 
         else
            ncal(i,k) = 0._r8
