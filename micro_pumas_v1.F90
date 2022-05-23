@@ -603,13 +603,13 @@ subroutine micro_pumas_tend ( &
      qmultgtot,          qmultrgtot,         psacrtot,           &
      npracgtot,          nscngtot,           ngracstot,          &
      nmultgtot,          nmultrgtot,         npsacwgtot,         & 
-     nnuccctot,          nnuccttot,          nnuccdtot,  &
-     nnudeptot,          nhomotot,           nnuccrtot,  &
-     nnuccritot,         nsacwitot,          npratot, &
-     npsacwstot,         npraitot,           npracstot, &
-     nprctot,            nprcitot,           ncsedten, &
-     nisedten,           nrsedten,           nssedten, &
-     ngsedten,           nmelttot,           nmeltstot, &
+     nnuccctot,          nnuccttot,          nnuccdtot,          &
+     nnudeptot,          nhomotot,           nnuccrtot,          &
+     nnuccritot,         nsacwitot,          npratot,            &
+     npsacwstot,         npraitot,           npracstot,          &
+     nprctot,            nprcitot,           ncsedten,           &
+     nisedten,           nrsedten,           nssedten,           &
+     ngsedten,           nmelttot,           nmeltstot,          &
      nmeltgtot, &
      nrout,                        nsout,                        &
      refl,               arefl,              areflz,             &
@@ -1204,8 +1204,8 @@ subroutine micro_pumas_tend ( &
   !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,rercld,ncai,ncal,      &
   !$acc               qrout2,qsout2,nrout2,nsout2,drout2,dsout2,freqs,        &
   !$acc               freqr,nfice,qcrat,qgout,dgout,ngout,qgout2,ngout2,      &
-  !$acc               dgout2,freqg,prer_evap)
-  !$acc      copyout (nnuccctot,nnuccttot,nnuccdtot,nnudeptot,nhomotot,       &
+  !$acc               dgout2,freqg,prer_evap,                                 &
+  !$acc               nnuccctot,nnuccttot,nnuccdtot,nnudeptot,nhomotot,       &
   !$acc               nnuccrtot,nnuccritot,nsacwitot,npratot,npsacwstot,      &
   !$acc               npraitot,npracstot,nprctot,nprcitot,ncsedten,nisedten,  &
   !$acc               nrsedten,nssedten,ngsedten,nmelttot,nmeltstot,          &
@@ -3673,9 +3673,7 @@ end if  ! end sedimentation
 
                  ! assume 25 micron mean volume radius of homogeneously frozen droplets
                  ! consistent with size of detrained ice in stratiform.F90
-!++ag
                  nhomotot(i,k)=dum*3._r8*dumc(i,k)/(4._r8*3.14_r8*micro_mg_homog_size**3._r8*500._r8)*rdeltat
-!--ag
                  nitend(i,k)=nitend(i,k)+nhomotot(i,k)
 
                  qctend(i,k)=((1._r8-dum)*dumc(i,k)-qc(i,k))*rdeltat
