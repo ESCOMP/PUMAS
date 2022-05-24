@@ -1248,7 +1248,7 @@ subroutine micro_pumas_tend ( &
   !$acc               nnuccrtot,nnuccritot,nsacwitot,npratot,npsacwstot,      &
   !$acc               npraitot,npracstot,nprctot,nprcitot,ncsedten,nisedten,  &
   !$acc               nrsedten,nssedten,ngsedten,nmelttot,nmeltstot,          &
-  !$acc               nmeltgtot)  
+  !$acc               nmeltgtot)                                              & 
   !$acc      create  (qc,qi,nc,ni,qr,qs,nr,ns,qg,ng,rho,dv,mu,sc,rhof,        &
   !$acc               precip_frac,cldm,icldm,lcldm,qsfm,qcic,qiic,qsic,qric,  &
   !$acc               qgic,ncic,niic,nsic,nric,ngic,lami,n0i,lamc,pgam,lams,  &
