@@ -2136,29 +2136,29 @@ subroutine micro_pumas_tend ( &
  
   if (do_cldice) then
 
-        ! heterogeneous freezing of cloud water
-        !----------------------------------------------
-        call immersion_freezing(microp_uniform, t, pgam, lamc, qcic, ncic, relvar, mnuccc, nnuccc, mgncol*nlev)
+     ! heterogeneous freezing of cloud water
+     !----------------------------------------------
+     call immersion_freezing(microp_uniform, t, pgam, lamc, qcic, ncic, relvar, mnuccc, nnuccc, mgncol*nlev)
 
-        ! make sure number of droplets frozen does not exceed available ice nuclei concentration
-        ! this prevents 'runaway' droplet freezing
+     ! make sure number of droplets frozen does not exceed available ice nuclei concentration
+     ! this prevents 'runaway' droplet freezing
 
-        !$acc parallel vector_length(VLENS) default(present)
-        !$acc loop gang vector collapse(2)
-        do k=1,nlev
-           do i=1,mgncol
-              if (qcic(i,k).ge.qsmall .and. t(i,k).lt.269.15_r8 .and. &
-                  nnuccc(i,k)*lcldm(i,k).gt.nnuccd(i,k)) then
-                  ! scale mixing ratio of droplet freezing with limit
-                  mnuccc(i,k)=mnuccc(i,k)*(nnuccd(i,k)/(nnuccc(i,k)*lcldm(i,k)))
-                  nnuccc(i,k)=nnuccd(i,k)/lcldm(i,k)
-              else
-                  mnuccc(i,k)=0._r8
-                  nnuccc(i,k)=0._r8
-              end if
-           end do
+     !$acc parallel vector_length(VLENS) default(present)
+     !$acc loop gang vector collapse(2)
+     do k=1,nlev
+        do i=1,mgncol
+           if (qcic(i,k).ge.qsmall .and. t(i,k).lt.269.15_r8 .and. &
+               nnuccc(i,k)*lcldm(i,k).gt.nnuccd(i,k)) then
+               ! scale mixing ratio of droplet freezing with limit
+               mnuccc(i,k)=mnuccc(i,k)*(nnuccd(i,k)/(nnuccc(i,k)*lcldm(i,k)))
+               nnuccc(i,k)=nnuccd(i,k)/lcldm(i,k)
+           else
+               mnuccc(i,k)=0._r8
+               nnuccc(i,k)=0._r8
+           end if
         end do
-        !$acc end parallel
+     end do
+     !$acc end parallel
 
      if (.not. use_hetfrz_classnuc) then
 
