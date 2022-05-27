@@ -4254,8 +4254,12 @@ end if  ! end sedimentation
 
   ! 10cm analytic radar reflectivity (rain radar)
   !--------------------------------------------------
-  ! Formula from Hugh morrison
+  ! Formula from Hugh Morrison
   ! Ice dielectric correction from Smith 1984, Equation  10 and Snow correction from Smith 1984 Equation 14
+  ! Smith, Paul L. “Equivalent Radar Reflectivity Factors for Snow and Ice Particles.
+  !                ” Journal of Climate and Applied Meteorology 23, no. 8 (1984): 1258–60.  
+  !                DOI:  10.1175/1520-0450(1984)023<1258:ERRFFS>2.0.CO;2
+
   ! *****note: radar reflectivity is local (in-precip average)
   ! units of mm^6/m^3
 
@@ -4270,20 +4274,26 @@ end if  ! end sedimentation
         dum   = minrefl10
 
 !     Rain
-        dum1 = rho(i,k)*n0r(i,k)*720._r8/lamr(i,k)**3/lamr(i,k)**3/lamr(i,k)
-        dum1 = max(dum1,minrefl10)
+        if (lamr(i,k) > 0._r8) then
+           dum1 = rho(i,k)*n0r(i,k)*720._r8/lamr(i,k)**3/lamr(i,k)**3/lamr(i,k)
+           dum1 = max(dum1,minrefl10)
+        end if
 
 !     Ice
         !  Add diaelectric factor from Smith 1984 equation 10
-        dum2= rho(i,k)*(0.176_r8/0.93_r8) * 720._r8*dumni0A2D(i,k)*(rhoi/900._r8)**2/lami(i,k)**7
-        dum2 = max(dum2,minrefl10)
+        if (lami(i,k) > 0._r8) then
+           dum2= rho(i,k)*(0.176_r8/0.93_r8) * 720._r8*dumni0A2D(i,k)*(rhoi/900._r8)**2/lami(i,k)**7
+           dum2 = max(dum2,minrefl10)
+        endif
 
 !     Snow
-        dum3= rho(i,k)*(0.176_r8/0.93_r8) * 720._r8*dumns0A2D(i,k)*(rhosn/900._r8)**2/lams(i,k)**7._r8 
-        dum3 = max(dum3,minrefl10)
+        if (lams(i,k) > 0._r8) then
+           dum3= rho(i,k)*(0.176_r8/0.93_r8) * 720._r8*dumns0A2D(i,k)*(rhosn/900._r8)**2/lams(i,k)**7._r8 
+           dum3 = max(dum3,minrefl10)
+        endif
 
 !     Graupel
-        if (do_hail .or. do_graupel .and. lamg(i,k).gt.0._r8) then
+        if (do_hail .or. do_graupel .and. lamg(i,k) > 0._r8) then
           dum4= rho(i,k)*(0.176_r8/0.93_r8) * 720._r8*n0g(i,k)*(rhogtmp/900._r8)**2/lamg(i,k)**7._r8 
           dum4 =max(dum4,minrefl10)
         end if
