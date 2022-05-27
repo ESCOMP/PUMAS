@@ -217,6 +217,9 @@ real(r8), parameter :: minrefl = 1.26e-10_r8    ! minrefl = 10._r8**(mindbz/10._
 integer, parameter  :: MG_PRECIP_FRAC_INCLOUD = 101
 integer, parameter  :: MG_PRECIP_FRAC_OVERLAP = 102
 
+! Reflectivity min for 10cm (Rain) radar reflectivity
+real(r8), parameter :: minrefl10 = 1.e-26_r8   
+
 ! autoconversion size threshold for cloud ice to snow (m)
 real(r8) :: dcs
 
@@ -614,7 +617,7 @@ subroutine micro_pumas_tend ( &
      nrout,                        nsout,                        &
      refl,               arefl,              areflz,             &
      frefl,              csrfl,              acsrfl,             &
-     fcsrfl,                       rercld,                       &
+     fcsrfl,        refl10cm, reflz10cm,     rercld,             &
      ncai,                         ncal,                         &
      qrout2,                       qsout2,                       &
      nrout2,                       nsout2,                       &
@@ -842,13 +845,15 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: nmeltgtot(mgncol,nlev)        ! change n  due to Melting of graupel       
   real(r8), intent(out) :: nrout(mgncol,nlev) ! rain number concentration (1/m3)
   real(r8), intent(out) :: nsout(mgncol,nlev)        ! snow number concentration (1/m3)
-  real(r8), intent(out) :: refl(mgncol,nlev)         ! analytic radar reflectivity
+  real(r8), intent(out) :: refl(mgncol,nlev)         ! analytic radar reflectivity (94GHZ, cloud radar)
   real(r8), intent(out) :: arefl(mgncol,nlev)        ! average reflectivity will zero points outside valid range
   real(r8), intent(out) :: areflz(mgncol,nlev)       ! average reflectivity in z.
   real(r8), intent(out) :: frefl(mgncol,nlev)        ! fractional occurrence of radar reflectivity
   real(r8), intent(out) :: csrfl(mgncol,nlev)        ! cloudsat reflectivity
   real(r8), intent(out) :: acsrfl(mgncol,nlev)       ! cloudsat average
   real(r8), intent(out) :: fcsrfl(mgncol,nlev)       ! cloudsat fractional occurrence of radar reflectivity
+  real(r8), intent(out) :: refl10cm(mgncol,nlev)     ! 10cm (rain) analytic radar reflectivity
+  real(r8), intent(out) :: reflz10cm(mgncol,nlev)    ! 10cm (rain) analytic radar reflectivity
   real(r8), intent(out) :: rercld(mgncol,nlev)       ! effective radius calculation for rain + cloud
   real(r8), intent(out) :: ncai(mgncol,nlev)         ! output number conc of ice nuclei available (1/m3)
   real(r8), intent(out) :: ncal(mgncol,nlev)         ! output number conc of CCN (1/m3)
@@ -1201,7 +1206,7 @@ subroutine micro_pumas_tend ( &
   !$acc               pgsacwtot,pgracstot,prdgtot,qmultgtot,qmultrgtot,       &
   !$acc               psacrtot,npracgtot,nscngtot,ngracstot,nmultgtot,        &
   !$acc               nmultrgtot,npsacwgtot,nrout,nsout,refl,arefl,           &
-  !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,rercld,ncai,ncal,      &
+  !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,refl10cm,reflz10cm,rercld,ncai,ncal,      &
   !$acc               qrout2,qsout2,nrout2,nsout2,drout2,dsout2,freqs,        &
   !$acc               freqr,nfice,qcrat,qgout,dgout,ngout,qgout2,ngout2,      &
   !$acc               dgout2,freqg,prer_evap,                                 &
@@ -1593,6 +1598,9 @@ subroutine micro_pumas_tend ( &
         csrfl(i,k)              = 0._r8
         acsrfl(i,k)             = 0._r8
         fcsrfl(i,k)             = 0._r8
+
+        refl10cm(i,k)           = -9999._r8
+        reflz10cm(i,k)          =  0._r8
       
         ncal(i,k)               = 0._r8
         ncai(i,k)               = 0._r8
@@ -3938,7 +3946,7 @@ end if  ! end sedimentation
   end do
   !$acc end parallel
 
-  call size_dist_param_basic(mg_rain_props, dumr, dumnr, lamr, mgncol, nlev)
+  call size_dist_param_basic(mg_rain_props, dumr, dumnr, lamr, mgncol, nlev, n0=n0r)
 
   !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector collapse(2)
@@ -4173,6 +4181,9 @@ end if  ! end sedimentation
   ! *****note: radar reflectivity is local (in-precip average)
   ! units of mm^6/m^3
 
+  ! Min rain rate of 0.1 mm/hr
+  rthrsh=0.0001_r8/3600._r8
+
   !$acc loop gang vector collapse(2) private(dum,dum1)
   do k=1,nlev
      do i=1,mgncol
@@ -4197,7 +4208,6 @@ end if  ! end sedimentation
         ! New version Aircraft cloud values
         !Z=a*R^b (R in mm/hr) from Comstock et al 2004
 
-        rthrsh=0.0001_r8/3600._r8
         if (rflx(i,k+1).ge.rthrsh) then
             dum=32._r8*(rflx(i,k+1)*3600._r8)**1.4_r8        
         else
@@ -4213,7 +4223,7 @@ end if  ! end sedimentation
 
         ! convert back to DBz
         if (refl(i,k).gt.minrefl) then
-           refl(i,k)=10._r8*log10(refl(i,k))
+           refl(i,k)=10._r8*dlog10(refl(i,k))
         else
            refl(i,k)=-9999._r8
         end if
@@ -4239,6 +4249,52 @@ end if  ! end sedimentation
            acsrfl(i,k)=0._r8
            fcsrfl(i,k)=0._r8
         end if
+     end do
+  end do
+
+  ! 10cm analytic radar reflectivity (rain radar)
+  !--------------------------------------------------
+  ! Formula from Hugh morrison
+  ! Ice dielectric correction from Smith 1984, Equation  10 and Snow correction from Smith 1984 Equation 14
+  ! *****note: radar reflectivity is local (in-precip average)
+  ! units of mm^6/m^3
+
+  !$acc loop gang vector collapse(2) private(dum,dum1)
+  do k=1,nlev
+     do i=1,mgncol
+      
+        dum1  = minrefl10
+        dum2  = minrefl10
+        dum3  = minrefl10
+        dum4  = minrefl10
+        dum   = minrefl10
+
+!     Rain
+        dum1 = rho(i,k)*n0r(i,k)*720._r8/lamr(i,k)**3/lamr(i,k)**3/lamr(i,k)
+        dum1 = max(dum1,minrefl10)
+
+!     Ice
+        !  Add diaelectric factor from Smith 1984 equation 10
+        dum2= rho(i,k)*(0.176_r8/0.93_r8) * 720._r8*dumni0A2D(i,k)*(rhoi/900._r8)**2/lami(i,k)**7
+        dum2 = max(dum2,minrefl10)
+
+!     Snow
+        dum3= rho(i,k)*(0.176_r8/0.93_r8) * 720._r8*dumns0A2D(i,k)*(rhosn/900._r8)**2/lams(i,k)**7._r8 
+        dum3 = max(dum3,minrefl10)
+
+!     Graupel
+        if (do_hail .or. do_graupel .and. lamg(i,k).gt.0._r8) then
+          dum4= rho(i,k)*(0.176_r8/0.93_r8) * 720._r8*n0g(i,k)*(rhogtmp/900._r8)**2/lamg(i,k)**7._r8 
+          dum4 =max(dum4,minrefl10)
+        end if
+                
+        reflz10cm(i,k) = (dum1+dum2+dum3+dum4) * precip_frac(i,k)
+        
+  ! Convert to dBz....
+      
+        dum = reflz10cm(i,k)*1.e18_r8
+        refl10cm(i,k) = 10._r8*dlog10(dum)
+ 
      end do
   end do
 
