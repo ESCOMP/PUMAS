@@ -1245,10 +1245,10 @@ subroutine micro_pumas_tend ( &
   !$acc               pgsacwtot,pgracstot,prdgtot,qmultgtot,qmultrgtot,       &
   !$acc               psacrtot,npracgtot,nscngtot,ngracstot,nmultgtot,        &
   !$acc               nmultrgtot,npsacwgtot,nrout,nsout,refl,arefl,           &
-  !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,refl10cm,reflz10cm,rercld,ncai,ncal,      &
-  !$acc               qrout2,qsout2,nrout2,nsout2,drout2,dsout2,freqs,        &
-  !$acc               freqr,nfice,qcrat,qgout,dgout,ngout,qgout2,ngout2,      &
-  !$acc               dgout2,freqg,prer_evap,                                 &
+  !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,refl10cm,reflz10cm,    &
+  !$acc               rercld,ncai,ncal,qrout2,qsout2,nrout2,nsout2,drout2,    &
+  !$acc               dsout2,freqs,freqr,nfice,qcrat,qgout,dgout,ngout,       &
+  !$acc               qgout2,ngout2,dgout2,freqg,prer_evap,                   &
   !$acc               nnuccctot,nnuccttot,nnuccdtot,nnudeptot,nhomotot,       &
   !$acc               nnuccrtot,nnuccritot,nsacwitot,npratot,npsacwstot,      &
   !$acc               npraitot,npracstot,nprctot,nprcitot,ncsedten,nisedten,  &
@@ -4190,20 +4190,21 @@ end if
            freqg(i,k)  = 0._r8
            reff_grau(i,k)=0._r8
         end if
-
-        ! analytic radar reflectivity
-        !--------------------------------------------------
-        ! formulas from Matthew Shupe, NOAA/CERES
-        ! *****note: radar reflectivity is local (in-precip average)
-        ! units of mm^6/m^3
-
      end do
   end do
+  !$acc end parallel
+
+  ! analytic radar reflectivity
+  !--------------------------------------------------
+  ! formulas from Matthew Shupe, NOAA/CERES
+  ! *****note: radar reflectivity is local (in-precip average)
+  ! units of mm^6/m^3
 
   ! Min rain rate of 0.1 mm/hr
   rthrsh=0.0001_r8/3600._r8
 
-  !$acc loop gang vector collapse(2) private(dum,dum1)
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
         if (qc(i,k).ge.qsmall .and. (nc(i,k)+nctend(i,k)*deltat).gt.10._r8) then
@@ -4270,6 +4271,7 @@ end if
         end if
      end do
   end do
+  !$acc end parallel
 
   ! 10cm analytic radar reflectivity (rain radar)
   !--------------------------------------------------
@@ -4282,7 +4284,8 @@ end if
   ! *****note: radar reflectivity is local (in-precip average)
   ! units of mm^6/m^3
 
-  !$acc loop gang vector collapse(2) private(dum,dum1)
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
 
@@ -4324,14 +4327,8 @@ end if
         dum = reflz10cm(i,k)*1.e18_r8
         refl10cm(i,k) = 10._r8*dlog10(dum)
 
-     end do
-  end do
-
   !redefine fice here....
 
-  !$acc loop gang vector collapse(2)
-  do k=1,nlev
-     do i=1,mgncol
         dum_2D(i,k) = qsout(i,k) + qrout(i,k) + qc(i,k) + qi(i,k)
         dumi(i,k)   = qsout(i,k) + qi(i,k)
         if (dumi(i,k) .gt. qsmall .and. dum_2D(i,k) .gt. qsmall) then
@@ -4339,6 +4336,7 @@ end if
         else
            nfice(i,k) = 0._r8
         end if
+
      end do
   end do
   !$acc end parallel
