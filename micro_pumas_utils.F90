@@ -287,9 +287,7 @@ real(r8) :: gamma_half_br_plus5
 real(r8) :: gamma_half_bs_plus5
 real(r8) :: gamma_2bs_plus2
 
-!$acc declare create (rv,cpp,tmelt,xxlv,xxls,gamma_bs_plus3,   &
-!$acc                 gamma_half_br_plus5,gamma_half_bs_plus5, &
-!$acc                 gamma_2bs_plus2)
+!$acc declare create (rv,cpp)
 
 !=========================================================
 ! Utilities that are cheaper if the compiler knows that
@@ -388,9 +386,7 @@ subroutine micro_pumas_utils_init( kind, rair, rh2o, cpair, tmelt_in, latvap, &
   mg_graupel_props = MGHydrometeorProps(rhog, dsph, lam_bnd_snow)
   mg_hail_props = MGHydrometeorProps(rhoh, dsph, lam_bnd_snow)
 
-  !$acc update device (rv,cpp,tmelt,xxlv,xxls,gamma_bs_plus3,   &
-  !$acc                gamma_half_br_plus5,gamma_half_bs_plus5, &
-  !$acc                gamma_2bs_plus2)
+  !$acc update device (rv,cpp)
 
 end subroutine micro_pumas_utils_init
 
