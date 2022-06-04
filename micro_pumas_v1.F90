@@ -309,6 +309,8 @@ logical           :: do_implicit_fall !   = .true.
 
 logical           :: accre_sees_auto  != .true.
 
+!$acc declare create (xxlv,xxls)
+
 !===============================================================================
 contains
 !===============================================================================
@@ -518,6 +520,8 @@ subroutine micro_pumas_init( &
 
   xxlv_squared=xxlv**2
   xxls_squared=xxls**2
+
+  !$acc update device (xxlv,xxls)
 
 end subroutine micro_pumas_init
 
