@@ -574,10 +574,9 @@ subroutine micro_pumas_tend ( &
      effc,               effc_fn,            effi,               &
      sadice,                       sadsnow,                      &
      prect,                        preci,                        &
-! CAC - The variables will be removed and have proc_rates in the argument list instead
-     nevapr,                       evapsnow,                     &
+     nevapr,                       proc_rates,                   &
      am_evp_st,                                                  &
-     prain,                        prodsnow,                     &
+     prain,                                                      &
      cmeout,                       deffi,                        &
      pgamrad,                      lamcrad,                      &
      qsout,                        dsout,                        &

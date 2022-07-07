@@ -23,7 +23,7 @@ contains
    ! Routine to allocate the elements of the proc_rates DDT
    !--------------------------------------------------------------
 
-      type(proc_rates_type) :: this
+      class(proc_rates_type) :: this
 
       integer, intent(in) :: psetcols, nlev
 
@@ -39,11 +39,11 @@ contains
    ! Routine to deallocate the elements of the proc_rates DDT
    !--------------------------------------------------------------
 
-      type(proc_rates_type) :: this
+      class(proc_rates_type) :: this
 
       deallocate(this%prodsnow)
       deallocate(this%evapsnow)
 
-   end subroutine proc_rates_allocate
+   end subroutine proc_rates_deallocate
 
 end module micro_pumas_diags
