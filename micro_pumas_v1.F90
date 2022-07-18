@@ -585,12 +585,6 @@ subroutine micro_pumas_tend ( &
      gflx,                                                       &
      rflx,               sflx,               qrout,              &
      reff_rain,          reff_snow,          reff_grau,          &
-     qcsevap,            qisevap,            qvres,              &
-     cmeitot,            vtrmc,              vtrmi,              &
-     umr,                          ums,                          &
-     umg,                qgsedten,                               &
-     qcsedten,                     qisedten,                     &
-     qrsedten,                     qssedten,                     &
      pratot,                       prctot,                       &
      mnuccctot,          mnuccttot,          msacwitot,          &
      psacwstot,          bergstot,  vapdepstot,         bergtot,            &
@@ -758,20 +752,6 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: reff_rain(mgncol,nlev)    ! rain effective radius (micron)
   real(r8), intent(out) :: reff_snow(mgncol,nlev)    ! snow effective radius (micron)
   real(r8), intent(out) :: reff_grau(mgncol,nlev)    ! graupel effective radius (micron)
-  real(r8), intent(out) :: qcsevap(mgncol,nlev)      ! cloud water evaporation due to sedimentation (1/s)
-  real(r8), intent(out) :: qisevap(mgncol,nlev)      ! cloud ice sublimation due to sublimation (1/s)
-  real(r8), intent(out) :: qvres(mgncol,nlev)        ! residual condensation term to ensure RH < 100% (1/s)
-  real(r8), intent(out) :: cmeitot(mgncol,nlev)      ! grid-mean cloud ice sub/dep (1/s)
-  real(r8), intent(out) :: vtrmc(mgncol,nlev)        ! mass-weighted cloud water fallspeed (m/s)
-  real(r8), intent(out) :: vtrmi(mgncol,nlev)        ! mass-weighted cloud ice fallspeed (m/s)
-  real(r8), intent(out) :: umr(mgncol,nlev)          ! mass weighted rain fallspeed (m/s)
-  real(r8), intent(out) :: ums(mgncol,nlev)          ! mass weighted snow fallspeed (m/s)
-  real(r8), intent(out) :: umg(mgncol,nlev)          ! mass weighted graupel/hail fallspeed (m/s)
-  real(r8), intent(out) :: qgsedten(mgncol,nlev)     ! qg sedimentation tendency (1/s)
-  real(r8), intent(out) :: qcsedten(mgncol,nlev)     ! qc sedimentation tendency (1/s)
-  real(r8), intent(out) :: qisedten(mgncol,nlev)     ! qi sedimentation tendency (1/s)
-  real(r8), intent(out) :: qrsedten(mgncol,nlev)     ! qr sedimentation tendency (1/s)
-  real(r8), intent(out) :: qssedten(mgncol,nlev)     ! qs sedimentation tendency (1/s)
 
   ! microphysical process rates for output (mixing ratio tendencies) (all have units of 1/s)
   real(r8), intent(out) :: pratot(mgncol,nlev)          ! accretion of cloud by rain
@@ -1163,8 +1143,10 @@ subroutine micro_pumas_tend ( &
   !$acc               nevapr,proc_rates%evapsnow,am_evp_st,prain,proc_rates%prodsnow,cmeout,        &
   !$acc               deffi,pgamrad,lamcrad,qsout,dsout,lflx,iflx,rflx,       &
   !$acc               sflx,gflx,qrout,reff_rain,reff_snow,reff_grau,          &
-  !$acc               qcsevap,qisevap,qvres,cmeitot,vtrmc,vtrmi,umr,ums,      &
-  !$acc               umg,qgsedten,qcsedten,qisedten,qrsedten,qssedten,       &
+  !$acc               proc_rates%qcsevap,proc_rates%qisevap,proc_rates%qvres,proc_rates%cmeitot,proc_rates%vtrmc,&
+  !$acc               proc_rates%vtrmi,proc_rates%umr,proc_rates%ums,      &
+  !$acc               proc_rates%umg,proc_rates%qgsedten,proc_rates%qcsedten, &
+  !$acc               proc_rates%qisedten,proc_rates%qrsedten,proc_rates%qssedten,       &
   !$acc               pratot,prctot,mnuccctot,mnuccttot,msacwitot,            &
   !$acc               psacwstot,bergstot,vapdepstot,bergtot,melttot,          &
   !$acc               meltstot,meltgtot,mnudeptot,homotot,qcrestot,prcitot,   &
@@ -1329,17 +1311,17 @@ subroutine micro_pumas_tend ( &
   !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
-        qcsevap(i,k)            = 0._r8
-        qisevap(i,k)            = 0._r8
-        qvres(i,k)              = 0._r8
-        cmeitot(i,k)            = 0._r8
-        vtrmc(i,k)              = 0._r8
-        vtrmi(i,k)              = 0._r8
-        qcsedten(i,k)           = 0._r8
-        qisedten(i,k)           = 0._r8
-        qrsedten(i,k)           = 0._r8
-        qssedten(i,k)           = 0._r8
-        qgsedten(i,k)           = 0._r8
+        proc_rates%qcsevap(i,k)            = 0._r8
+        proc_rates%qisevap(i,k)            = 0._r8
+        proc_rates%qvres(i,k)              = 0._r8
+        proc_rates%cmeitot(i,k)            = 0._r8
+        proc_rates%vtrmc(i,k)              = 0._r8
+        proc_rates%vtrmi(i,k)              = 0._r8
+        proc_rates%qcsedten(i,k)           = 0._r8
+        proc_rates%qisedten(i,k)           = 0._r8
+        proc_rates%qrsedten(i,k)           = 0._r8
+        proc_rates%qssedten(i,k)           = 0._r8
+        proc_rates%qgsedten(i,k)           = 0._r8
 
         pratot(i,k)             = 0._r8
         prctot(i,k)             = 0._r8
@@ -1487,11 +1469,11 @@ subroutine micro_pumas_tend ( &
   do k=1,nlev
      do i=1,mgncol
         ! initialize precip fallspeeds to zero
-        ums(i,k)                = 0._r8
+        proc_rates%ums(i,k)                = 0._r8
         uns(i,k)                = 0._r8
-        umr(i,k)                = 0._r8
+        proc_rates%umr(i,k)                = 0._r8
         unr(i,k)                = 0._r8
-        umg(i,k)                = 0._r8
+        proc_rates%umg(i,k)                = 0._r8
         ung(i,k)                = 0._r8
 
         ! initialize limiter for output
@@ -1958,9 +1940,9 @@ subroutine micro_pumas_tend ( &
            dum_2D(i,k)= lamr(i,k)**br
            ! provisional rain number and mass weighted mean fallspeed (m/s)
            unr(i,k) = min(arn(i,k)*gamma_br_plus1/dum_2D(i,k),9.1_r8*rhof(i,k))
-           umr(i,k) = min(arn(i,k)*gamma_br_plus4/(6._r8*dum_2D(i,k)),9.1_r8*rhof(i,k))
+           proc_rates%umr(i,k) = min(arn(i,k)*gamma_br_plus4/(6._r8*dum_2D(i,k)),9.1_r8*rhof(i,k))
         else
-           umr(i,k) = 0._r8
+           proc_rates%umr(i,k) = 0._r8
            unr(i,k) = 0._r8
         end if
      end do
@@ -1977,21 +1959,21 @@ subroutine micro_pumas_tend ( &
      do i=1,mgncol
         if (ifs_sed) then
            if (lams(i,k) > 0._r8) then
-              ums(i,k) = 1._r8
+              proc_rates%ums(i,k) = 1._r8
               uns(i,k) = 1._r8
            else
-              ums(i,k) = 0._r8
+              proc_rates%ums(i,k) = 0._r8
               uns(i,k) = 0._r8
            end if
         else
            if (lams(i,k) > 0._r8) then
               dum_2D(i,k) = lams(i,k)**bs
               ! provisional snow number and mass weighted mean fallspeed (m/s)
-              ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*dum_2D(i,k)),1.2_r8*rhof(i,k))
-              ums(i,k) = ums(i,k)*micro_mg_vtrmi_factor
+              proc_rates%ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*dum_2D(i,k)),1.2_r8*rhof(i,k))
+              proc_rates%ums(i,k) = proc_rates%ums(i,k)*micro_mg_vtrmi_factor
               uns(i,k) = min(asn(i,k)*gamma_bs_plus1/dum_2D(i,k),1.2_r8*rhof(i,k))
            else
-              ums(i,k) = 0._r8
+              proc_rates%ums(i,k) = 0._r8
               uns(i,k) = 0._r8
            end if
         end if
@@ -2015,10 +1997,10 @@ subroutine micro_pumas_tend ( &
         if (lamg(i,k) > 0._r8) then
            dum_2D(i,k) = lamg(i,k)**bgtmp
            ! provisional graupel/hail number and mass weighted mean fallspeed (m/s)
-           umg(i,k) = min(agn(i,k)*gamma_bg_plus4/(6._r8*dum_2D(i,k)),20._r8*rhof(i,k))
+           proc_rates%umg(i,k) = min(agn(i,k)*gamma_bg_plus4/(6._r8*dum_2D(i,k)),20._r8*rhof(i,k))
            ung(i,k) = min(agn(i,k)*gamma_bg_plus1/dum_2D(i,k),20._r8*rhof(i,k))
         else
-           umg(i,k) = 0._r8
+           proc_rates%umg(i,k) = 0._r8
            ung(i,k) = 0._r8
         end if
      end do
@@ -2127,7 +2109,7 @@ subroutine micro_pumas_tend ( &
      !$acc end parallel
   end if
 
-  call accrete_rain_snow(t, rho, umr, ums, unr, uns, qric, qsic, lamr, &
+  call accrete_rain_snow(t, rho, proc_rates%umr(:mgncol,:nlev), proc_rates%ums(:mgncol,:nlev), unr, uns, qric, qsic, lamr, &
                          n0r, lams, n0s, pracs, npracs, mgncol*nlev)
 
   call heterogeneous_rain_freezing(t, qric, nric, lamr, mnuccr, nnuccr, mgncol*nlev)
@@ -2226,7 +2208,8 @@ subroutine micro_pumas_tend ( &
 !===================================================================
 
   if (do_hail.or.do_graupel) then
-     call graupel_collecting_snow(qsic, qric, umr, ums, rho, lamr, n0r, lams, n0s, psacr, mgncol*nlev)
+     call graupel_collecting_snow(qsic, qric, proc_rates%umr(:mgncol,:nlev), proc_rates%ums(:mgncol,:nlev), rho, &
+                                  lamr, n0r, lams, n0s, psacr, mgncol*nlev)
 
      call graupel_collecting_cld_water(qgic, qcic, ncic, rho, n0g, lamg, bgtmp, agn, psacwg, npsacwg, mgncol*nlev)
 
@@ -2243,7 +2226,7 @@ subroutine micro_pumas_tend ( &
      call graupel_riming_liquid_snow(psacws, qsic, qcic, nsic, rho, rhosn, rhogtmp, asn, &
                                      lams, n0s, deltat, pgsacw, nscng, mgncol*nlev)
 
-     call graupel_collecting_rain(qric, qgic, umg, umr, ung, unr, rho, n0r, &
+     call graupel_collecting_rain(qric, qgic, proc_rates%umg(:mgncol,:nlev), proc_rates%umr(:mgncol,:nlev), ung, unr, rho, n0r, &
                                   lamr, n0g, lamg, pracg, npracg, mgncol*nlev)
 
      !$acc parallel vector_length(VLENS) default(present)
@@ -2739,7 +2722,7 @@ subroutine micro_pumas_tend ( &
      do i=1,mgncol
         cmeout(i,k) = vap_dep(i,k) + ice_sublim(i,k) + mnuccd(i,k) + vap_deps(i,k)
         ! add output for cmei (accumulate)
-        cmeitot(i,k) = vap_dep(i,k) + ice_sublim(i,k) + mnuccd(i,k) + vap_deps(i,k)
+        proc_rates%cmeitot(i,k) = vap_dep(i,k) + ice_sublim(i,k) + mnuccd(i,k) + vap_deps(i,k)
         !-------------------------------------------------------------------
         ! evaporation/sublimation is stored here as positive term
         ! Add to evapsnow via prdg
@@ -2988,7 +2971,7 @@ subroutine micro_pumas_tend ( &
         if (dumc(i,k).ge.qsmall) then
            dum1 = 4._r8+bc+pgam(i,k)
            dum2 = pgam(i,k)+4._r8
-           vtrmc(i,k)=acn(i,k)*gamma(dum1)/(lamc(i,k)**bc*gamma(dum2))
+           proc_rates%vtrmc(i,k)=acn(i,k)*gamma(dum1)/(lamc(i,k)**bc*gamma(dum2))
            ! Following ifs, no condensate sedimentation
            if (ifs_sed) then
               fc(i,k)  = 0._r8
@@ -2996,7 +2979,7 @@ subroutine micro_pumas_tend ( &
            else
               dum3     = 1._r8+bc+pgam(i,k)
               dum4     = pgam(i,k)+1._r8
-              fc(i,k)  = g*rho(i,k)*vtrmc(i,k)
+              fc(i,k)  = g*rho(i,k)*proc_rates%vtrmc(i,k)
               fnc(i,k) = g*rho(i,k)* &
                    acn(i,k)*gamma(dum3)/ &
                    (lamc(i,k)**bc*gamma(dum4))
@@ -3013,11 +2996,11 @@ subroutine micro_pumas_tend ( &
      do i=1,mgncol
         ! calculate number and mass weighted fall velocity for cloud ice
         if (dumi(i,k).ge.qsmall) then
-           vtrmi(i,k)=min(ain(i,k)*gamma_bi_plus4/(6._r8*lami(i,k)**bi), &
+           proc_rates%vtrmi(i,k)=min(ain(i,k)*gamma_bi_plus4/(6._r8*lami(i,k)**bi), &
                 1.2_r8*rhof(i,k))
-           vtrmi(i,k)=vtrmi(i,k)*micro_mg_vtrmi_factor
+           proc_rates%vtrmi(i,k)=proc_rates%vtrmi(i,k)*micro_mg_vtrmi_factor
 
-           fi(i,k) = g*rho(i,k)*vtrmi(i,k)
+           fi(i,k) = g*rho(i,k)*proc_rates%vtrmi(i,k)
            fni(i,k) = g*rho(i,k)* &
                 min(ain(i,k)*gamma_bi_plus1/lami(i,k)**bi,1.2_r8*rhof(i,k))
 
@@ -3027,13 +3010,13 @@ subroutine micro_pumas_tend ( &
            ifrac = min(1._r8, max(0._r8, (irad - 18._r8) / 2._r8))
 
            if (ifrac .lt. 1._r8) then
-              vtrmi(i,k) = ifrac * vtrmi(i,k) + &
+              proc_rates%vtrmi(i,k) = ifrac * proc_rates%vtrmi(i,k) + &
                  (1._r8 - ifrac) * &
                  min(ajn(i,k)*gamma_bj_plus4/(6._r8*lami(i,k)**bj), &
                  1.2_r8*rhof(i,k))
-              vtrmi(i,k)=vtrmi(i,k)*micro_mg_vtrmi_factor
+              proc_rates%vtrmi(i,k)=proc_rates%vtrmi(i,k)*micro_mg_vtrmi_factor
 
-              fi(i,k)  = g*rho(i,k)*vtrmi(i,k)
+              fi(i,k)  = g*rho(i,k)*proc_rates%vtrmi(i,k)
               fni(i,k) = ifrac * fni(i,k) + &
                  (1._r8 - ifrac) * &
                  g*rho(i,k)* &
@@ -3075,8 +3058,8 @@ subroutine micro_pumas_tend ( &
            ! 'final' values of number and mass weighted mean fallspeed for rain (m/s)
            unr(i,k) = min(arn(i,k)*gamma_br_plus1/qtmp,9.1_r8*rhof(i,k))
            fnr(i,k) = g*rho(i,k)*unr(i,k)
-           umr(i,k) = min(arn(i,k)*gamma_br_plus4/(6._r8*qtmp),9.1_r8*rhof(i,k))
-           fr(i,k) = g*rho(i,k)*umr(i,k)
+           proc_rates%umr(i,k) = min(arn(i,k)*gamma_br_plus4/(6._r8*qtmp),9.1_r8*rhof(i,k))
+           fr(i,k) = g*rho(i,k)*proc_rates%umr(i,k)
         else
            fr(i,k)=0._r8
            fnr(i,k)=0._r8
@@ -3097,15 +3080,15 @@ subroutine micro_pumas_tend ( &
         if (lams(i,k).ge.qsmall) then
            qtmp = lams(i,k)**bs
            ! 'final' values of number and mass weighted mean fallspeed for snow (m/s)
-           ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*qtmp),1.2_r8*rhof(i,k))
-           ums(i,k) = ums(i,k)*micro_mg_vtrmi_factor
+           proc_rates%ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*qtmp),1.2_r8*rhof(i,k))
+           proc_rates%ums(i,k) = proc_rates%ums(i,k)*micro_mg_vtrmi_factor
 
-           fs(i,k)  = g*rho(i,k)*ums(i,k)
+           fs(i,k)  = g*rho(i,k)*proc_rates%ums(i,k)
            uns(i,k) = min(asn(i,k)*gamma_bs_plus1/qtmp,1.2_r8*rhof(i,k))
            fns(i,k) = g*rho(i,k)*uns(i,k)
            ! Fix fallspeed for snow
            if (ifs_sed) then
-              ums(i,k) = 1._r8
+              proc_rates%ums(i,k) = 1._r8
               uns(i,k) = 1._r8
             end if
         else
@@ -3125,8 +3108,8 @@ subroutine micro_pumas_tend ( &
         if (lamg(i,k).ge.qsmall) then
            qtmp = lamg(i,k)**bgtmp
            ! 'final' values of number and mass weighted mean fallspeed for graupel (m/s)
-           umg(i,k) = min(agn(i,k)*gamma_bg_plus4/(6._r8*qtmp),20._r8*rhof(i,k))
-           fg(i,k) = g*rho(i,k)*umg(i,k)
+           proc_rates%umg(i,k) = min(agn(i,k)*gamma_bg_plus4/(6._r8*qtmp),20._r8*rhof(i,k))
+           fg(i,k) = g*rho(i,k)*proc_rates%umg(i,k)
            ung(i,k) = min(agn(i,k)*gamma_bg_plus1/qtmp,20._r8*rhof(i,k))
            fng(i,k) = g*rho(i,k)*ung(i,k)
         else
@@ -3220,7 +3203,7 @@ if ( do_implicit_fall ) then
  ! cloud water mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumc,fc,.FALSE.,qctend, &
-                               xflx=lflx,qxsedten=qcsedten,prect=prect)
+                               xflx=lflx,qxsedten=proc_rates%qcsedten(:mgncol,:nlev),prect=prect)
 
  ! cloud water number sedimentation
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnc,fnc,.FALSE.,nctend)
@@ -3228,7 +3211,7 @@ if ( do_implicit_fall ) then
  ! cloud ice mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumi,fi,.FALSE.,qitend, &
-                               xflx=iflx,qxsedten=qisedten,prect=prect,preci=preci)
+                               xflx=iflx,qxsedten=proc_rates%qisedten(:mgncol,:nlev),prect=prect,preci=preci)
 
  ! cloud ice number sedimentation
 
@@ -3237,7 +3220,7 @@ if ( do_implicit_fall ) then
  ! rain water mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumr,fr,.TRUE.,qrtend, &
-                               xflx=rflx,qxsedten=qrsedten,prect=prect)
+                               xflx=rflx,qxsedten=proc_rates%qrsedten(:mgncol,:nlev),prect=prect)
 
  ! rain water number sedimentation
 
@@ -3246,7 +3229,7 @@ if ( do_implicit_fall ) then
  ! snow water mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dums,fs,.TRUE.,qstend, &
-                               xflx=sflx,qxsedten=qssedten,prect=prect,preci=preci)
+                               xflx=sflx,qxsedten=proc_rates%qssedten(:mgncol,:nlev),prect=prect,preci=preci)
 
  ! snow water number sedimentation
 
@@ -3255,7 +3238,7 @@ if ( do_implicit_fall ) then
  ! graupel mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumg,fg,.TRUE.,qgtend, &
-                               xflx=gflx,qxsedten=qgsedten,prect=prect,preci=preci)
+                               xflx=gflx,qxsedten=proc_rates%qgsedten(:mgncol,:nlev),prect=prect,preci=preci)
 
  ! graupel number sedimentation
 
@@ -3274,8 +3257,8 @@ else
 
   ! ice mass sediment
   call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep,rnstep,fi,dumi,pdel_inv, &
-                     qitend,qxsedten=qisedten,prect=prect,xflx=iflx,xxlx=xxls, &
-                     qxsevap=qisevap,tlat=tlat,qvlat=qvlat,xcldm=icldm,preci=preci)
+                     qitend,qxsedten=proc_rates%qisedten(:mgncol,:nlev),prect=prect,xflx=iflx,xxlx=xxls, &
+                     qxsevap=proc_rates%qisevap,tlat=tlat,qvlat=qvlat,xcldm=icldm,preci=preci)
 
   ! ice number sediment
   call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep,rnstep,fni,dumni,pdel_inv,nitend,xcldm=icldm)
@@ -3290,8 +3273,8 @@ else
 
   ! liq mass sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fc,dumc,pdel_inv, &
-                     qctend,qxsedten=qcsedten,prect=prect,xflx=lflx,xxlx=xxlv, &
-                     qxsevap=qcsevap,tlat=tlat,qvlat=qvlat,xcldm=lcldm)
+                     qctend,qxsedten=proc_rates%qcsedten(:mgncol,:nlev),prect=prect,xflx=lflx,xxlx=xxlv, &
+                     qxsevap=proc_rates%qcsevap,tlat=tlat,qvlat=qvlat,xcldm=lcldm)
 
   ! liq number sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fnc,dumnc,pdel_inv,nctend,xcldm=lcldm)
@@ -3306,7 +3289,7 @@ else
 
   ! rain mass sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fr,dumr,pdel_inv, &
-                     qrtend,qxsedten=qrsedten,prect=prect,xflx=rflx)
+                     qrtend,qxsedten=proc_rates%qrsedten(:mgncol,:nlev),prect=prect,xflx=rflx)
 
   ! rain number sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fnr,dumnr,pdel_inv,nrtend)
@@ -3321,7 +3304,7 @@ else
 
   ! snow mass sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fs,dums,pdel_inv, &
-                     qstend,qxsedten=qssedten,prect=prect,xflx=sflx,preci=preci)
+                     qstend,qxsedten=proc_rates%qssedten(:mgncol,:nlev),prect=prect,xflx=sflx,preci=preci)
 
   ! snow number sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fns,dumns,pdel_inv,nstend)
@@ -3336,7 +3319,7 @@ else
 
   ! graupel mass sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fg,dumg,pdel_inv, &
-                     qgtend,qxsedten=qgsedten,prect=prect,xflx=gflx,preci=preci)
+                     qgtend,qxsedten=proc_rates%qgsedten(:mgncol,:nlev),prect=prect,xflx=gflx,preci=preci)
 
   ! graupel number sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep,rnstep,fng,dumng,pdel_inv,ngtend)
@@ -3651,7 +3634,7 @@ end if  ! end sedimentation
               qirestot(i,k)=dum*dum1
               qvlat(i,k)=qvlat(i,k)-dum
               ! for output
-              qvres(i,k)=-dum
+              proc_rates%qvres(i,k)=-dum
               tlat(i,k)=tlat(i,k)+dum*(1._r8-dum1)*xxlv+dum*dum1*xxls
            end if
         end do
