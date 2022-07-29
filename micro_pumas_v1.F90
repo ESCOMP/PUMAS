@@ -585,9 +585,7 @@ subroutine micro_pumas_tend ( &
      gflx,                                                       &
      rflx,               sflx,               qrout,              &
      reff_rain,          reff_snow,          reff_grau,          &
-     pratot,                       prctot,                       &
-     mnuccctot,          mnuccttot,          msacwitot,          &
-     psacwstot,          bergstot,  vapdepstot,         bergtot,            &
+!     psacwstot,           vapdepstot,         bergtot,            &
      melttot,    meltstot,   meltgtot,       homotot,            &
      qcrestot,           prcitot,            praitot,            &
      qirestot,           mnuccrtot,    mnudeptot,       mnuccritot, pracstot,           &
@@ -597,6 +595,7 @@ subroutine micro_pumas_tend ( &
      qmultgtot,          qmultrgtot,         psacrtot,           &
      npracgtot,          nscngtot,           ngracstot,          &
      nmultgtot,          nmultrgtot,         npsacwgtot,         &
+! ------------------
      nrout,                        nsout,                        &
      refl,               arefl,              areflz,             &
      frefl,              csrfl,              acsrfl,             &
@@ -754,15 +753,6 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: reff_grau(mgncol,nlev)    ! graupel effective radius (micron)
 
   ! microphysical process rates for output (mixing ratio tendencies) (all have units of 1/s)
-  real(r8), intent(out) :: pratot(mgncol,nlev)          ! accretion of cloud by rain
-  real(r8), intent(out) :: prctot(mgncol,nlev)          ! autoconversion of cloud to rain
-  real(r8), intent(out) :: mnuccctot(mgncol,nlev)       ! mixing ratio tend due to immersion freezing
-  real(r8), intent(out) :: mnuccttot(mgncol,nlev)       ! mixing ratio tend due to contact freezing
-  real(r8), intent(out) :: msacwitot(mgncol,nlev)       ! mixing ratio tend due to H-M splintering
-  real(r8), intent(out) :: psacwstot(mgncol,nlev)       ! collection of cloud water by snow
-  real(r8), intent(out) :: bergstot(mgncol,nlev)        ! bergeron process on snow
-  real(r8), intent(out) :: vapdepstot(mgncol,nlev)      ! vapor deposition  process onto snow
-  real(r8), intent(out) :: bergtot(mgncol,nlev)         ! bergeron process on cloud ice
   real(r8), intent(out) :: melttot(mgncol,nlev)         ! melting of cloud ice
   real(r8), intent(out) :: meltstot(mgncol,nlev)        ! melting of snow
   real(r8), intent(out) :: meltgtot(mgncol,nlev)        ! melting of graupel
@@ -1147,8 +1137,8 @@ subroutine micro_pumas_tend ( &
   !$acc               proc_rates%vtrmi,proc_rates%umr,proc_rates%ums,      &
   !$acc               proc_rates%umg,proc_rates%qgsedten,proc_rates%qcsedten, &
   !$acc               proc_rates%qisedten,proc_rates%qrsedten,proc_rates%qssedten,       &
-  !$acc               pratot,prctot,mnuccctot,mnuccttot,msacwitot,            &
-  !$acc               psacwstot,bergstot,vapdepstot,bergtot,melttot,          &
+  !$acc               proc_rates%pratot,proc_rates%prctot,proc_rates%mnuccctot,proc_rates%mnuccttot,proc_rates%msacwitot,       &
+  !$acc               proc_rates%psacwstot,proc_rates%bergstot,proc_rates%vapdepstot,proc_rates%bergtot,melttot,          &
   !$acc               meltstot,meltgtot,mnudeptot,homotot,qcrestot,prcitot,   &
   !$acc               praitot,qirestot,mnuccrtot,mnuccritot,pracstot,         &
   !$acc               meltsdttot,frzrdttot,mnuccdtot,pracgtot,psacwgtot,      &
@@ -1323,15 +1313,15 @@ subroutine micro_pumas_tend ( &
         proc_rates%qssedten(i,k)           = 0._r8
         proc_rates%qgsedten(i,k)           = 0._r8
 
-        pratot(i,k)             = 0._r8
-        prctot(i,k)             = 0._r8
-        mnuccctot(i,k)          = 0._r8
-        mnuccttot(i,k)          = 0._r8
-        msacwitot(i,k)          = 0._r8
-        psacwstot(i,k)          = 0._r8
-        bergstot(i,k)           = 0._r8
-        vapdepstot(i,k)         = 0._r8
-        bergtot(i,k)            = 0._r8
+        proc_rates%pratot(i,k)             = 0._r8
+        proc_rates%prctot(i,k)             = 0._r8
+        proc_rates%mnuccctot(i,k)          = 0._r8
+        proc_rates%mnuccttot(i,k)          = 0._r8
+        proc_rates%msacwitot(i,k)          = 0._r8
+        proc_rates%psacwstot(i,k)          = 0._r8
+        proc_rates%bergstot(i,k)           = 0._r8
+        proc_rates%vapdepstot(i,k)         = 0._r8
+        proc_rates%bergtot(i,k)            = 0._r8
         melttot(i,k)            = 0._r8
 
         mnudeptot(i,k)          = 0._r8
@@ -2757,16 +2747,16 @@ subroutine micro_pumas_tend ( &
   do k=1,nlev
      do i=1,mgncol
         ! microphysics output, note this is grid-averaged
-        pratot(i,k)     = pra(i,k)*lcldm(i,k)
-        prctot(i,k)     = prc(i,k)*lcldm(i,k)
-        mnuccctot(i,k)  = mnuccc(i,k)*lcldm(i,k)
+        proc_rates%pratot(i,k)     = pra(i,k)*lcldm(i,k)
+        proc_rates%prctot(i,k)     = prc(i,k)*lcldm(i,k)
+        proc_rates%mnuccctot(i,k)  = mnuccc(i,k)*lcldm(i,k)
         mnudeptot(i,k)  = mnudep(i,k)*lcldm(i,k)
-        mnuccttot(i,k)  = mnucct(i,k)*lcldm(i,k)
-        msacwitot(i,k)  = msacwi(i,k)*lcldm(i,k)
-        psacwstot(i,k)  = psacws(i,k)*lcldm(i,k)
-        bergstot(i,k)   = bergs(i,k)*lcldm(i,k)
-        vapdepstot(i,k) = vap_deps(i,k)
-        bergtot(i,k)    = berg(i,k)
+        proc_rates%mnuccttot(i,k)  = mnucct(i,k)*lcldm(i,k)
+        proc_rates%msacwitot(i,k)  = msacwi(i,k)*lcldm(i,k)
+        proc_rates%psacwstot(i,k)  = psacws(i,k)*lcldm(i,k)
+        proc_rates%bergstot(i,k)   = bergs(i,k)*lcldm(i,k)
+        proc_rates%vapdepstot(i,k) = vap_deps(i,k)
+        proc_rates%bergtot(i,k)    = berg(i,k)
         prcitot(i,k)    = prci(i,k)*icldm(i,k)
         praitot(i,k)    = prai(i,k)*icldm(i,k)
         mnuccdtot(i,k)  = mnuccd(i,k)*icldm(i,k)

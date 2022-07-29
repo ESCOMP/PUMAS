@@ -25,6 +25,15 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
     real(r8), allocatable :: qrsedten(:,:)     ! qr sedimentation tendency (1/s)
     real(r8), allocatable :: qssedten(:,:)     ! qs sedimentation tendency (1/s)
 
+    real(r8), allocatable :: pratot(:,:)
+    real(r8), allocatable :: prctot(:,:)
+    real(r8), allocatable :: mnuccctot(:,:)
+    real(r8), allocatable :: mnuccttot(:,:)
+    real(r8), allocatable :: msacwitot(:,:)
+    real(r8), allocatable :: psacwstot(:,:)
+    real(r8), allocatable :: bergstot(:,:)
+    real(r8), allocatable :: vapdepstot(:,:)
+    real(r8), allocatable :: bergtot(:,:)
 
     contains
       procedure :: allocate => proc_rates_allocate
@@ -60,6 +69,15 @@ contains
       allocate(this%qisedten(psetcols,nlev), stat=ierr)
       allocate(this%qrsedten(psetcols,nlev), stat=ierr)
       allocate(this%qssedten(psetcols,nlev), stat=ierr)
+      allocate(this%pratot(psetcols,nlev), stat=ierr)
+      allocate(this%prctot(psetcols,nlev), stat=ierr)
+      allocate(this%mnuccctot(psetcols,nlev), stat=ierr)
+      allocate(this%mnuccttot(psetcols,nlev), stat=ierr)
+      allocate(this%msacwitot(psetcols,nlev), stat=ierr)
+      allocate(this%psacwstot(psetcols,nlev), stat=ierr)
+      allocate(this%bergstot(psetcols,nlev), stat=ierr)
+      allocate(this%vapdepstot(psetcols,nlev), stat=ierr)
+      allocate(this%bergtot(psetcols,nlev), stat=ierr)
 
    end subroutine proc_rates_allocate
 
@@ -86,6 +104,15 @@ contains
       deallocate(this%qisedten)
       deallocate(this%qrsedten)
       deallocate(this%qssedten)
+      deallocate(this%pratot)
+      deallocate(this%prctot)
+      deallocate(this%mnuccctot)
+      deallocate(this%mnuccttot)
+      deallocate(this%msacwitot)
+      deallocate(this%psacwstot)
+      deallocate(this%bergstot)
+      deallocate(this%vapdepstot)
+      deallocate(this%bergtot)
 
    end subroutine proc_rates_deallocate
 
