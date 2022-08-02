@@ -585,16 +585,6 @@ subroutine micro_pumas_tend ( &
      gflx,                                                       &
      rflx,               sflx,               qrout,              &
      reff_rain,          reff_snow,          reff_grau,          &
-!     psacwstot,           vapdepstot,         bergtot,            &
-     melttot,    meltstot,   meltgtot,       homotot,            &
-     qcrestot,           prcitot,            praitot,            &
-     qirestot,           mnuccrtot,    mnudeptot,       mnuccritot, pracstot,           &
-     meltsdttot,         frzrdttot,          mnuccdtot,          &
-     pracgtot,           psacwgtot,          pgsacwtot,          &
-     pgracstot,          prdgtot,           &
-     qmultgtot,          qmultrgtot,         psacrtot,           &
-     npracgtot,          nscngtot,           ngracstot,          &
-     nmultgtot,          nmultrgtot,         npsacwgtot,         &
 ! ------------------
      nrout,                        nsout,                        &
      refl,               arefl,              areflz,             &
@@ -753,35 +743,6 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: reff_grau(mgncol,nlev)    ! graupel effective radius (micron)
 
   ! microphysical process rates for output (mixing ratio tendencies) (all have units of 1/s)
-  real(r8), intent(out) :: melttot(mgncol,nlev)         ! melting of cloud ice
-  real(r8), intent(out) :: meltstot(mgncol,nlev)        ! melting of snow
-  real(r8), intent(out) :: meltgtot(mgncol,nlev)        ! melting of graupel
-  real(r8), intent(out) :: mnudeptot(mgncol,nlev)       ! deposition nucleation to ice
-  real(r8), intent(out) :: homotot(mgncol,nlev)         ! homogeneous freezing cloud water
-  real(r8), intent(out) :: qcrestot(mgncol,nlev)        ! residual cloud condensation due to removal of excess supersat
-  real(r8), intent(out) :: prcitot(mgncol,nlev)         ! autoconversion of cloud ice to snow
-  real(r8), intent(out) :: praitot(mgncol,nlev)         ! accretion of cloud ice by snow
-  real(r8), intent(out) :: qirestot(mgncol,nlev)        ! residual ice deposition due to removal of excess supersat
-  real(r8), intent(out) :: mnuccrtot(mgncol,nlev)       ! mixing ratio tendency due to heterogeneous freezing of rain to snow (1/s)
-  real(r8), intent(out) :: mnuccritot(mgncol,nlev)      ! mixing ratio tendency due to heterogeneous freezing of rain to ice (1/s)
-  real(r8), intent(out) :: pracstot(mgncol,nlev)        ! mixing ratio tendency due to accretion of rain by snow (1/s)
-  real(r8), intent(out) :: meltsdttot(mgncol,nlev)      ! latent heating rate due to melting of snow  (W/kg)
-  real(r8), intent(out) :: frzrdttot(mgncol,nlev)       ! latent heating rate due to homogeneous freezing of rain (W/kg)
-  real(r8), intent(out) :: mnuccdtot(mgncol,nlev)       ! mass tendency from ice nucleation
-  real(r8), intent(out) :: pracgtot(mgncol,nlev)        ! change in q collection rain by graupel  (precipf)
-  real(r8), intent(out) :: psacwgtot(mgncol,nlev)       ! change in q collection droplets by graupel (lcldm)
-  real(r8), intent(out) :: pgsacwtot(mgncol,nlev)       ! conversion q to graupel due to collection droplets by snow  (lcldm)
-  real(r8), intent(out) :: pgracstot(mgncol,nlev)       ! conversion q to graupel due to collection rain by snow (precipf)
-  real(r8), intent(out) :: prdgtot(mgncol,nlev)         ! dep of graupel (precipf)
-  real(r8), intent(out) :: qmultgtot(mgncol,nlev)       ! change q due to ice mult droplets/graupel  (lcldm)
-  real(r8), intent(out) :: qmultrgtot(mgncol,nlev)      ! change q due to ice mult rain/graupel (precipf)
-  real(r8), intent(out) :: psacrtot(mgncol,nlev)        ! conversion due to coll of snow by rain (precipf)
-  real(r8), intent(out) :: npracgtot(mgncol,nlev)       ! change n collection rain by graupel  (precipf)
-  real(r8), intent(out) :: nscngtot(mgncol,nlev)        ! change n conversion to graupel due to collection droplets by snow (lcldm)
-  real(r8), intent(out) :: ngracstot(mgncol,nlev)       ! change n conversion to graupel due to collection rain by snow (precipf)
-  real(r8), intent(out) :: nmultgtot(mgncol,nlev)       ! ice mult due to acc droplets by graupel  (lcldm)
-  real(r8), intent(out) :: nmultrgtot(mgncol,nlev)      ! ice mult due to acc rain by graupel  (precipf)
-  real(r8), intent(out) :: npsacwgtot(mgncol,nlev)      ! change n collection droplets by graupel (lcldm?)
   real(r8), intent(out) :: nrout(mgncol,nlev)        ! rain number concentration (1/m3)
   real(r8), intent(out) :: nsout(mgncol,nlev)        ! snow number concentration (1/m3)
   real(r8), intent(out) :: refl(mgncol,nlev)         ! analytic radar reflectivity
@@ -1138,13 +1099,14 @@ subroutine micro_pumas_tend ( &
   !$acc               proc_rates%umg,proc_rates%qgsedten,proc_rates%qcsedten, &
   !$acc               proc_rates%qisedten,proc_rates%qrsedten,proc_rates%qssedten,       &
   !$acc               proc_rates%pratot,proc_rates%prctot,proc_rates%mnuccctot,proc_rates%mnuccttot,proc_rates%msacwitot,       &
-  !$acc               proc_rates%psacwstot,proc_rates%bergstot,proc_rates%vapdepstot,proc_rates%bergtot,melttot,          &
-  !$acc               meltstot,meltgtot,mnudeptot,homotot,qcrestot,prcitot,   &
-  !$acc               praitot,qirestot,mnuccrtot,mnuccritot,pracstot,         &
-  !$acc               meltsdttot,frzrdttot,mnuccdtot,pracgtot,psacwgtot,      &
-  !$acc               pgsacwtot,pgracstot,prdgtot,qmultgtot,qmultrgtot,       &
-  !$acc               psacrtot,npracgtot,nscngtot,ngracstot,nmultgtot,        &
-  !$acc               nmultrgtot,npsacwgtot,nrout,nsout,refl,arefl,           &
+  !$acc               proc_rates%psacwstot,proc_rates%bergstot,proc_rates%vapdepstot,proc_rates%bergtot,proc_rates%melttot,     &
+  !$acc               proc_rates%meltstot,proc_rates%meltgtot,proc_rates%mnudeptot,      &
+  !$acc               proc_rates%homotot,proc_rates%qcrestot,proc_rates%prcitot, &
+  !$acc               proc_rates%praitot,proc_rates%qirestot,proc_rates%mnuccrtot,proc_rates%mnuccritot,proc_rates%pracstot,    &
+  !$acc               proc_rates%meltsdttot,proc_rates%frzrdttot,proc_rates%mnuccdtot,proc_rates%pracgtot,proc_rates%psacwgtot, &
+  !$acc               proc_rates%pgsacwtot,proc_rates%pgracstot,proc_rates%prdgtot,proc_rates%qmultgtot,proc_rates%qmultrgtot,  &
+  !$acc               proc_rates%psacrtot,proc_rates%npracgtot,proc_rates%nscngtot,proc_rates%ngracstot,proc_rates%nmultgtot,   &
+  !$acc               proc_rates%nmultrgtot,proc_rates%npsacwgtot,nrout,nsout,refl,arefl,           &
   !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,rercld,ncai,ncal,      &
   !$acc               qrout2,qsout2,nrout2,nsout2,drout2,dsout2,freqs,        &
   !$acc               freqr,nfice,qcrat,qgout,dgout,ngout,qgout2,ngout2,      &
@@ -1322,36 +1284,36 @@ subroutine micro_pumas_tend ( &
         proc_rates%bergstot(i,k)           = 0._r8
         proc_rates%vapdepstot(i,k)         = 0._r8
         proc_rates%bergtot(i,k)            = 0._r8
-        melttot(i,k)            = 0._r8
+        proc_rates%melttot(i,k)            = 0._r8
 
-        mnudeptot(i,k)          = 0._r8
-        meltstot(i,k)           = 0._r8
-        meltgtot(i,k)           = 0._r8
-        homotot(i,k)            = 0._r8
-        qcrestot(i,k)           = 0._r8
-        prcitot(i,k)            = 0._r8
-        praitot(i,k)            = 0._r8
-        qirestot(i,k)           = 0._r8
-        mnuccrtot(i,k)          = 0._r8
-        mnuccritot(i,k)         = 0._r8
-        pracstot(i,k)           = 0._r8
-        meltsdttot(i,k)         = 0._r8
-        frzrdttot(i,k)          = 0._r8
-        mnuccdtot(i,k)          = 0._r8
-        psacrtot(i,k)           = 0._r8
-        pracgtot(i,k)           = 0._r8
-        psacwgtot(i,k)          = 0._r8
-        pgsacwtot(i,k)          = 0._r8
-        pgracstot(i,k)          = 0._r8
-        prdgtot(i,k)            = 0._r8
-        qmultgtot(i,k)          = 0._r8
-        qmultrgtot(i,k)         = 0._r8
-        npracgtot(i,k)          = 0._r8
-        nscngtot(i,k)           = 0._r8
-        ngracstot(i,k)          = 0._r8
-        nmultgtot(i,k)          = 0._r8
-        nmultrgtot(i,k)         = 0._r8
-        npsacwgtot(i,k)         = 0._r8
+        proc_rates%mnudeptot(i,k)          = 0._r8
+        proc_rates%meltstot(i,k)           = 0._r8
+        proc_rates%meltgtot(i,k)           = 0._r8
+        proc_rates%homotot(i,k)            = 0._r8
+        proc_rates%qcrestot(i,k)           = 0._r8
+        proc_rates%prcitot(i,k)            = 0._r8
+        proc_rates%praitot(i,k)            = 0._r8
+        proc_rates%qirestot(i,k)           = 0._r8
+        proc_rates%mnuccrtot(i,k)          = 0._r8
+        proc_rates%mnuccritot(i,k)         = 0._r8
+        proc_rates%pracstot(i,k)           = 0._r8
+        proc_rates%meltsdttot(i,k)         = 0._r8
+        proc_rates%frzrdttot(i,k)          = 0._r8
+        proc_rates%mnuccdtot(i,k)          = 0._r8
+        proc_rates%psacrtot(i,k)           = 0._r8
+        proc_rates%pracgtot(i,k)           = 0._r8
+        proc_rates%psacwgtot(i,k)          = 0._r8
+        proc_rates%pgsacwtot(i,k)          = 0._r8
+        proc_rates%pgracstot(i,k)          = 0._r8
+        proc_rates%prdgtot(i,k)            = 0._r8
+        proc_rates%qmultgtot(i,k)          = 0._r8
+        proc_rates%qmultrgtot(i,k)         = 0._r8
+        proc_rates%npracgtot(i,k)          = 0._r8
+        proc_rates%nscngtot(i,k)           = 0._r8
+        proc_rates%ngracstot(i,k)          = 0._r8
+        proc_rates%nmultgtot(i,k)          = 0._r8
+        proc_rates%nmultrgtot(i,k)         = 0._r8
+        proc_rates%npsacwgtot(i,k)         = 0._r8
 
 !need to zero these out to be totally switchable (for conservation)
         psacr(i,k)              = 0._r8
@@ -1620,8 +1582,8 @@ subroutine micro_pumas_tend ( &
 
               dum1=-xlf*minstsm(i,k)*rdeltat
               tlat(i,k)=tlat(i,k)+dum1
-              meltsdttot(i,k)=meltsdttot(i,k) + dum1
-              meltstot(i,k)=minstsm(i,k)*rdeltat
+              proc_rates%meltsdttot(i,k)=proc_rates%meltsdttot(i,k) + dum1
+              proc_rates%meltstot(i,k)=minstsm(i,k)*rdeltat
 
               qs(i,k) = max(qs(i,k) - minstsm(i,k), 0._r8)
               ns(i,k) = max(ns(i,k) - ninstsm(i,k), 0._r8)
@@ -1658,8 +1620,8 @@ subroutine micro_pumas_tend ( &
 
               dum1=-xlf*minstgm(i,k)*rdeltat
               tlat(i,k)=tlat(i,k)+dum1
-              meltsdttot(i,k)=meltsdttot(i,k) + dum1
-              meltgtot(i,k)=minstgm(i,k)*rdeltat
+              proc_rates%meltsdttot(i,k)=proc_rates%meltsdttot(i,k) + dum1
+              proc_rates%meltgtot(i,k)=minstgm(i,k)*rdeltat
 
               qg(i,k) = max(qg(i,k) - minstgm(i,k), 0._r8)
               ng(i,k) = max(ng(i,k) - ninstgm(i,k), 0._r8)
@@ -1697,7 +1659,7 @@ subroutine micro_pumas_tend ( &
               ! heating tendency
               dum1 = xlf*minstrf(i,k)*rdeltat
               tlat(i,k)=tlat(i,k)+dum1
-              frzrdttot(i,k)=frzrdttot(i,k) + dum1
+              proc_rates%frzrdttot(i,k)=proc_rates%frzrdttot(i,k) + dum1
 
               qr(i,k) = max(qr(i,k) - minstrf(i,k), 0._r8)
               nr(i,k) = max(nr(i,k) - ninstrf(i,k), 0._r8)
@@ -2750,39 +2712,39 @@ subroutine micro_pumas_tend ( &
         proc_rates%pratot(i,k)     = pra(i,k)*lcldm(i,k)
         proc_rates%prctot(i,k)     = prc(i,k)*lcldm(i,k)
         proc_rates%mnuccctot(i,k)  = mnuccc(i,k)*lcldm(i,k)
-        mnudeptot(i,k)  = mnudep(i,k)*lcldm(i,k)
+        proc_rates%mnudeptot(i,k)  = mnudep(i,k)*lcldm(i,k)
         proc_rates%mnuccttot(i,k)  = mnucct(i,k)*lcldm(i,k)
         proc_rates%msacwitot(i,k)  = msacwi(i,k)*lcldm(i,k)
         proc_rates%psacwstot(i,k)  = psacws(i,k)*lcldm(i,k)
         proc_rates%bergstot(i,k)   = bergs(i,k)*lcldm(i,k)
         proc_rates%vapdepstot(i,k) = vap_deps(i,k)
         proc_rates%bergtot(i,k)    = berg(i,k)
-        prcitot(i,k)    = prci(i,k)*icldm(i,k)
-        praitot(i,k)    = prai(i,k)*icldm(i,k)
-        mnuccdtot(i,k)  = mnuccd(i,k)*icldm(i,k)
-        pracstot(i,k)   = pracs(i,k)*precip_frac(i,k)
-        mnuccrtot(i,k)  = mnuccr(i,k)*precip_frac(i,k)
-        mnuccritot(i,k) = mnuccri(i,k)*precip_frac(i,k)
+        proc_rates%prcitot(i,k)    = prci(i,k)*icldm(i,k)
+        proc_rates%praitot(i,k)    = prai(i,k)*icldm(i,k)
+        proc_rates%mnuccdtot(i,k)  = mnuccd(i,k)*icldm(i,k)
+        proc_rates%pracstot(i,k)   = pracs(i,k)*precip_frac(i,k)
+        proc_rates%mnuccrtot(i,k)  = mnuccr(i,k)*precip_frac(i,k)
+        proc_rates%mnuccritot(i,k) = mnuccri(i,k)*precip_frac(i,k)
      end do
   end do
 
   !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
-        psacrtot(i,k)   = psacr(i,k)*precip_frac(i,k)
-        pracgtot(i,k)   = pracg(i,k)*precip_frac(i,k)
-        psacwgtot(i,k)  = psacwg(i,k)*lcldm(i,k)
-        pgsacwtot(i,k)  = pgsacw(i,k)*lcldm(i,k)
-        pgracstot(i,k)  = pgracs(i,k)*precip_frac(i,k)
-        prdgtot(i,k)    = prdg(i,k)*precip_frac(i,k)
-        qmultgtot(i,k)  = qmultg(i,k)*lcldm(i,k)
-        qmultrgtot(i,k) = qmultrg(i,k)*precip_frac(i,k)
-        npracgtot(i,k)  = npracg(i,k)*precip_frac(i,k)
-        nscngtot(i,k)   = nscng(i,k)*lcldm(i,k)
-        ngracstot(i,k)  = ngracs(i,k)*precip_frac(i,k)
-        nmultgtot(i,k)  = nmultg(i,k)*lcldm(i,k)
-        nmultrgtot(i,k) = nmultrg(i,k)*precip_frac(i,k)
-        npsacwgtot(i,k) = npsacwg(i,k)*lcldm(i,k)
+        proc_rates%psacrtot(i,k)   = psacr(i,k)*precip_frac(i,k)
+        proc_rates%pracgtot(i,k)   = pracg(i,k)*precip_frac(i,k)
+        proc_rates%psacwgtot(i,k)  = psacwg(i,k)*lcldm(i,k)
+        proc_rates%pgsacwtot(i,k)  = pgsacw(i,k)*lcldm(i,k)
+        proc_rates%pgracstot(i,k)  = pgracs(i,k)*precip_frac(i,k)
+        proc_rates%prdgtot(i,k)    = prdg(i,k)*precip_frac(i,k)
+        proc_rates%qmultgtot(i,k)  = qmultg(i,k)*lcldm(i,k)
+        proc_rates%qmultrgtot(i,k) = qmultrg(i,k)*precip_frac(i,k)
+        proc_rates%npracgtot(i,k)  = npracg(i,k)*precip_frac(i,k)
+        proc_rates%nscngtot(i,k)   = nscng(i,k)*lcldm(i,k)
+        proc_rates%ngracstot(i,k)  = ngracs(i,k)*precip_frac(i,k)
+        proc_rates%nmultgtot(i,k)  = nmultg(i,k)*lcldm(i,k)
+        proc_rates%nmultrgtot(i,k) = nmultrg(i,k)*precip_frac(i,k)
+        proc_rates%npsacwgtot(i,k) = npsacwg(i,k)*lcldm(i,k)
      end do
   end do
 
@@ -3397,7 +3359,7 @@ end if  ! end sedimentation
 
               dum1=-xlf*dum*dums(i,k)*rdeltat
               tlat(i,k)=tlat(i,k)+dum1
-              meltsdttot(i,k)=meltsdttot(i,k) + dum1
+              proc_rates%meltsdttot(i,k)=proc_rates%meltsdttot(i,k) + dum1
 
 !STOPPED FIX FOR SNOW NUMBER
 !ensure that snow... number does not go negative with constant number set
@@ -3435,7 +3397,7 @@ end if  ! end sedimentation
 
               dum1=-xlf*dum*dumg(i,k)*rdeltat
               tlat(i,k)=tlat(i,k)+dum1
-              meltsdttot(i,k)=meltsdttot(i,k) + dum1
+              proc_rates%meltsdttot(i,k)=proc_rates%meltsdttot(i,k) + dum1
 
 !ensure that graupel number does not go negative with constant number set
 !necessary because dumng is updated above.
@@ -3489,7 +3451,7 @@ end if  ! end sedimentation
 
               ! heating tendency
               dum1 = xlf*dum*dumr(i,k)*rdeltat
-              frzrdttot(i,k)=frzrdttot(i,k) + dum1
+              proc_rates%frzrdttot(i,k)=proc_rates%frzrdttot(i,k) + dum1
               tlat(i,k)=tlat(i,k)+dum1
            end if
         end if
@@ -3519,7 +3481,7 @@ end if  ! end sedimentation
                  qctend(i,k)=qctend(i,k)+dum*dumi(i,k)*rdeltat
 
                  ! for output
-                 melttot(i,k)=dum*dumi(i,k)*rdeltat
+                 proc_rates%melttot(i,k)=dum*dumi(i,k)*rdeltat
 
                  ! assume melting ice produces droplet
                  ! mean volume radius of 8 micron
@@ -3555,7 +3517,7 @@ end if  ! end sedimentation
 
                  qitend(i,k)=qitend(i,k)+dum*dumc(i,k)*rdeltat
                  ! for output
-                 homotot(i,k)=dum*dumc(i,k)*rdeltat
+                 proc_rates%homotot(i,k)=dum*dumc(i,k)*rdeltat
 
                  ! assume 25 micron mean volume radius of homogeneously frozen droplets
                  ! consistent with size of detrained ice in stratiform.F90
@@ -3619,9 +3581,9 @@ end if  ! end sedimentation
                     *qvnA(i,k)/(cpp*rv*ttmpA(i,k)**2))*rdeltat
               qctend(i,k)=qctend(i,k)+dum*(1._r8-dum1)
               ! for output
-              qcrestot(i,k)=dum*(1._r8-dum1)
+              proc_rates%qcrestot(i,k)=dum*(1._r8-dum1)
               qitend(i,k)=qitend(i,k)+dum*dum1
-              qirestot(i,k)=dum*dum1
+              proc_rates%qirestot(i,k)=dum*dum1
               qvlat(i,k)=qvlat(i,k)-dum
               ! for output
               proc_rates%qvres(i,k)=-dum
