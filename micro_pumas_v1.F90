@@ -585,7 +585,6 @@ subroutine micro_pumas_tend ( &
      gflx,                                                       &
      rflx,               sflx,               qrout,              &
      reff_rain,          reff_snow,          reff_grau,          &
-! ------------------
      nrout,                        nsout,                        &
      refl,               arefl,              areflz,             &
      frefl,              csrfl,              acsrfl,             &
@@ -721,10 +720,8 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: preci(mgncol)             ! cloud ice/snow precip rate (m/s)
   real(r8), intent(out) :: nevapr(mgncol,nlev)       ! evaporation rate of rain + snow (1/s)
   type (proc_rates_type) :: proc_rates
-!  real(r8), intent(out) :: evapsnow(mgncol,nlev)     ! sublimation rate of snow (1/s)
   real(r8), intent(out) :: am_evp_st(mgncol,nlev)    ! stratiform evaporation area (frac)
   real(r8), intent(out) :: prain(mgncol,nlev)        ! production of rain + snow (1/s)
-!  real(r8), intent(out) :: prodsnow(mgncol,nlev)     ! production of snow (1/s)
   real(r8), intent(out) :: cmeout(mgncol,nlev)       ! evap/sub of cloud (1/s)
   real(r8), intent(out) :: deffi(mgncol,nlev)        ! ice effective diameter for optics (radiation) (micron)
   real(r8), intent(out) :: pgamrad(mgncol,nlev)      ! ice gamma parameter for optics (radiation) (no units)
