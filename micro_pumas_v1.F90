@@ -1179,10 +1179,10 @@ subroutine micro_pumas_tend ( &
   !$acc               proc_rates%pgsacwtot,proc_rates%pgracstot,proc_rates%prdgtot,proc_rates%qmultgtot,proc_rates%qmultrgtot,  &
   !$acc               proc_rates%psacrtot,proc_rates%npracgtot,proc_rates%nscngtot,proc_rates%ngracstot,proc_rates%nmultgtot,   &
   !$acc               proc_rates%nmultrgtot,proc_rates%npsacwgtot,nrout,nsout,refl,arefl,           &
-  !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,refl10cm,reflz10cm,rercld,ncai,ncal,      &
-  !$acc               qrout2,qsout2,nrout2,nsout2,drout2,dsout2,freqs,        &
-  !$acc               freqr,nfice,qcrat,qgout,dgout,ngout,qgout2,ngout2,      &
-  !$acc               dgout2,freqg,prer_evap,                                 &
+  !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,refl10cm,reflz10cm,    &
+  !$acc               rercld,ncai,ncal,qrout2,qsout2,nrout2,nsout2,drout2,    &
+  !$acc               dsout2,freqs,freqr,nfice,qcrat,qgout,dgout,ngout,       &
+  !$acc               qgout2,ngout2,dgout2,freqg,prer_evap,                   &
   !$acc               nnuccctot,nnuccttot,nnuccdtot,nnudeptot,nhomotot,       &
   !$acc               nnuccrtot,nnuccritot,nsacwitot,npratot,npsacwstot,      &
   !$acc               npraitot,npracstot,nprctot,nprcitot,ncsedten,nisedten,  &
