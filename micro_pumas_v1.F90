@@ -2825,8 +2825,8 @@ subroutine micro_pumas_tend ( &
         proc_rates%nscngtot(i,k)   = nscng(i,k)*lcldm(i,k)
         proc_rates%ngracstot(i,k)  = ngracs(i,k)*precip_frac(i,k)
         proc_rates%nmultgtot(i,k)  = nmultg(i,k)*lcldm(i,k)
-        nmultrgtot(i,k) = nmultrg(i,k)*precip_frac(i,k)
-        npsacwgtot(i,k) = npsacwg(i,k)*lcldm(i,k)
+        proc_rates%nmultrgtot(i,k) = nmultrg(i,k)*precip_frac(i,k)
+        proc_rates%npsacwgtot(i,k) = npsacwg(i,k)*lcldm(i,k)
 
         nnuccctot(i,k) = nnuccc(i,k)*lcldm(i,k)
         nnuccttot(i,k) = nnucct(i,k)*lcldm(i,k)
@@ -2843,8 +2843,6 @@ subroutine micro_pumas_tend ( &
         nprcitot(i,k) = nprci(i,k)*icldm(i,k)
         nmeltstot(i,k) = ninstsm(i,k)/deltat
         nmeltgtot(i,k) = ninstgm(i,k)/deltat
-        proc_rates%nmultrgtot(i,k) = nmultrg(i,k)*precip_frac(i,k)
-        proc_rates%npsacwgtot(i,k) = npsacwg(i,k)*lcldm(i,k)
      end do
   end do
   !$acc end parallel
