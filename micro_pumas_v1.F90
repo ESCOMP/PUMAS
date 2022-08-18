@@ -1154,6 +1154,18 @@ subroutine micro_pumas_tend ( &
   ! set mdust as the number of dust bins for use later in contact freezing subroutine
   mdust = size(rndst,3)
 
+! PUT BACK AFTER GITHUB HAPPY
+!  !$acc               proc_rates%qcsevap,proc_rates%qisevap,proc_rates%qvres,proc_rates%cmeitot,proc_rates%vtrmc,proc_rates%vtrmi,proc_rates%umr,proc_rates%ums,      &
+!  !$acc               proc_rates%umg,proc_rates%qgsedten,proc_rates%qcsedten,proc_rates%qisedten,proc_rates%qrsedten,proc_rates%qssedten,       &
+!  !$acc               proc_rates%pratot,proc_rates%prctot,proc_rates%mnuccctot,proc_rates%mnuccttot,proc_rates%msacwitot,       &
+!  !$acc               proc_rates%psacwstot,proc_rates%bergstot,proc_rates%vapdepstot,proc_rates%bergtot,proc_rates%melttot,     &
+!  !$acc               proc_rates%meltstot,proc_rates%meltgtot,proc_rates%mnudeptot,proc_rates%homotot,proc_rates%qcrestot,proc_rates%prcitot, &
+!  !$acc               proc_rates%praitot,proc_rates%qirestot,proc_rates%mnuccrtot,proc_rates%mnuccritot,proc_rates%pracstot,    &
+!  !$acc               proc_rates%meltsdttot,proc_rates%frzrdttot,proc_rates%mnuccdtot,proc_rates%pracgtot,proc_rates%psacwgtot, &
+!  !$acc               proc_rates%pgsacwtot,proc_rates%pgracstot,proc_rates%prdgtot,proc_rates%qmultgtot,proc_rates%qmultrgtot,  &
+!  !$acc               proc_rates%psacrtot,proc_rates%npracgtot,proc_rates%nscngtot,proc_rates%ngracstot,proc_rates%nmultgtot,   &
+!  !$acc               proc_rates%nmultrgtot,proc_rates%npsacwgtot,nrout,nsout,refl,arefl,           &
+
   !$acc data copyin  (t,q,qcn,qin,ncn,nin,qrn,qsn,nrn,nsn,qgr,ngr,relvar,     &
   !$acc               accre_enhan,p,pdel,pint,cldn,liqcldf,icecldf,qsatfac,   &
   !$acc               naai,npccn,rndst,nacon,tnd_qsnow,tnd_nsnow,re_ice,      &
@@ -1166,16 +1178,16 @@ subroutine micro_pumas_tend ( &
   !$acc               nevapr,proc_rates%evapsnow,am_evp_st,prain,proc_rates%prodsnow,cmeout,        &
   !$acc               deffi,pgamrad,lamcrad,qsout,dsout,lflx,iflx,rflx,       &
   !$acc               sflx,gflx,qrout,reff_rain,reff_snow,reff_grau,          &
-  !$acc               proc_rates%qcsevap,proc_rates%qisevap,proc_rates%qvres,proc_rates%cmeitot,proc_rates%vtrmc,proc_rates%vtrmi,proc_rates%umr,proc_rates%ums,      &
-  !$acc               proc_rates%umg,proc_rates%qgsedten,proc_rates%qcsedten,proc_rates%qisedten,proc_rates%qrsedten,proc_rates%qssedten,       &
-  !$acc               proc_rates%pratot,proc_rates%prctot,proc_rates%mnuccctot,proc_rates%mnuccttot,proc_rates%msacwitot,       &
-  !$acc               proc_rates%psacwstot,proc_rates%bergstot,proc_rates%vapdepstot,proc_rates%bergtot,proc_rates%melttot,     &
-  !$acc               proc_rates%meltstot,proc_rates%meltgtot,proc_rates%mnudeptot,proc_rates%homotot,proc_rates%qcrestot,proc_rates%prcitot, &
-  !$acc               proc_rates%praitot,proc_rates%qirestot,proc_rates%mnuccrtot,proc_rates%mnuccritot,proc_rates%pracstot,    &
-  !$acc               proc_rates%meltsdttot,proc_rates%frzrdttot,proc_rates%mnuccdtot,proc_rates%pracgtot,proc_rates%psacwgtot, &
-  !$acc               proc_rates%pgsacwtot,proc_rates%pgracstot,proc_rates%prdgtot,proc_rates%qmultgtot,proc_rates%qmultrgtot,  &
-  !$acc               proc_rates%psacrtot,proc_rates%npracgtot,proc_rates%nscngtot,proc_rates%ngracstot,proc_rates%nmultgtot,   &
-  !$acc               proc_rates%nmultrgtot,proc_rates%npsacwgtot,nrout,nsout,refl,arefl,           &
+  !$acc               qcsevap,qisevap,qvres,cmeitot,vtrmc,vtrmi,umr,ums,      &
+  !$acc               umg,qgsedten,qcsedten,qisedten,qrsedten,qssedten,       &
+  !$acc               pratot,prctot,mnuccctot,mnuccttot,msacwitot,            &
+  !$acc               psacwstot,bergstot,vapdepstot,bergtot,melttot,          &
+  !$acc               meltstot,meltgtot,mnudeptot,homotot,qcrestot,prcitot,   &
+  !$acc               praitot,qirestot,mnuccrtot,mnuccritot,pracstot,         &
+  !$acc               meltsdttot,frzrdttot,mnuccdtot,pracgtot,psacwgtot,      &
+  !$acc               pgsacwtot,pgracstot,prdgtot,qmultgtot,qmultrgtot,       &
+  !$acc               psacrtot,npracgtot,nscngtot,ngracstot,nmultgtot,        &
+  !$acc               nmultrgtot,npsacwgtot,nrout,nsout,refl,arefl,           &
   !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,refl10cm,reflz10cm,    &
   !$acc               rercld,ncai,ncal,qrout2,qsout2,nrout2,nsout2,drout2,    &
   !$acc               dsout2,freqs,freqr,nfice,qcrat,qgout,dgout,ngout,       &
