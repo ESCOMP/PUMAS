@@ -3311,7 +3311,7 @@ if ( do_implicit_fall ) then
   ! cloud ice mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumi,fi,.FALSE.,qitend, &
-                               IQUEUE,xflx=iflx,qxsedten=proc_rates%qisedten(:mgncol,:nlev),prect=prect,preci=preci_i)
+                               IQUEUE,xflx=iflx,qxsedten=proc_rates%qisedten(:mgncol,:nlev),prect=prect_i,preci=preci_i)
 
  ! cloud ice number sedimentation
 
@@ -3331,7 +3331,7 @@ if ( do_implicit_fall ) then
   ! snow water mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dums,fs,.TRUE.,qstend, &
-                               SQUEUE,xflx=sflx,qxsedten=proc_rates%qssedten(:mgncol,:nlev),prect=prect,preci=preci_s)
+                               SQUEUE,xflx=sflx,qxsedten=proc_rates%qssedten(:mgncol,:nlev),prect=prect_s,preci=preci_s)
 
   ! snow water number sedimentation
 
@@ -3341,7 +3341,7 @@ if ( do_implicit_fall ) then
   ! graupel mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumg,fg,.TRUE.,qgtend, &
-                               GQUEUE,xflx=gflx,qxsedten=proc_rates%qgsedten(:mgncol,:nlev),prect=prect,preci=preci_g)
+                               GQUEUE,xflx=gflx,qxsedten=proc_rates%qgsedten(:mgncol,:nlev),prect=prect_g,preci=preci_g)
 
   ! graupel number sedimentation
 
