@@ -1154,8 +1154,6 @@ subroutine micro_pumas_tend ( &
   ! set mdust as the number of dust bins for use later in contact freezing subroutine
   mdust = size(rndst,3)
 
-! PUT BACK AFTER GITHUB HAPPY
-
   !$acc data copyin  (t,q,qcn,qin,ncn,nin,qrn,qsn,nrn,nsn,qgr,ngr,relvar,     &
   !$acc               accre_enhan,p,pdel,pint,cldn,liqcldf,icecldf,qsatfac,   &
   !$acc               naai,npccn,rndst,nacon,tnd_qsnow,tnd_nsnow,re_ice,      &
@@ -3304,7 +3302,7 @@ if ( do_implicit_fall ) then
   ! cloud water mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumc,fc,.FALSE.,qctend, &
-                               LQUEUE,xflx=lflx,qxsedten=proc_rates%qcsedten(:mgncol,:nlev),prect=prect)
+                               LQUEUE,xflx=lflx,qxsedten=proc_rates%qcsedten(:mgncol,:nlev),prect=prect_l)
 
   ! cloud water number sedimentation
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnc,fnc,.FALSE.,nctend, &
@@ -3313,7 +3311,7 @@ if ( do_implicit_fall ) then
   ! cloud ice mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumi,fi,.FALSE.,qitend, &
-                               IQUEUE,xflx=iflx,qxsedten=proc_rates%qisedten(:mgncol,:nlev),prect=prect,preci=preci)
+                               IQUEUE,xflx=iflx,qxsedten=proc_rates%qisedten(:mgncol,:nlev),prect=prect,preci=preci_i)
 
  ! cloud ice number sedimentation
 
@@ -3323,7 +3321,7 @@ if ( do_implicit_fall ) then
   ! rain water mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumr,fr,.TRUE.,qrtend, &
-                               RQUEUE,xflx=rflx,qxsedten=proc_rates%qrsedten(:mgncol,:nlev),prect=prect)
+                               RQUEUE,xflx=rflx,qxsedten=proc_rates%qrsedten(:mgncol,:nlev),prect=prect_r)
 
   ! rain water number sedimentation
 
@@ -3333,7 +3331,7 @@ if ( do_implicit_fall ) then
   ! snow water mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dums,fs,.TRUE.,qstend, &
-                               SQUEUE,xflx=sflx,qxsedten=proc_rates%qssedten(:mgncol,:nlev),prect=prect,preci=preci)
+                               SQUEUE,xflx=sflx,qxsedten=proc_rates%qssedten(:mgncol,:nlev),prect=prect,preci=preci_s)
 
   ! snow water number sedimentation
 
@@ -3343,7 +3341,7 @@ if ( do_implicit_fall ) then
   ! graupel mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumg,fg,.TRUE.,qgtend, &
-                               GQUEUE,xflx=gflx,qxsedten=proc_rates%qgsedten(:mgncol,:nlev),prect=prect,preci=preci)
+                               GQUEUE,xflx=gflx,qxsedten=proc_rates%qgsedten(:mgncol,:nlev),prect=prect,preci=preci_g)
 
   ! graupel number sedimentation
 
