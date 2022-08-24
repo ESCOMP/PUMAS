@@ -309,23 +309,7 @@ logical           :: do_implicit_fall !   = .true.
 
 logical           :: accre_sees_auto  != .true.
 
-!$acc declare create (nccons,nicons,ngcons,nrcons,nscons,ncnst,ninst,ngnst,    &
-!$acc                 nrnst,nsnst,evap_sed_off,icenuc_rh_off,evap_scl_ifs,     &
-!$acc                 icenuc_use_meyers,evap_rhthrsh_ifs,rainfreeze_ifs,       &
-!$acc                 ifs_sed,precip_fall_corr,dcs,                            &
-!$acc                 g,r,rv,cpp,tmelt,xxlv,xlf,xxls,rhmini,microp_uniform,    &
-!$acc                 do_cldice,use_hetfrz_classnuc,do_hail,do_graupel,rhosu,  &
-!$acc                 icenuct,snowmelt,rainfrze,xxlv_squared,xxls_squared,     &
-!$acc                 gamma_br_plus1,gamma_br_plus4,gamma_bs_plus1,            &
-!$acc                 gamma_bs_plus4,gamma_bi_plus1,gamma_bi_plus4,            &
-!$acc                 gamma_bj_plus1,gamma_bj_plus4,gamma_bg_plus1,            &
-!$acc                 gamma_bg_plus4,micro_mg_berg_eff_factor,                 &
-!$acc                 remove_supersat,do_sb_physics,                           &
-!$acc                 micro_mg_accre_enhan_fact,micro_mg_autocon_fact,         &
-!$acc                 micro_mg_autocon_nd_exp,micro_mg_autocon_lwp_exp,        &
-!$acc                 micro_mg_homog_size,micro_mg_vtrmi_factor,               &
-!$acc                 micro_mg_effi_factor,micro_mg_iaccr_factor,              &
-!$acc                 micro_mg_max_nicons,do_implicit_fall,accre_sees_auto)
+!$acc declare create (xxlv,xxls)
 
 !===============================================================================
 contains
@@ -537,23 +521,7 @@ subroutine micro_pumas_init( &
   xxlv_squared=xxlv**2
   xxls_squared=xxls**2
 
-  !$acc update device (nccons,nicons,ngcons,nrcons,nscons,ncnst,ninst,ngnst,   &
-  !$acc                nrnst,nsnst,evap_sed_off,icenuc_rh_off,evap_scl_ifs,    &
-  !$acc                icenuc_use_meyers,evap_rhthrsh_ifs,rainfreeze_ifs,      &
-  !$acc                ifs_sed,precip_fall_corr,dcs,                           &
-  !$acc                g,r,rv,cpp,tmelt,xxlv,xlf,xxls,rhmini,microp_uniform,   &
-  !$acc                do_cldice,use_hetfrz_classnuc,do_hail,do_graupel,rhosu, &
-  !$acc                icenuct,snowmelt,rainfrze,xxlv_squared,xxls_squared,    &
-  !$acc                gamma_br_plus1,gamma_br_plus4,gamma_bs_plus1,           &
-  !$acc                gamma_bs_plus4,gamma_bi_plus1,gamma_bi_plus4,           &
-  !$acc                gamma_bj_plus1,gamma_bj_plus4,gamma_bg_plus1,           &
-  !$acc                gamma_bg_plus4,micro_mg_berg_eff_factor,                &
-  !$acc                remove_supersat,do_sb_physics,                          &
-  !$acc                micro_mg_accre_enhan_fact,micro_mg_autocon_fact,        &
-  !$acc                micro_mg_autocon_nd_exp,micro_mg_autocon_lwp_exp,       &
-  !$acc                micro_mg_homog_size,micro_mg_vtrmi_factor,              &
-  !$acc                micro_mg_effi_factor,micro_mg_iaccr_factor,             &
-  !$acc                micro_mg_max_nicons,do_implicit_fall,accre_sees_auto)
+  !$acc update device (xxlv,xxls)
 
 end subroutine micro_pumas_init
 
@@ -4124,20 +4092,21 @@ end if
            freqg(i,k)  = 0._r8
            reff_grau(i,k)=0._r8
         end if
-
-        ! analytic radar reflectivity
-        !--------------------------------------------------
-        ! formulas from Matthew Shupe, NOAA/CERES
-        ! *****note: radar reflectivity is local (in-precip average)
-        ! units of mm^6/m^3
-
      end do
   end do
+  !$acc end parallel
+
+  ! analytic radar reflectivity
+  !--------------------------------------------------
+  ! formulas from Matthew Shupe, NOAA/CERES
+  ! *****note: radar reflectivity is local (in-precip average)
+  ! units of mm^6/m^3
 
   ! Min rain rate of 0.1 mm/hr
   rthrsh=0.0001_r8/3600._r8
 
-  !$acc loop gang vector collapse(2) private(dum,dum1)
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
         if (qc(i,k).ge.qsmall .and. (nc(i,k)+nctend(i,k)*deltat).gt.10._r8) then
@@ -4204,6 +4173,7 @@ end if
         end if
      end do
   end do
+  !$acc end parallel
 
   ! 10cm analytic radar reflectivity (rain radar)
   !--------------------------------------------------
@@ -4216,7 +4186,8 @@ end if
   ! *****note: radar reflectivity is local (in-precip average)
   ! units of mm^6/m^3
 
-  !$acc loop gang vector collapse(2) private(dum,dum1)
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
 
@@ -4258,14 +4229,8 @@ end if
         dum = reflz10cm(i,k)*1.e18_r8
         refl10cm(i,k) = 10._r8*dlog10(dum)
 
-     end do
-  end do
-
   !redefine fice here....
 
-  !$acc loop gang vector collapse(2)
-  do k=1,nlev
-     do i=1,mgncol
         dum_2D(i,k) = qsout(i,k) + qrout(i,k) + qc(i,k) + qi(i,k)
         dumi(i,k)   = qsout(i,k) + qi(i,k)
         if (dumi(i,k) .gt. qsmall .and. dum_2D(i,k) .gt. qsmall) then
@@ -4273,6 +4238,7 @@ end if
         else
            nfice(i,k) = 0._r8
         end if
+
      end do
   end do
   !$acc end parallel

@@ -1,6 +1,10 @@
 ====================================
+.. pumas_cam-release_v1.26
+June 7, 2022 - Cam Tag cam6_3_063 now supports PUMAS interface changes in the  F2000dev compset 
+(cam_dev version of micro_pumas_cam.F90). This applies to the previous two tags as well.
+====================================
 .. pumas_cam-release_v1.25
-May 27, 2022 - Notes from v1.23 still apply. The CAM PR does not have a tag yet.
+June 2, 2022 - Notes from v1.23 still apply. The CAM PR does not have a tag yet.
 ====================================
 .. pumas_cam-release_v1.24
 May 27, 2022 - Notes from v1.23 still apply. The CAM PR does not have a tag yet.
