@@ -1578,6 +1578,10 @@ subroutine micro_pumas_tend ( &
         qvlat_i(i,k)            = 0._r8
         tlat_l(i,k)             = 0._r8
         qvlat_l(i,k)            = 0._r8
+
+        nnudep(i,k) = 0._r8
+        mnudep(i,k) = 0._r8
+
      end do
   end do
   !$acc end parallel
