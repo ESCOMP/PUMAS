@@ -64,6 +64,30 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
     real(r8), allocatable :: nmultrgtot(:,:)
     real(r8), allocatable :: npsacwgtot(:,:)
 
+  real(r8), allocatable :: nnuccctot(:,:)        ! change n  due to Immersion freezing of cloud water
+  real(r8), allocatable :: nnuccttot(:,:)        ! change n  due to Contact freezing of cloud water
+  real(r8), allocatable :: nnuccdtot(:,:)        ! change n  due to Ice nucleation
+  real(r8), allocatable :: nnudeptot(:,:)        ! change n  due to Deposition Nucleation
+  real(r8), allocatable :: nhomotot(:,:)         ! change n  due to Homogeneous freezing of cloud water
+  real(r8), allocatable :: nnuccrtot(:,:)        ! change n  due to heterogeneous freezing of rain to snow (1/s)
+  real(r8), allocatable :: nnuccritot(:,:)       ! change n  due to Heterogeneous freezing of rain to ice
+  real(r8), allocatable :: nsacwitot(:,:)        ! change n  due to Conversion of cloud water [to cloud ice]
+                                                         !                  from rime-splintering
+  real(r8), allocatable :: npratot(:,:)          ! change n  due to Accretion of cloud water by rain
+  real(r8), allocatable :: npsacwstot(:,:)       ! change n  due to Accretion of cloud water by snow
+  real(r8), allocatable :: npraitot(:,:)         ! change n  due to Accretion of cloud ice to snow
+  real(r8), allocatable :: npracstot(:,:)        ! change n  due to Accretion of rain by snow
+  real(r8), allocatable :: nprctot(:,:)          ! change n  due to Autoconversion of cloud water [to rain]
+  real(r8), allocatable :: nprcitot(:,:)         ! change n  due to Autoconversion of cloud ice to snow
+  real(r8), allocatable :: ncsedten(:,:)         ! change n  due to cloud liquid sedimentation
+  real(r8), allocatable :: nisedten(:,:)         ! change n  due to cloud ice sedimentation
+  real(r8), allocatable :: nrsedten(:,:)         ! change n  due to rain sedimentation
+  real(r8), allocatable :: nssedten(:,:)         ! change n  due to snow sedimentation
+  real(r8), allocatable :: ngsedten(:,:)         ! change n  due to graupel sedimentation
+  real(r8), allocatable :: nmelttot(:,:)         ! change n  due to Melting of cloud ice
+  real(r8), allocatable :: nmeltstot(:,:)        ! change n  due to Melting of snow
+  real(r8), allocatable :: nmeltgtot(:,:)        ! change n  due to Melting of graupel
+
     contains
       procedure :: allocate => proc_rates_allocate
       procedure :: deallocate => proc_rates_deallocate
@@ -81,6 +105,8 @@ contains
       integer, intent(in) :: psetcols, nlev
 
       integer :: ierr
+
+!CAC -- NEED TO ADD ALLOCATE CHECKS
 
       allocate(this%prodsnow(psetcols,nlev), stat=ierr)
       allocate(this%evapsnow(psetcols,nlev), stat=ierr)
@@ -137,6 +163,28 @@ contains
       allocate(this%nmultrgtot(psetcols,nlev), stat=ierr)
       allocate(this%npsacwgtot(psetcols,nlev), stat=ierr)
 
+      allocate(this%nnuccctot(psetcols,nlev), stat=ierr)
+      allocate(this%nnuccttot(psetcols,nlev), stat=ierr)
+      allocate(this%nnuccdtot(psetcols,nlev), stat=ierr)
+      allocate(this%nnudeptot(psetcols,nlev), stat=ierr)
+      allocate(this%nhomotot(psetcols,nlev), stat=ierr)
+      allocate(this%nnuccrtot(psetcols,nlev), stat=ierr)
+      allocate(this%nnuccritot(psetcols,nlev), stat=ierr)
+      allocate(this%nsacwitot(psetcols,nlev), stat=ierr)
+      allocate(this%npratot(psetcols,nlev), stat=ierr)
+      allocate(this%npsacwstot(psetcols,nlev), stat=ierr)
+      allocate(this%npraitot(psetcols,nlev), stat=ierr)
+      allocate(this%npracstot(psetcols,nlev), stat=ierr)
+      allocate(this%nprctot(psetcols,nlev), stat=ierr)
+      allocate(this%nprcitot(psetcols,nlev), stat=ierr)
+      allocate(this%ncsedten(psetcols,nlev), stat=ierr)
+      allocate(this%nisedten(psetcols,nlev), stat=ierr)
+      allocate(this%nrsedten(psetcols,nlev), stat=ierr)
+      allocate(this%nssedten(psetcols,nlev), stat=ierr)
+      allocate(this%ngsedten(psetcols,nlev), stat=ierr)
+      allocate(this%nmelttot(psetcols,nlev), stat=ierr)
+      allocate(this%nmeltstot(psetcols,nlev), stat=ierr)
+      allocate(this%nmeltgtot(psetcols,nlev), stat=ierr)
    end subroutine proc_rates_allocate
 
    subroutine proc_rates_deallocate(this)
@@ -200,6 +248,28 @@ contains
       deallocate(this%nmultgtot)
       deallocate(this%nmultrgtot)
       deallocate(this%npsacwgtot)
+      deallocate(this%nnuccctot)
+      deallocate(this%nnuccttot)
+      deallocate(this%nnuccdtot)
+      deallocate(this%nnudeptot)
+      deallocate(this%nhomotot)
+      deallocate(this%nnuccrtot)
+      deallocate(this%nnuccritot)
+      deallocate(this%nsacwitot)
+      deallocate(this%npratot)
+      deallocate(this%npsacwstot)
+      deallocate(this%npraitot)
+      deallocate(this%npracstot)
+      deallocate(this%nprctot)
+      deallocate(this%nprcitot)
+      deallocate(this%ncsedten)
+      deallocate(this%nisedten)
+      deallocate(this%nrsedten)
+      deallocate(this%nssedten)
+      deallocate(this%ngsedten)
+      deallocate(this%nmelttot)
+      deallocate(this%nmeltstot)
+      deallocate(this%nmeltgtot)
 
    end subroutine proc_rates_deallocate
 
