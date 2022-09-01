@@ -562,14 +562,7 @@ subroutine micro_pumas_tend ( &
      gflx,                                                       &
      rflx,               sflx,               qrout,              &
      reff_rain,          reff_snow,          reff_grau,          &
-!     nnudeptot,          nhomotot,           nnuccrtot,          &
-!     nnuccritot,         nsacwitot,          npratot,            &
-!     npsacwstot,         npraitot,           npracstot,          &
-!     nprctot,            nprcitot,           ncsedten,           &
-!     nisedten,           nrsedten,           nssedten,           &
-!     ngsedten,           nmelttot,           nmeltstot,          &
-!     nmeltgtot, &
-      nrout,                        nsout,                        &
+     nrout,                        nsout,                        &
      refl,               arefl,              areflz,             &
      frefl,              csrfl,              acsrfl,             &
      fcsrfl,        refl10cm, reflz10cm,     rercld,             &
@@ -723,30 +716,6 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: reff_snow(mgncol,nlev)    ! snow effective radius (micron)
   real(r8), intent(out) :: reff_grau(mgncol,nlev)    ! graupel effective radius (micron)
 
-  ! microphysical process rates for output (mixing ratio tendencies) (all have units of 1/s)
-!  real(r8), intent(out) :: nnuccctot(mgncol,nlev)        ! change n  due to Immersion freezing of cloud water
-!  real(r8), intent(out) :: nnuccttot(mgncol,nlev)        ! change n  due to Contact freezing of cloud water
-!  real(r8), intent(out) :: nnuccdtot(mgncol,nlev)        ! change n  due to Ice nucleation
-!  real(r8), intent(out) :: nnudeptot(mgncol,nlev)        ! change n  due to Deposition Nucleation
-!  real(r8), intent(out) :: nhomotot(mgncol,nlev)         ! change n  due to Homogeneous freezing of cloud water
-!  real(r8), intent(out) :: nnuccrtot(mgncol,nlev)        ! change n  due to heterogeneous freezing of rain to snow (1/s)
-!  real(r8), intent(out) :: nnuccritot(mgncol,nlev)       ! change n  due to Heterogeneous freezing of rain to ice
-!  real(r8), intent(out) :: nsacwitot(mgncol,nlev)        ! change n  due to Conversion of cloud water [to cloud ice]
-                                                         !                  from rime-splintering
-!  real(r8), intent(out) :: npratot(mgncol,nlev)          ! change n  due to Accretion of cloud water by rain
-!  real(r8), intent(out) :: npsacwstot(mgncol,nlev)       ! change n  due to Accretion of cloud water by snow
-!  real(r8), intent(out) :: npraitot(mgncol,nlev)         ! change n  due to Accretion of cloud ice to snow
-!  real(r8), intent(out) :: npracstot(mgncol,nlev)        ! change n  due to Accretion of rain by snow
-!  real(r8), intent(out) :: nprctot(mgncol,nlev)          ! change n  due to Autoconversion of cloud water [to rain]
-!  real(r8), intent(out) :: nprcitot(mgncol,nlev)         ! change n  due to Autoconversion of cloud ice to snow
-!  real(r8), intent(out) :: ncsedten(mgncol,nlev)         ! change n  due to cloud liquid sedimentation
-!  real(r8), intent(out) :: nisedten(mgncol,nlev)         ! change n  due to cloud ice sedimentation
-!  real(r8), intent(out) :: nrsedten(mgncol,nlev)         ! change n  due to rain sedimentation
-!  real(r8), intent(out) :: nssedten(mgncol,nlev)         ! change n  due to snow sedimentation
-!  real(r8), intent(out) :: ngsedten(mgncol,nlev)         ! change n  due to graupel sedimentation
-!  real(r8), intent(out) :: nmelttot(mgncol,nlev)         ! change n  due to Melting of cloud ice
-!  real(r8), intent(out) :: nmeltstot(mgncol,nlev)        ! change n  due to Melting of snow
-!  real(r8), intent(out) :: nmeltgtot(mgncol,nlev)        ! change n  due to Melting of graupel
   real(r8), intent(out) :: nrout(mgncol,nlev)        ! rain number concentration (1/m3)
   real(r8), intent(out) :: nsout(mgncol,nlev)        ! snow number concentration (1/m3)
   real(r8), intent(out) :: refl(mgncol,nlev)         ! analytic radar reflectivity (94GHZ, cloud radar)
@@ -1130,32 +1099,51 @@ subroutine micro_pumas_tend ( &
   !$acc      copyout (qcsinksum_rate1ord,tlat,qvlat,qctend,qitend,nctend,     &
   !$acc               nitend,qrtend,qstend,nrtend,nstend,qgtend,ngtend,       &
   !$acc               effc,effc_fn,effi,sadice,sadsnow,prect,preci,           &
-  !$acc               nevapr,proc_rates%evapsnow,am_evp_st,prain,proc_rates%prodsnow,cmeout,        &
+  !$acc               nevapr,proc_rates%evapsnow,am_evp_st,prain,             &
+  !$acc               proc_rates%prodsnow,cmeout,                             &
   !$acc               deffi,pgamrad,lamcrad,qsout,dsout,lflx,iflx,rflx,       &
   !$acc               sflx,gflx,qrout,reff_rain,reff_snow,reff_grau,          &
   !$acc               proc_rates%qcsevap,proc_rates%qisevap,proc_rates%qvres, &
-  !$acc               proc_rates%cmeitot,proc_rates%vtrmc,proc_rates%vtrmi,proc_rates%umr,proc_rates%ums,      &
-  !$acc               proc_rates%umg,proc_rates%qgsedten,proc_rates%qcsedten,proc_rates%qisedten,&
-  !$acc               proc_rates%qrsedten,proc_rates%qssedten,       &
-  !$acc               proc_rates%pratot,proc_rates%prctot,proc_rates%mnuccctot,proc_rates%mnuccttot,proc_rates%msacwitot,       &
-  !$acc               proc_rates%psacwstot,proc_rates%bergstot,proc_rates%vapdepstot,proc_rates%bergtot,proc_rates%melttot,     &
-  !$acc               proc_rates%meltstot,proc_rates%meltgtot,proc_rates%mnudeptot,proc_rates%homotot,&
-  !$acc               proc_rates%qcrestot,proc_rates%prcitot, &
-  !$acc               proc_rates%praitot,proc_rates%qirestot,proc_rates%mnuccrtot,proc_rates%mnuccritot,proc_rates%pracstot,    &
-  !$acc               proc_rates%meltsdttot,proc_rates%frzrdttot,proc_rates%mnuccdtot,proc_rates%pracgtot,proc_rates%psacwgtot, &
-  !$acc               proc_rates%pgsacwtot,proc_rates%pgracstot,proc_rates%prdgtot,proc_rates%qmultgtot,proc_rates%qmultrgtot,  &
-  !$acc               proc_rates%psacrtot,proc_rates%npracgtot,proc_rates%nscngtot,proc_rates%ngracstot,proc_rates%nmultgtot,   &
-  !$acc               proc_rates%nmultrgtot,proc_rates%npsacwgtot,nrout,nsout,refl,arefl,           &
+  !$acc               proc_rates%cmeitot,proc_rates%vtrmc,proc_rates%vtrmi,   &
+  !$acc               proc_rates%umr,proc_rates%ums,                          &
+  !$acc               proc_rates%umg,proc_rates%qgsedten,proc_rates%qcsedten, &
+  !$acc               proc_rates%qisedten,proc_rates%qrsedten,                &
+  !$acc               proc_rates%qssedten,proc_rates%pratot,                  &
+  !$acc               proc_rates%prctot,proc_rates%mnuccctot,                 &
+  !$acc               proc_rates%mnuccttot,proc_rates%msacwitot,              &
+  !$acc               proc_rates%psacwstot,proc_rates%bergstot,               &
+  !$acc               proc_rates%vapdepstot,proc_rates%bergtot,               &
+  !$acc               proc_rates%melttot,proc_rates%meltstot,                 &
+  !$acc               proc_rates%meltgtot,proc_rates%mnudeptot,               &
+  !$acc               proc_rates%homotot,                                     &
+  !$acc               proc_rates%qcrestot,proc_rates%prcitot,                 &
+  !$acc               proc_rates%praitot,proc_rates%qirestot,                 &
+  !$acc               proc_rates%mnuccrtot,proc_rates%mnuccritot,             &
+  !$acc               proc_rates%pracstot,proc_rates%meltsdttot,              &
+  !$acc               proc_rates%frzrdttot,proc_rates%mnuccdtot,              &
+  !$acc               proc_rates%pracgtot,proc_rates%psacwgtot,               &
+  !$acc               proc_rates%pgsacwtot,proc_rates%pgracstot,              &
+  !$acc               proc_rates%prdgtot,proc_rates%qmultgtot,                &
+  !$acc               proc_rates%qmultrgtot,proc_rates%psacrtot,              &
+  !$acc               proc_rates%npracgtot,proc_rates%nscngtot,               &
+  !$acc               proc_rates%ngracstot,proc_rates%nmultgtot,              &
+  !$acc               proc_rates%nmultrgtot,proc_rates%npsacwgtot,            &
+  !$acc               nrout,nsout,refl,arefl,                                 &
   !$acc               areflz,frefl,csrfl,acsrfl,fcsrfl,refl10cm,reflz10cm,    &
   !$acc               rercld,ncai,ncal,qrout2,qsout2,nrout2,nsout2,drout2,    &
   !$acc               dsout2,freqs,freqr,nfice,qcrat,qgout,dgout,ngout,       &
   !$acc               qgout2,ngout2,dgout2,freqg,prer_evap,                   &
-  !$acc               proc_rates%nnuccctot,proc_rates%nnuccttot,proc_rates%nnuccdtot,proc_rates%nnudeptot,proc_rates%nhomotot,  &
-  !$acc               proc_rates%nnuccrtot,proc_rates%nnuccritot,proc_rates%nsacwitot,proc_rates%npratot,proc_rates%npsacwstot, &
-  !$acc               proc_rates%npraitot,proc_rates%npracstot,proc_rates%nprctot,proc_rates%nprcitot,proc_rates%ncsedten,      &
-  !$acc               proc_rates%nisedten,  &
-  !$acc               proc_rates%nrsedten,proc_rates%nssedten,proc_rates%ngsedten,proc_rates%nmelttot,proc_rates%nmeltstot,     &
-  !$acc               proc_rates%nmeltgtot)                                   &
+  !$acc               proc_rates%nnuccctot,proc_rates%nnuccttot,              &
+  !$acc               proc_rates%nnuccdtot,proc_rates%nnudeptot,              &
+  !$acc               proc_rates%nhomotot,proc_rates%nnuccrtot,               &
+  !$acc               proc_rates%nnuccritot,proc_rates%nsacwitot,             &
+  !$acc               proc_rates%npratot,proc_rates%npsacwstot,               &
+  !$acc               proc_rates%npraitot,proc_rates%npracstot,               &
+  !$acc               proc_rates%nprctot,proc_rates%nprcitot,                 &
+  !$acc               proc_rates%ncsedten,proc_rates%nisedten,                &
+  !$acc               proc_rates%nrsedten,proc_rates%nssedten,                &
+  !$acc               proc_rates%ngsedten,proc_rates%nmelttot,                &
+  !$acc               proc_rates%nmeltstot,proc_rates%nmeltgtot)              &
   !$acc      create  (qc,qi,nc,ni,qr,qs,nr,ns,qg,ng,rho,dv,mu,sc,rhof,        &
   !$acc               precip_frac,cldm,icldm,lcldm,qsfm,qcic,qiic,qsic,qric,  &
   !$acc               qgic,ncic,niic,nsic,nric,ngic,lami,n0i,lamc,pgam,lams,  &
