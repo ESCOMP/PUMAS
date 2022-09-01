@@ -95,96 +95,327 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
 
 contains
 
-   subroutine proc_rates_allocate(this, psetcols, nlev)
+   subroutine proc_rates_allocate(this, psetcols, nlev, errstring)
    !--------------------------------------------------------------
    ! Routine to allocate the elements of the proc_rates DDT
    !--------------------------------------------------------------
 
+   use cam_abortutils, only: endrun
+
       class(proc_rates_type) :: this
 
       integer, intent(in) :: psetcols, nlev
+      character(128),   intent(out) :: errstring
 
       integer :: ierr
 
-!CAC -- NEED TO ADD ALLOCATE CHECKS
+      errstring=' '
 
       allocate(this%prodsnow(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%prodsnow'
+      end if
       allocate(this%evapsnow(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%evapsnow'
+      end if
       allocate(this%qcsevap(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qcsevap'
+      end if
       allocate(this%qisevap(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qisevap'
+      end if
       allocate(this%qvres(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qvres'
+      end if
       allocate(this%cmeitot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%cmeitot'
+      end if
       allocate(this%vtrmc(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%vtrmc'
+      end if
       allocate(this%vtrmi(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%vtrmi'
+      end if
       allocate(this%umr(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%umr'
+      end if
       allocate(this%ums(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%ums'
+      end if
       allocate(this%umg(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%umg'
+      end if
       allocate(this%qgsedten(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qgsedten'
+      end if
       allocate(this%qcsedten(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qcsedten'
+      end if
       allocate(this%qisedten(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qisedten'
+      end if
       allocate(this%qrsedten(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qrsedten'
+      end if
       allocate(this%qssedten(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qssedten'
+      end if
       allocate(this%pratot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%pratot'
+      end if
       allocate(this%prctot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%prctot'
+      end if
       allocate(this%mnuccctot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%mnuccctot'
+      end if
       allocate(this%mnuccttot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%mnuccttot'
+      end if
       allocate(this%msacwitot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%msacwitot'
+      end if
       allocate(this%psacwstot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%psacwstot'
+      end if
       allocate(this%bergstot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%bergstot'
+      end if
       allocate(this%vapdepstot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%vapdepstot'
+      end if
       allocate(this%bergtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%bergtot'
+      end if
       allocate(this%melttot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%melttot'
+      end if
       allocate(this%meltstot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%meltstot'
+      end if
       allocate(this%meltgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%meltgtot'
+      end if
       allocate(this%homotot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%homotot'
+      end if
       allocate(this%qcrestot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qcrestot'
+      end if
       allocate(this%prcitot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%prcitot'
+      end if
       allocate(this%praitot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%praitot'
+      end if
       allocate(this%qirestot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qirestot'
+      end if
       allocate(this%mnuccrtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%mnuccrtot'
+      end if
       allocate(this%mnudeptot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%mnudeptot'
+      end if
       allocate(this%mnuccritot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%mnuccritot'
+      end if
       allocate(this%pracstot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%pracstot'
+      end if
       allocate(this%meltsdttot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%meltsdttot'
+      end if
       allocate(this%frzrdttot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%frzrdttot'
+      end if
       allocate(this%mnuccdtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%mnuccdtot'
+      end if
       allocate(this%pracgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%pracgtot'
+      end if
       allocate(this%psacwgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%psacwgtot'
+      end if
       allocate(this%pgsacwtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%pgsacwtot'
+      end if
       allocate(this%pgracstot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%pgracstot'
+      end if
       allocate(this%prdgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%prdgtot'
+      end if
       allocate(this%qmultgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qmultgtot'
+      end if
       allocate(this%qmultrgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qmultrgtot'
+      end if
       allocate(this%psacrtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%psacrtot'
+      end if
       allocate(this%npracgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%npracgtot'
+      end if
       allocate(this%nscngtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nscngtot'
+      end if
       allocate(this%ngracstot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%ngracstot'
+      end if
       allocate(this%nmultgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nmultgtot'
+      end if
       allocate(this%nmultrgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nmultrgtot'
+      end if
       allocate(this%npsacwgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%npsacwgtot'
+      end if
 
       allocate(this%nnuccctot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nnuccctot'
+      end if
       allocate(this%nnuccttot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nnuccttot'
+      end if
       allocate(this%nnuccdtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nnuccdtot'
+      end if
       allocate(this%nnudeptot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nnudeptot'
+      end if
       allocate(this%nhomotot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nhomotot'
+      end if
       allocate(this%nnuccrtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nnuccrtot'
+      end if
       allocate(this%nnuccritot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nnuccritot'
+      end if
       allocate(this%nsacwitot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nsacwitot'
+      end if
       allocate(this%npratot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%npratot'
+      end if
       allocate(this%npsacwstot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%npsacwstot'
+      end if
       allocate(this%npraitot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%npraitot'
+      end if
       allocate(this%npracstot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%npracstot'
+      end if
       allocate(this%nprctot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nprctot'
+      end if
       allocate(this%nprcitot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nprcitot'
+      end if
       allocate(this%ncsedten(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%ncsedten'
+      end if
       allocate(this%nisedten(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nisedten'
+      end if
       allocate(this%nrsedten(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nrsedten'
+      end if
       allocate(this%nssedten(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nssedten'
+      end if
       allocate(this%ngsedten(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%ngsedten'
+      end if
       allocate(this%nmelttot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nmelttot'
+      end if
       allocate(this%nmeltstot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nmeltstot'
+      end if
       allocate(this%nmeltgtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nmeltgtot'
+      end if
    end subroutine proc_rates_allocate
 
    subroutine proc_rates_deallocate(this)
