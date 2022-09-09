@@ -327,7 +327,6 @@ contains
       if (ierr /= 0) then
         errstring='Error allocating this%npsacwgtot'
       end if
-
       allocate(this%nnuccctot(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%nnuccctot'

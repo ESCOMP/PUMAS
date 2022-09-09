@@ -551,8 +551,7 @@ subroutine micro_pumas_tend ( &
      effc,               effc_fn,            effi,               &
      sadice,                       sadsnow,                      &
      prect,                        preci,                        &
-     nevapr,                       proc_rates,                   &
-     am_evp_st,                                                  &
+     nevapr,                       am_evp_st,                    &
      prain,                                                      &
      cmeout,                       deffi,                        &
      pgamrad,                      lamcrad,                      &
@@ -573,6 +572,7 @@ subroutine micro_pumas_tend ( &
      qgout2,        ngout2,        dgout2,    freqg,                   &
      freqs,                        freqr,                        &
      nfice,                        qcrat,                        &
+     proc_rates,                                                 &
      errstring, & ! Below arguments are "optional" (pass null pointers to omit).
      tnd_qsnow,          tnd_nsnow,          re_ice,             &
      prer_evap,                                                      &
@@ -696,7 +696,6 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: prect(mgncol)             ! surface precip rate (m/s)
   real(r8), intent(out) :: preci(mgncol)             ! cloud ice/snow precip rate (m/s)
   real(r8), intent(out) :: nevapr(mgncol,nlev)       ! evaporation rate of rain + snow (1/s)
-  type (proc_rates_type) :: proc_rates
   real(r8), intent(out) :: am_evp_st(mgncol,nlev)    ! stratiform evaporation area (frac)
   real(r8), intent(out) :: prain(mgncol,nlev)        ! production of rain + snow (1/s)
   real(r8), intent(out) :: cmeout(mgncol,nlev)       ! evap/sub of cloud (1/s)
@@ -749,6 +748,8 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: freqg(mgncol,nlev)        ! fractional occurrence of graupel
 
   real(r8), intent(out) :: prer_evap(mgncol,nlev)
+
+  type (proc_rates_type), intent(inout)  :: proc_rates
 
   character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
 
@@ -1507,11 +1508,11 @@ subroutine micro_pumas_tend ( &
         vap_deps(i,k)           = 0._r8
 
         ! initialize precip fallspeeds to zero
-        proc_rates%ums(i,k)                = 0._r8
+        proc_rates%ums(i,k)     = 0._r8
         uns(i,k)                = 0._r8
-        proc_rates%umr(i,k)                = 0._r8
+        proc_rates%umr(i,k)     = 0._r8
         unr(i,k)                = 0._r8
-        proc_rates%umg(i,k)                = 0._r8
+        proc_rates%umg(i,k)     = 0._r8
         ung(i,k)                = 0._r8
 
         ! initialize limiter for output
