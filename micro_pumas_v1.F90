@@ -3262,8 +3262,8 @@ if ( do_implicit_fall ) then
 
   ! cloud water mass sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumc,fc,.FALSE.,qctend, &
-                               LQUEUE,xflx=lflx,qxsedten=proc_rates%qcsedten(:mgncol,:nlev),prect=prect_l)
+  call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumc,fc,.FALSE.,qctend, &
+                              LQUEUE,xflx=lflx,qxsedten=proc_rates%qcsedten(:mgncol,:nlev),prect=prect_l)
 
   ! cloud water number sedimentation
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnc,fnc,.FALSE.,nctend, &
@@ -3274,15 +3274,15 @@ if ( do_implicit_fall ) then
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumi,fi,.FALSE.,qitend, &
                                IQUEUE,xflx=iflx,qxsedten=proc_rates%qisedten(:mgncol,:nlev),prect=prect_i,preci=preci_i)
 
- ! cloud ice number sedimentation
+  ! cloud ice number sedimentation
 
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumni,fni,.FALSE.,nitend, &
                               IQUEUE,qxsedten=proc_rates%nisedten(:mgncol,:nlev))
 
   ! rain water mass sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumr,fr,.TRUE.,qrtend, &
-                               RQUEUE,xflx=rflx,qxsedten=proc_rates%qrsedten(:mgncol,:nlev),prect=prect_r)
+  call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumr,fr,.TRUE.,qrtend, &
+                              RQUEUE,xflx=rflx,qxsedten=proc_rates%qrsedten(:mgncol,:nlev),prect=prect_r)
 
   ! rain water number sedimentation
 
@@ -3291,8 +3291,8 @@ if ( do_implicit_fall ) then
 
   ! snow water mass sedimentation
 
-   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dums,fs,.TRUE.,qstend, &
-                               SQUEUE,xflx=sflx,qxsedten=proc_rates%qssedten(:mgncol,:nlev),prect=prect_s,preci=preci_s)
+  call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dums,fs,.TRUE.,qstend, &
+                              SQUEUE,xflx=sflx,qxsedten=proc_rates%qssedten(:mgncol,:nlev),prect=prect_s,preci=preci_s)
 
   ! snow water number sedimentation
 
