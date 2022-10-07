@@ -1096,7 +1096,7 @@ subroutine micro_pumas_tend ( &
   !$acc               naai,npccn,rndst,nacon,tnd_qsnow,tnd_nsnow,re_ice,      &
   !$acc               frzimm,frzcnt,frzdep,mg_liq_props,mg_ice_props,         &
   !$acc               mg_rain_props,mg_graupel_props,mg_hail_props,           &
-  !$acc               mg_snow_props)                                          &
+  !$acc               mg_snow_props,proc_rates)                               &
   !$acc      copyout (qcsinksum_rate1ord,tlat,qvlat,qctend,qitend,nctend,     &
   !$acc               nitend,qrtend,qstend,nrtend,nstend,qgtend,ngtend,       &
   !$acc               effc,effc_fn,effi,sadice,sadsnow,prect,preci,           &
@@ -2138,7 +2138,7 @@ subroutine micro_pumas_tend ( &
      !$acc end parallel
   end if
 
-  call accrete_rain_snow(t, rho, proc_rates%umr(:mgncol,:nlev), proc_rates%ums(:mgncol,:nlev), unr, uns, qric, qsic, lamr, &
+  call accrete_rain_snow(t, rho, proc_rates%umr, proc_rates%ums, unr, uns, qric, qsic, lamr, &
                          n0r, lams, n0s, pracs, npracs, mgncol*nlev)
 
   call heterogeneous_rain_freezing(t, qric, nric, lamr, mnuccr, nnuccr, mgncol*nlev)
@@ -2237,7 +2237,7 @@ subroutine micro_pumas_tend ( &
 !===================================================================
 
   if (do_hail.or.do_graupel) then
-     call graupel_collecting_snow(qsic, qric, proc_rates%umr(:mgncol,:nlev), proc_rates%ums(:mgncol,:nlev), rho, &
+     call graupel_collecting_snow(qsic, qric, proc_rates%umr, proc_rates%ums, rho, &
                                   lamr, n0r, lams, n0s, psacr, mgncol*nlev)
 
      call graupel_collecting_cld_water(qgic, qcic, ncic, rho, n0g, lamg, bgtmp, agn, psacwg, npsacwg, mgncol*nlev)
@@ -2255,7 +2255,7 @@ subroutine micro_pumas_tend ( &
      call graupel_riming_liquid_snow(psacws, qsic, qcic, nsic, rho, rhosn, rhogtmp, asn, &
                                      lams, n0s, deltat, pgsacw, nscng, mgncol*nlev)
 
-     call graupel_collecting_rain(qric, qgic, proc_rates%umg(:mgncol,:nlev), proc_rates%umr(:mgncol,:nlev), ung, unr, rho, n0r, &
+     call graupel_collecting_rain(qric, qgic, proc_rates%umg, proc_rates%umr, ung, unr, rho, n0r, &
                                   lamr, n0g, lamg, pracg, npracg, mgncol*nlev)
 
      !$acc parallel vector_length(VLENS) default(present)
@@ -3263,51 +3263,51 @@ if ( do_implicit_fall ) then
   ! cloud water mass sedimentation
 
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumc,fc,.FALSE.,qctend, &
-                              LQUEUE,xflx=lflx,qxsedten=proc_rates%qcsedten(:mgncol,:nlev),prect=prect_l)
+                              LQUEUE,xflx=lflx,qxsedten=proc_rates%qcsedten,prect=prect_l)
 
   ! cloud water number sedimentation
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnc,fnc,.FALSE.,nctend, &
-                              LQUEUE,qxsedten=proc_rates%ncsedten(:mgncol,:nlev))
+                              LQUEUE,qxsedten=proc_rates%ncsedten)
 
   ! cloud ice mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumi,fi,.FALSE.,qitend, &
-                               IQUEUE,xflx=iflx,qxsedten=proc_rates%qisedten(:mgncol,:nlev),prect=prect_i,preci=preci_i)
+                               IQUEUE,xflx=iflx,qxsedten=proc_rates%qisedten,prect=prect_i,preci=preci_i)
 
   ! cloud ice number sedimentation
 
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumni,fni,.FALSE.,nitend, &
-                              IQUEUE,qxsedten=proc_rates%nisedten(:mgncol,:nlev))
+                              IQUEUE,qxsedten=proc_rates%nisedten)
 
   ! rain water mass sedimentation
 
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumr,fr,.TRUE.,qrtend, &
-                              RQUEUE,xflx=rflx,qxsedten=proc_rates%qrsedten(:mgncol,:nlev),prect=prect_r)
+                              RQUEUE,xflx=rflx,qxsedten=proc_rates%qrsedten,prect=prect_r)
 
   ! rain water number sedimentation
 
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumnr,fnr,.TRUE.,nrtend, &
-                              RQUEUE,qxsedten=proc_rates%nrsedten(:mgncol,:nlev))
+                              RQUEUE,qxsedten=proc_rates%nrsedten)
 
   ! snow water mass sedimentation
 
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dums,fs,.TRUE.,qstend, &
-                              SQUEUE,xflx=sflx,qxsedten=proc_rates%qssedten(:mgncol,:nlev),prect=prect_s,preci=preci_s)
+                              SQUEUE,xflx=sflx,qxsedten=proc_rates%qssedten,prect=prect_s,preci=preci_s)
 
   ! snow water number sedimentation
 
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumns,fns,.TRUE.,nstend, &
-                              SQUEUE,qxsedten=proc_rates%nssedten(:mgncol,:nlev))
+                              SQUEUE,qxsedten=proc_rates%nssedten)
 
   ! graupel mass sedimentation
 
    call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumg,fg,.TRUE.,qgtend, &
-                               GQUEUE,xflx=gflx,qxsedten=proc_rates%qgsedten(:mgncol,:nlev),prect=prect_g,preci=preci_g)
+                               GQUEUE,xflx=gflx,qxsedten=proc_rates%qgsedten,prect=prect_g,preci=preci_g)
 
   ! graupel number sedimentation
 
   call Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumng,fng,.TRUE.,ngtend, &
-                              GQUEUE,qxsedten=proc_rates%ngsedten(:mgncol,:nlev))
+                              GQUEUE,qxsedten=proc_rates%ngsedten)
 
 else
 
@@ -3323,12 +3323,12 @@ else
 
   ! ice mass sediment
   call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep_i,rnstep_i,fi,dumi,pdel_inv, &
-                     qitend,IQUEUE,qxsedten=proc_rates%qisedten(:mgncol,:nlev),prect=prect_i,xflx=iflx,xxlx=xxls, &
+                     qitend,IQUEUE,qxsedten=proc_rates%qisedten,prect=prect_i,xflx=iflx,xxlx=xxls, &
                      qxsevap=proc_rates%qisevap,tlat=tlat_i,qvlat=qvlat_i,xcldm=icldm,preci=preci_i)
 
   ! ice number sediment
   call Sedimentation(mgncol,nlev,do_cldice,deltat,nstep_i,rnstep_i,fni,dumni,pdel_inv, &
-                     nitend,IQUEUE,xcldm=icldm,qxsedten=proc_rates%nisedten(:mgncol,:nlev))
+                     nitend,IQUEUE,xcldm=icldm,qxsedten=proc_rates%nisedten)
 
   !$acc parallel vector_length(VLENS) default(present) async(LQUEUE)
   !$acc loop gang vector
@@ -3340,12 +3340,12 @@ else
 
   ! liq mass sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_l,rnstep_l,fc,dumc,pdel_inv, &
-                     qctend,LQUEUE,qxsedten=proc_rates%qcsedten(:mgncol,:nlev),prect=prect_l,xflx=lflx,xxlx=xxlv, &
+                     qctend,LQUEUE,qxsedten=proc_rates%qcsedten,prect=prect_l,xflx=lflx,xxlx=xxlv, &
                      qxsevap=proc_rates%qcsevap,tlat=tlat_l,qvlat=qvlat_l,xcldm=lcldm)
 
   ! liq number sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_l,rnstep_l,fnc,dumnc,pdel_inv, &
-                     nctend,LQUEUE,xcldm=lcldm,qxsedten=proc_rates%ncsedten(:mgncol,:nlev))
+                     nctend,LQUEUE,xcldm=lcldm,qxsedten=proc_rates%ncsedten)
 
   !$acc parallel vector_length(VLENS) default(present) async(RQUEUE)
   !$acc loop gang vector
@@ -3357,11 +3357,11 @@ else
 
   ! rain mass sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_r,rnstep_r,fr,dumr,pdel_inv, &
-                     qrtend,RQUEUE,qxsedten=proc_rates%qrsedten(:mgncol,:nlev),prect=prect_r,xflx=rflx)
+                     qrtend,RQUEUE,qxsedten=proc_rates%qrsedten,prect=prect_r,xflx=rflx)
 
   ! rain number sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_r,rnstep_r,fnr,dumnr,pdel_inv, &
-                     nrtend,RQUEUE,qxsedten=proc_rates%nrsedten(:mgncol,:nlev))
+                     nrtend,RQUEUE,qxsedten=proc_rates%nrsedten)
 
   !$acc parallel vector_length(VLENS) default(present) async(SQUEUE)
   !$acc loop gang vector
@@ -3373,11 +3373,11 @@ else
 
   ! snow mass sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_s,rnstep_s,fs,dums,pdel_inv, &
-                     qstend,SQUEUE,qxsedten=proc_rates%qssedten(:mgncol,:nlev),prect=prect_s,xflx=sflx,preci=preci_s)
+                     qstend,SQUEUE,qxsedten=proc_rates%qssedten,prect=prect_s,xflx=sflx,preci=preci_s)
 
   ! snow number sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_s,rnstep_s,fns,dumns,pdel_inv, &
-                     nstend,SQUEUE,qxsedten=proc_rates%nssedten(:mgncol,:nlev))
+                     nstend,SQUEUE,qxsedten=proc_rates%nssedten)
 
   !$acc parallel vector_length(VLENS) default(present) async(GQUEUE)
   !$acc loop gang vector
@@ -3389,11 +3389,11 @@ else
 
   ! graupel mass sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_g,rnstep_g,fg,dumg,pdel_inv, &
-                     qgtend,GQUEUE,qxsedten=proc_rates%qgsedten(:mgncol,:nlev),prect=prect_g,xflx=gflx,preci=preci_g)
+                     qgtend,GQUEUE,qxsedten=proc_rates%qgsedten,prect=prect_g,xflx=gflx,preci=preci_g)
 
   ! graupel number sediment
   call Sedimentation(mgncol,nlev,.TRUE.,deltat,nstep_g,rnstep_g,fng,dumng,pdel_inv, &
-                     ngtend,GQUEUE,qxsedten=proc_rates%ngsedten(:mgncol,:nlev))
+                     ngtend,GQUEUE,qxsedten=proc_rates%ngsedten)
 
 end if
 ! ----------------------------------------------
