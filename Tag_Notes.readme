@@ -1,4 +1,7 @@
 ====================================
+.. pumas_cam-release_v1.28
+October 11, 2022 - Creation and implimentation of a derived data type (DDT) for process rates. Not supported by cam_development yet. The CAM changes are currently in https://github.com/ESCOMP/CAM/pull/632
+====================================
 .. pumas_cam-release_v1.27
 August 24, 2022 - New tag for cam_development. Initialized nnudep and mnudep.
 ====================================
