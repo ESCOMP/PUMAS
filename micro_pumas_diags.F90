@@ -88,6 +88,45 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: nmeltstot(:,:)        ! change n  due to Melting of snow
   real(r8), allocatable :: nmeltgtot(:,:)        ! change n  due to Melting of graupel
 
+  ! TAU diagnostic variables
+  ! CACNOTE - Probably need to get Jack to document what each variable is
+  real(r8), allocatable :: scale_qc(:,:)
+  real(r8), allocatable :: scale_nc(:,:)
+  real(r8), allocatable :: scale_qr(:,:)
+  real(r8), allocatable :: scale_nr(:,:)
+  real(r8), allocatable :: amk_c(:,:)
+  real(r8), allocatable :: ank_c(:,:)
+  real(r8), allocatable :: amk_r(:,:)
+  real(r8), allocatable :: ank_r(:,:)
+  real(r8), allocatable :: amk(:,:)
+  real(r8), allocatable :: ank(:,:)
+  real(r8), allocatable :: amk_out(:,:)
+  real(r8), allocatable :: ank_out(:,:)
+  real(r8), allocatable :: qc_out(:,:)
+  real(r8), allocatable :: nc_out(:,:)
+  real(r8), allocatable :: qr_out(:,:)
+  real(r8), allocatable :: nr_out(:,:)
+  real(r8), allocatable :: qctend_MG2(:,:)
+  real(r8), allocatable :: nctend_MG2(:,:)
+  real(r8), allocatable :: qrtend_MG2(:,:)
+  real(r8), allocatable :: nrtend_MG2(:,:)
+  real(r8), allocatable :: qctend_TAU(:,:)
+  real(r8), allocatable :: nctend_TAU(:,:)
+  real(r8), allocatable :: qrtend_TAU(:,:)
+  real(r8), allocatable :: nrtend_TAU(:,:)
+  real(r8), allocatable :: qctend_TAU_diag(:,:)
+  real(r8), allocatable :: nctend_TAU_diag(:,:)
+  real(r8), allocatable :: qrtend_TAU_diag(:,:)
+  real(r8), allocatable :: nrtend_TAU_diag(:,:)
+  real(r8), allocatable :: gmnnn_lmnnn_TAU(:,:)
+  real(r8), allocatable :: ML_fixer(:,:)
+  real(r8), allocatable :: QC_fixer(:,:)
+  real(r8), allocatable :: NC_fixer(:,:)
+  real(r8), allocatable :: QR_fixer(:,:)
+  real(r8), allocatable :: NR_fixer(:,:)
+
+
+
     contains
       procedure :: allocate => proc_rates_allocate
       procedure :: deallocate => proc_rates_deallocate
@@ -415,6 +454,143 @@ contains
       if (ierr /= 0) then
         errstring='Error allocating this%nmeltgtot'
       end if
+
+      allocate(this%scale_qc(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%scale_qc'
+      end if
+      allocate(this%scale_nc(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%scale_nc'
+      end if
+      allocate(this%scale_qr(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%scale_qr'
+      end if
+      allocate(this%scale_nr(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%scale_nr'
+      end if
+      allocate(this%amk_c(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%amk_c'
+      end if
+      allocate(this%ank_c(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%ank_c'
+      end if
+      allocate(this%amk_r(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%amk_r'
+      end if
+      allocate(this%ank_r(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%ank_r'
+      end if
+      allocate(this%amk(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%amk'
+      end if
+      allocate(this%ank(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%ank'
+      end if
+      allocate(this%amk_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%amk_out'
+      end if
+      allocate(this%ank_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%ank_out'
+      end if
+      allocate(this%qc_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qc_out'
+      end if
+      allocate(this%nc_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nc_out'
+      end if
+      allocate(this%qr_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qr_out'
+      end if
+      allocate(this%nr_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nr_out'
+      end if
+      allocate(this%qctend_MG2(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qctend_MG2'
+      end if
+      allocate(this%nctend_MG2(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nctend_MG2'
+      end if
+      allocate(this%qrtend_MG2(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%artend_MG2'
+      end if
+      allocate(this%nrtend_MG2(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nrtend_MG2'
+      end if
+      allocate(this%qctend_TAU(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qctend_TAU'
+      end if
+      allocate(this%nctend_TAU(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nctend_TAU'
+      end if
+      allocate(this%qrtend_TAU(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qrtend_TAU'
+      end if
+      allocate(this%nrtend_TAU(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nrtend_TAU'
+      end if
+      allocate(this%qctend_TAU_diag(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qctend_TAU_diag'
+      end if
+      allocate(this%nctend_TAU_diag(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nctend_TAU_diag'
+      end if
+      allocate(this%qrtend_TAU_diag(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qrtend_TAU_diag'
+      end if
+      allocate(this%nrtend_TAU_diag(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nrtend_TAU_diag'
+      end if
+      allocate(this%gmnnn_lmnnn_TAU(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%gmnnn_lmnnn_TAU'
+      end if
+      allocate(this%ML_fixer(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%ML_fixer'
+      end if
+      allocate(this%QC_fixer(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%QC_fixer'
+      end if
+      allocate(this%NC_fixer(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%NC_fixer'
+      end if
+      allocate(this%QR_fixer(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%QR_fixer'
+      end if
+      allocate(this%NR_fixer(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%NR_fixer'
+      end if
    end subroutine proc_rates_allocate
 
    subroutine proc_rates_deallocate(this)
@@ -500,6 +676,41 @@ contains
       deallocate(this%nmelttot)
       deallocate(this%nmeltstot)
       deallocate(this%nmeltgtot)
+
+      deallocate(this%scale_qc)
+      deallocate(this%scale_nc)
+      deallocate(this%scale_qr)
+      deallocate(this%scale_nr)
+      deallocate(this%amk_c)
+      deallocate(this%ank_c)
+      deallocate(this%amk_r)
+      deallocate(this%ank_r)
+      deallocate(this%amk)
+      deallocate(this%ank)
+      deallocate(this%amk_out)
+      deallocate(this%ank_out)
+      deallocate(this%qc_out)
+      deallocate(this%nc_out)
+      deallocate(this%qr_out)
+      deallocate(this%nr_out)
+      deallocate(this%qctend_MG2)
+      deallocate(this%nctend_MG2)
+      deallocate(this%qrtend_MG2)
+      deallocate(this%nrtend_MG2)
+      deallocate(this%qctend_TAU)
+      deallocate(this%nctend_TAU)
+      deallocate(this%qrtend_TAU)
+      deallocate(this%nrtend_TAU)
+      deallocate(this%qctend_TAU_diag)
+      deallocate(this%nctend_TAU_diag)
+      deallocate(this%qrtend_TAU_diag)
+      deallocate(this%nrtend_TAU_diag)
+      deallocate(this%gmnnn_lmnnn_TAU)
+      deallocate(this%ML_fixer)
+      deallocate(this%QC_fixer)
+      deallocate(this%NC_fixer)
+      deallocate(this%QR_fixer)
+      deallocate(this%NR_fixer)
 
    end subroutine proc_rates_deallocate
 
