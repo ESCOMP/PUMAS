@@ -5,6 +5,7 @@ module micro_pumas_diags
 !----------------------------------------
 
 use shr_kind_mod,   only: r8=>shr_kind_r8
+use stochastic_collect_tau_cam, only: ncd
 
   type, public :: proc_rates_type
 
@@ -94,14 +95,14 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: scale_nc(:,:)
   real(r8), allocatable :: scale_qr(:,:)
   real(r8), allocatable :: scale_nr(:,:)
-  real(r8), allocatable :: amk_c(:,:)
-  real(r8), allocatable :: ank_c(:,:)
-  real(r8), allocatable :: amk_r(:,:)
-  real(r8), allocatable :: ank_r(:,:)
-  real(r8), allocatable :: amk(:,:)
-  real(r8), allocatable :: ank(:,:)
-  real(r8), allocatable :: amk_out(:,:)
-  real(r8), allocatable :: ank_out(:,:)
+  real(r8), allocatable :: amk_c(:,:,:)
+  real(r8), allocatable :: ank_c(:,:,:)
+  real(r8), allocatable :: amk_r(:,:,:)
+  real(r8), allocatable :: ank_r(:,:,:)
+  real(r8), allocatable :: amk(:,:,:)
+  real(r8), allocatable :: ank(:,:,:)
+  real(r8), allocatable :: amk_out(:,:,:)
+  real(r8), allocatable :: ank_out(:,:,:)
   real(r8), allocatable :: qc_out(:,:)
   real(r8), allocatable :: nc_out(:,:)
   real(r8), allocatable :: qr_out(:,:)
@@ -455,6 +456,7 @@ contains
         errstring='Error allocating this%nmeltgtot'
       end if
 
+!CACNOTE -- Only allocate these variables if machine learning turned on
       allocate(this%scale_qc(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%scale_qc'
@@ -471,35 +473,35 @@ contains
       if (ierr /= 0) then
         errstring='Error allocating this%scale_nr'
       end if
-      allocate(this%amk_c(psetcols,nlev), stat=ierr)
+      allocate(this%amk_c(psetcols,nlev,ncd), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%amk_c'
       end if
-      allocate(this%ank_c(psetcols,nlev), stat=ierr)
+      allocate(this%ank_c(psetcols,nlev,ncd), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%ank_c'
       end if
-      allocate(this%amk_r(psetcols,nlev), stat=ierr)
+      allocate(this%amk_r(psetcols,nlev,ncd), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%amk_r'
       end if
-      allocate(this%ank_r(psetcols,nlev), stat=ierr)
+      allocate(this%ank_r(psetcols,nlev,ncd), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%ank_r'
       end if
-      allocate(this%amk(psetcols,nlev), stat=ierr)
+      allocate(this%amk(psetcols,nlev,ncd), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%amk'
       end if
-      allocate(this%ank(psetcols,nlev), stat=ierr)
+      allocate(this%ank(psetcols,nlev,ncd), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%ank'
       end if
-      allocate(this%amk_out(psetcols,nlev), stat=ierr)
+      allocate(this%amk_out(psetcols,nlev,ncd), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%amk_out'
       end if
-      allocate(this%ank_out(psetcols,nlev), stat=ierr)
+      allocate(this%ank_out(psetcols,nlev,ncd), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%ank_out'
       end if
