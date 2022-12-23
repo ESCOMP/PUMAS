@@ -297,8 +297,8 @@ real(r8)           :: micro_mg_effi_factor
 real(r8)           :: micro_mg_iaccr_factor
 real(r8)           :: micro_mg_max_nicons
 
-logical  :: remove_supersat ! If true, remove supersaturation after sedimentation loop
-logical  :: do_sb_physics ! do SB 2001 autoconversion or accretion physics
+logical            :: remove_supersat      ! If true, remove supersaturation after sedimentation loop
+character(len=16)  :: warm_rain            ! 'tau','emulated','sb2001' or 'kk2000'
 
 !Parameters for Implicit Sedimentation Calculation
 real(r8), parameter :: vfactor = 1.0        ! Rain/Snow/Graupel Factor
@@ -326,7 +326,7 @@ subroutine micro_pumas_init( &
      micro_mg_autocon_nd_exp_in, micro_mg_autocon_lwp_exp_in, micro_mg_homog_size_in, &
      micro_mg_vtrmi_factor_in, micro_mg_effi_factor_in,  micro_mg_iaccr_factor_in,&
      micro_mg_max_nicons_in, &
-     remove_supersat_in, do_sb_physics_in, &
+     remove_supersat_in, warm_rain_in, &
      micro_mg_evap_sed_off_in, micro_mg_icenuc_rh_off_in, micro_mg_icenuc_use_meyers_in, &
      micro_mg_evap_scl_ifs_in, micro_mg_evap_rhthrsh_ifs_in, &
      micro_mg_rainfreeze_ifs_in,  micro_mg_ifs_sed_in, micro_mg_precip_fall_corr, &
@@ -382,7 +382,7 @@ subroutine micro_pumas_init( &
   real(r8),         intent(in)  :: micro_mg_max_nicons_in ! maximum number ice crystal allowed
 
   logical,  intent(in)  ::  remove_supersat_in ! If true, remove supersaturation after sedimentation loop
-  logical,  intent(in)  ::  do_sb_physics_in ! do SB autoconversion and accretion physics
+  character(len=*),  intent(in)  ::  warm_rain_in
 
 ! IFS-like Switches
 
@@ -446,7 +446,7 @@ subroutine micro_pumas_init( &
   micro_mg_iaccr_factor = micro_mg_iaccr_factor_in
   micro_mg_max_nicons = micro_mg_max_nicons_in
   remove_supersat          = remove_supersat_in
-  do_sb_physics               = do_sb_physics_in
+  warm_rain                = warm_rain_in
   do_implicit_fall   = micro_mg_implicit_fall_in
   accre_sees_auto = micro_mg_accre_sees_auto_in
 
@@ -1590,15 +1590,17 @@ subroutine micro_pumas_tend ( &
   !$acc end parallel
 
 !++ TAU
-  proc_rates%qctend_MG2 = 0._r8
-  proc_rates%nctend_MG2 = 0._r8
-  proc_rates%qrtend_MG2 = 0._r8
-  proc_rates%nrtend_MG2 = 0._r8
-  proc_rates%qctend_TAU = 0._r8
-  proc_rates%nctend_TAU = 0._r8
-  proc_rates%qrtend_TAU = 0._r8
-  proc_rates%nrtend_TAU = 0._r8
-  proc_rates%gmnnn_lmnnn_TAU = 0._r8
+  if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+     proc_rates%qctend_MG2 = 0._r8
+     proc_rates%nctend_MG2 = 0._r8
+     proc_rates%qrtend_MG2 = 0._r8
+     proc_rates%nrtend_MG2 = 0._r8
+     proc_rates%qctend_TAU = 0._r8
+     proc_rates%nctend_TAU = 0._r8
+     proc_rates%qrtend_TAU = 0._r8
+     proc_rates%nrtend_TAU = 0._r8
+     proc_rates%gmnnn_lmnnn_TAU = 0._r8
+  end if
 !-- TAU
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -1878,7 +1880,7 @@ subroutine micro_pumas_tend ( &
   ! formula from Khrouditnov and Kogan (2000), modified for sub-grid distribution of qc
   ! minimum qc of 1 x 10^-8 prevents floating point error
 
-  if (.not. do_sb_physics) then
+  if (trim(warm_rain) == 'kk2000') then
     call kk2000_liq_autoconversion(microp_uniform, qcic, ncic, rho, relvar, prc, nprc, nprc1, micro_mg_autocon_fact, micro_mg_autocon_nd_exp, micro_mg_autocon_lwp_exp, mgncol*nlev)
   end if
 
@@ -1914,7 +1916,7 @@ subroutine micro_pumas_tend ( &
   call size_dist_param_basic(mg_ice_props, qiic, niic, lami, mgncol, nlev, n0=n0i)
 
   ! Alternative autoconversion
-  if (do_sb_physics) then
+  if (trim(warm_rain) == 'sb2001') then
      call sb2001v2_liq_autoconversion(pgam, qcic, ncic, qric, rho, relvar, prc, nprc, nprc1, mgncol*nlev)
   end if
 
@@ -2136,34 +2138,37 @@ subroutine micro_pumas_tend ( &
   end if
 
 !++ TAU
-!    call stochastic_collect_tau_tend(deltatin, t(:,k), rho(:,k), qcn(1:mgncol,k), qrn(1:mgncol,k), &
-!                                     qcic(1:mgncol,k), ncic(1:mgncol,k), &
-!                                     qric(1:mgncol,k), nric(1:mgncol,k), lcldm(1:mgncol,k), precip_frac(1:mgncol,k), &
-!                                     pgam(1:mgncol,k), lamc(1:mgncol,k), n0r(1:mgncol,k), lamr(1:mgncol,k), &
-!                                     proc_rates%qc_out(1:mgncol,k), proc_rates%nc_out(1:mgncol,k), &
-!                                     proc_rates%qr_out(1:mgncol,k), proc_rates%nr_out(1:mgncol,k), &
-!                                     qctend(1:mgncol,k), nctend(1:mgncol,k), &
-!                                     qrtend(1:mgncol,k), nrtend(1:mgncol,k), &
-!                                     proc_rates%qctend_TAU_diag(1:mgncol,k), proc_rates%nctend_TAU_diag(1:mgncol,k), &
-!                                     proc_rates%qrtend_TAU_diag(1:mgncol,k), proc_rates%nrtend_TAU_diag(1:mgncol,k), &
-!                                     proc_rates%scale_qc(1:mgncol,k), proc_rates%scale_nc(1:mgncol,k), &
-!                                     proc_rates%scale_qr(1:mgncol,k), proc_rates%scale_nr(1:mgncol,k), &
-!                                     proc_rates%amk_c(1:mgncol,k,1:ncd), proc_rates%ank_c(1:mgncol,k,1:ncd), &
-!                                     proc_rates%amk_r(1:mgncol,k,1:ncd), proc_rates%ank_r(1:mgncol,k,1:ncd), &
-!                                     proc_rates%amk(1:mgncol,k,1:ncd), proc_rates%ank(1:mgncol,k,1:ncd), &
-!                                     proc_rates%amk_out(1:mgncol,k,1:ncd), proc_rates%ank_out(1:mgncol,k,1:ncd), &
-!                                     proc_rates%gmnnn_lmnnn_TAU(1:mgncol,k), mgncol)
+  if (trim(warm_rain) == 'tau') then
+     call stochastic_collect_tau_tend(deltatin, t(:,k), rho(:,k), qcn(1:mgncol,k), qrn(1:mgncol,k), &
+                                      qcic(1:mgncol,k), ncic(1:mgncol,k), &
+                                      qric(1:mgncol,k), nric(1:mgncol,k), lcldm(1:mgncol,k), precip_frac(1:mgncol,k), &
+                                      pgam(1:mgncol,k), lamc(1:mgncol,k), n0r(1:mgncol,k), lamr(1:mgncol,k), &
+                                      proc_rates%qc_out(1:mgncol,k), proc_rates%nc_out(1:mgncol,k), &
+                                      proc_rates%qr_out(1:mgncol,k), proc_rates%nr_out(1:mgncol,k), &
+                                      qctend(1:mgncol,k), nctend(1:mgncol,k), &
+                                      qrtend(1:mgncol,k), nrtend(1:mgncol,k), &
+                                      proc_rates%qctend_TAU_diag(1:mgncol,k), proc_rates%nctend_TAU_diag(1:mgncol,k), &
+                                      proc_rates%qrtend_TAU_diag(1:mgncol,k), proc_rates%nrtend_TAU_diag(1:mgncol,k), &
+                                      proc_rates%scale_qc(1:mgncol,k), proc_rates%scale_nc(1:mgncol,k), &
+                                      proc_rates%scale_qr(1:mgncol,k), proc_rates%scale_nr(1:mgncol,k), &
+                                      proc_rates%amk_c(1:mgncol,k,1:ncd), proc_rates%ank_c(1:mgncol,k,1:ncd), &
+                                      proc_rates%amk_r(1:mgncol,k,1:ncd), proc_rates%ank_r(1:mgncol,k,1:ncd), &
+                                      proc_rates%amk(1:mgncol,k,1:ncd), proc_rates%ank(1:mgncol,k,1:ncd), &
+                                      proc_rates%amk_out(1:mgncol,k,1:ncd), proc_rates%ank_out(1:mgncol,k,1:ncd), &
+                                      proc_rates%gmnnn_lmnnn_TAU(1:mgncol,k), mgncol)
+  else if (trim(warm_rain) == 'emulated') then
 
     call tau_emulate_cloud_rain_interactions(qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), rho(1:mgncol,k), &
-           lamc(1:mgncol,k), lamr(1:mgncol,k), lcldm(1:mgncol,k), n0r(1:mgncol,k), pgam(1:mgncol,k), precip_frac(1:mgncol,k), &
-           qsmall, mgncol, proc_rates%qctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nctend_TAU(1:mgncol,k), &
-           proc_rates%nrtend_TAU(1:mgncol,k))
+          lamc(1:mgncol,k), lamr(1:mgncol,k), lcldm(1:mgncol,k), n0r(1:mgncol,k), pgam(1:mgncol,k), precip_frac(1:mgncol,k), &
+          qsmall, mgncol, proc_rates%qctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nctend_TAU(1:mgncol,k), &
+          proc_rates%nrtend_TAU(1:mgncol,k))
 
     call ML_fixer_calc(mgncol, deltatin, qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), &
-           proc_rates%qctend_TAU(1:mgncol,k),&
-           proc_rates%nctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nrtend_TAU(1:mgncol,k), &
-           proc_rates%ML_fixer(1:mgncol,k), proc_rates%QC_fixer(1:mgncol,k), &
-           proc_rates%NC_fixer(1:mgncol,k), proc_rates%QR_fixer(1:mgncol,k), proc_rates%NR_fixer(1:mgncol,k))
+          proc_rates%qctend_TAU(1:mgncol,k),&
+          proc_rates%nctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nrtend_TAU(1:mgncol,k), &
+          proc_rates%ML_fixer(1:mgncol,k), proc_rates%QC_fixer(1:mgncol,k), &
+          proc_rates%NC_fixer(1:mgncol,k), proc_rates%QR_fixer(1:mgncol,k), proc_rates%NR_fixer(1:mgncol,k))
+  end if
 !-- TAU
 
   call snow_self_aggregation(t, rho, asn, rhosn, qsic, nsic, nsagg, mgncol*nlev)
@@ -2200,7 +2205,7 @@ subroutine micro_pumas_tend ( &
 
   call heterogeneous_rain_freezing(t, qric, nric, lamr, mnuccr, nnuccr, mgncol*nlev)
 
-  if (do_sb_physics) then
+  if (trim(warm_rain) == 'sb2001') then
      call sb2001v2_accre_cld_water_rain(qcic, ncic, qric, rho, relvar, pra, npra, mgncol*nlev)
   else
 
@@ -2741,13 +2746,21 @@ subroutine micro_pumas_tend ( &
                   qmultg(i,k)+pgsacw(i,k))*lcldm(i,k)+ &
              (mnuccr(i,k)+pracs(i,k)+mnuccri(i,k)+pracg(i,k)+pgracs(i,k)+qmultrg(i,k))*precip_frac(i,k)+ &
                   berg(i,k))*xlf)
-!CACNOTE - This needs to be controlled via a namelist setting
-!        qctend(i,k) = qctend(i,k)+ &
-!             (-pra(i,k)-prc(i,k)-mnuccc(i,k)-mnucct(i,k)-msacwi(i,k)- &
-!             psacws(i,k)-bergs(i,k)-qmultg(i,k)-psacwg(i,k)-pgsacw(i,k))*lcldm(i,k)-berg(i,k)
-        qctend(i,k) = qctend(i,k)+ proc_rates%qctend_TAU(i,k) + &
+        if (trim(warm_rain) == 'kk2000' .or. trim(warm_rain) == 'sb2001') then
+          qctend(i,k) = qctend(i,k)+ &
+             (-pra(i,k)-prc(i,k)-mnuccc(i,k)-mnucct(i,k)-msacwi(i,k)- &
+             psacws(i,k)-bergs(i,k)-qmultg(i,k)-psacwg(i,k)-pgsacw(i,k))*lcldm(i,k)-berg(i,k)
+!++ TAU
+        else if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+          qctend(i,k) = qctend(i,k)+ proc_rates%qctend_TAU(i,k) + &
              (-mnuccc(i,k)-mnucct(i,k)-msacwi(i,k)- &
              psacws(i,k)-bergs(i,k))*lcldm(i,k)-berg(i,k)
+          proc_rates%qctend_MG2(i,k) = (-pra(i,k)-prc(i,k))*lcldm(i,k)
+        else
+           errstring = 'Invalid value for warm_rain in micro_pumas_tend'
+           return
+        end if
+!-- TAU
 
         if (do_cldice) then
            qitend(i,k) = qitend(i,k)+ &
@@ -2756,16 +2769,20 @@ subroutine micro_pumas_tend ( &
               mnuccd(i,k)+(mnuccri(i,k)+qmultrg(i,k))*precip_frac(i,k)
         end if
 
-!CACNOTE - This needs to be controlled via a namelist setting
-!        qrtend(i,k) = qrtend(i,k)+ &
-!             (pra(i,k)+prc(i,k))*lcldm(i,k)+(pre(i,k)-pracs(i,k)- &
-!             mnuccr(i,k)-mnuccri(i,k)-qmultrg(i,k)-pracg(i,k)-pgracs(i,k))*precip_frac(i,k)
-        qrtend(i,k) = qrtend(i,k)+ proc_rates%qrtend_TAU(i,k)+&
-             (pre(i,k)-pracs(i,k)- &
-             mnuccr(i,k)-mnuccri(i,k))*precip_frac(i,k)
-
+        if (trim(warm_rain) == 'kk2000' .or. trim(warm_rain) == 'sb2001') then
+           qrtend(i,k) = qrtend(i,k)+ &
+              (pra(i,k)+prc(i,k))*lcldm(i,k)+(pre(i,k)-pracs(i,k)- &
+              mnuccr(i,k)-mnuccri(i,k)-qmultrg(i,k)-pracg(i,k)-pgracs(i,k))*precip_frac(i,k)
 !++ TAU
-       proc_rates%qrtend_MG2(i,k) = (pra(i,k)+prc(i,k))*lcldm(i,k)
+        else if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+           qrtend(i,k) = qrtend(i,k)+ proc_rates%qrtend_TAU(i,k)+&
+              (pre(i,k)-pracs(i,k)- &
+              mnuccr(i,k)-mnuccri(i,k))*precip_frac(i,k)
+           proc_rates%qrtend_MG2(i,k) = (pra(i,k)+prc(i,k))*lcldm(i,k)
+        else
+           errstring = 'Invalid value for warm_rain in micro_pumas_tend'
+           return
+        end if
 !-- TAU
 
         if (do_hail.or.do_graupel) then
@@ -2881,16 +2898,20 @@ subroutine micro_pumas_tend ( &
   !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
-!CACNOTE - This needs to be controlled via namelist
-!        nctend(i,k) = nctend(i,k)+&
-!             (-nnuccc(i,k)-nnucct(i,k)-npsacws(i,k)+nsubc(i,k) &
-!             -npra(i,k)-nprc1(i,k)-npsacwg(i,k))*lcldm(i,k)
-        nctend(i,k) = nctend(i,k)+proc_rates%nctend_TAU(i,k)+&
+        if (trim(warm_rain) == 'kk2000' .or. trim(warm_rain) == 'sb2001') then
+           nctend(i,k) = nctend(i,k)+&
+              (-nnuccc(i,k)-nnucct(i,k)-npsacws(i,k)+nsubc(i,k) &
+              -npra(i,k)-nprc1(i,k)-npsacwg(i,k))*lcldm(i,k)
+!++ TAU
+        else if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+           nctend(i,k) = nctend(i,k)+proc_rates%nctend_TAU(i,k)+&
              (-nnuccc(i,k)-nnucct(i,k)-npsacws(i,k)+nsubc(i,k) &
              )*lcldm(i,k)
-
-!++ TAU
-        proc_rates%nctend_MG2(i,k) = (-npra(i,k)-nprc1(i,k)-npsacwg(i,k))*lcldm(i,k)
+           proc_rates%nctend_MG2(i,k) = (-npra(i,k)-nprc1(i,k)-npsacwg(i,k))*lcldm(i,k)
+        else
+           errstring = 'Invalid value for warm_rain in micro_pumas_tend'
+           return
+        end if
 !-- TAU
 
         if (do_cldice) then
@@ -2914,18 +2935,21 @@ subroutine micro_pumas_tend ( &
                 nsagg(i,k)+nnuccr(i,k))*precip_frac(i,k)+nprci(i,k)*icldm(i,k)
         end if
 
-!CACNOTE - This needs to be controlled via namelist setting
-!        nrtend(i,k) = nrtend(i,k)+ &
-!             nprc(i,k)*lcldm(i,k)+(nsubr(i,k)-npracs(i,k)-nnuccr(i,k) &
-!             -nnuccri(i,k)+nragg(i,k)-npracg(i,k)-ngracs(i,k))*precip_frac(i,k)
-        nrtend(i,k) = nrtend(i,k)+proc_rates%nrtend_TAU(i,k)+ &
+        if (trim(warm_rain) == 'kk2000' .or. trim(warm_rain) == 'sb2001') then
+           nrtend(i,k) = nrtend(i,k)+ &
+              nprc(i,k)*lcldm(i,k)+(nsubr(i,k)-npracs(i,k)-nnuccr(i,k) &
+              -nnuccri(i,k)+nragg(i,k)-npracg(i,k)-ngracs(i,k))*precip_frac(i,k)
+!++ TAU
+        else if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+           nrtend(i,k) = nrtend(i,k)+proc_rates%nrtend_TAU(i,k)+ &
              (nsubr(i,k)-npracs(i,k)-nnuccr(i,k) &
              -nnuccri(i,k))*precip_frac(i,k)
-
-!++ TAU
-        proc_rates%nrtend_MG2(i,k) = nprc(i,k)*lcldm(i,k)+nragg(i,k)*precip_frac(i,k)
+           proc_rates%nrtend_MG2(i,k) = nprc(i,k)*lcldm(i,k)+nragg(i,k)*precip_frac(i,k)
+        else
+           errstring = 'Invalid value for warm_rain in micro_pumas_tend'
+           return
+        end if
 !-- TAU
-
 
         !-----------------------------------------------------
         ! convert rain/snow q and N for output to history, note,
@@ -4058,30 +4082,32 @@ end if
         if (qg(i,k)+qgtend(i,k)*deltat.lt.qsmall) ngtend(i,k)=-ng(i,k)*rdeltat
 
 !++ TAU
-!        if(qc(i,k)+qctend(i,k)*deltat.le.0._r8.or.nc(i,k)+nctend(i,k)*deltat.le.0._r8) then
-!           qctend(i,k) = -qc(i,k)/deltat
-!           nctend(i,k) = -nc(i,k)/deltat
-!        end if
-!        if(qr(i,k)+qrtend(i,k)*deltat.le.0._r8.or.nr(i,k)+nrtend(i,k)*deltat.le.0._r8) then
-!           qrtend(i,k) = -qr(i,k)/deltat
-!           nrtend(i,k) = -nr(i,k)/deltat
-!        end if
+       if (trim(warm_rain) == 'tau') then
+           if(qc(i,k)+qctend(i,k)*deltat.le.0._r8.or.nc(i,k)+nctend(i,k)*deltat.le.0._r8) then
+              qctend(i,k) = -qc(i,k)/deltat
+              nctend(i,k) = -nc(i,k)/deltat
+           end if
+           if(qr(i,k)+qrtend(i,k)*deltat.le.0._r8.or.nr(i,k)+nrtend(i,k)*deltat.le.0._r8) then
+              qrtend(i,k) = -qr(i,k)/deltat
+              nrtend(i,k) = -nr(i,k)/deltat
+           end if
 
-! cap effective radius at 100 microns & 1000 microns for qc & qr
-!       if(qc(i,k)+qctend(i,k)*deltat.gt.0._r8.or.nc(i,k)+nctend(i,k)*deltat.gt.0._r8) then
-!          qc_eff_r = 100.e-6_r8
-!          nc_eff_r = (qc(i,k)+qctend(i,k)*deltat)/(4._r8/3._r8*pi*qc_eff_r**3.*rhow)
-!          if(nc(i,k)+nctend(i,k)*deltat.lt.nc_eff_r) then
-!             nctend(i,k) = (nc_eff_r-nc(i,k))/deltat
-!          end if
-!       end if
-!       if(qr(i,k)+qrtend(i,k)*deltat.gt.0._r8.or.nr(i,k)+nrtend(i,k)*deltat.gt.0._r8) then
-!          qr_eff_r = 1000.e-6_r8
-!          nr_eff_r = (qr(i,k)+qrtend(i,k)*deltat)/(4._r8/3._r8*pi*qr_eff_r**3.*rhow)
-!          if(nr(i,k)+nrtend(i,k)*deltat.lt.nr_eff_r) then
-!             nrtend(i,k) = (nr_eff_r-nc(i,k))/deltat
-!          end if
-!       end if
+          ! cap effective radius at 100 microns & 1000 microns for qc & qr
+          if(qc(i,k)+qctend(i,k)*deltat.gt.0._r8.or.nc(i,k)+nctend(i,k)*deltat.gt.0._r8) then
+             qc_eff_r = 100.e-6_r8
+             nc_eff_r = (qc(i,k)+qctend(i,k)*deltat)/(4._r8/3._r8*pi*qc_eff_r**3.*rhow)
+             if(nc(i,k)+nctend(i,k)*deltat.lt.nc_eff_r) then
+                nctend(i,k) = (nc_eff_r-nc(i,k))/deltat
+             end if
+          end if
+          if(qr(i,k)+qrtend(i,k)*deltat.gt.0._r8.or.nr(i,k)+nrtend(i,k)*deltat.gt.0._r8) then
+             qr_eff_r = 1000.e-6_r8
+             nr_eff_r = (qr(i,k)+qrtend(i,k)*deltat)/(4._r8/3._r8*pi*qr_eff_r**3.*rhow)
+             if(nr(i,k)+nrtend(i,k)*deltat.lt.nr_eff_r) then
+                nrtend(i,k) = (nr_eff_r-nc(i,k))/deltat
+             end if
+          end if
+       end if
 !-- TAU
 
   ! DO STUFF FOR OUTPUT:
@@ -4347,46 +4373,56 @@ end if
 
      end do
   end do
-! TAU check radius
-!  do i=1,mgncol
-!  do k=1,nlev
-!     qc_eff_r = qcn(i,k)+qctend(i,k)*deltatin
-!     nc_eff_r = ncn(i,k)+nctend(i,k)*deltatin
-!     if(qc_eff_r.lt.0._r8) then
-!        write(iulog,*) 'negative qc! ', qc_eff_r, proc_rates%qctend_TAU(i,k), proc_rates%qctend_MG2(i,k), proc_rates%nctend_TAU(i,k), proc_rates%nctend_MG2(i,k)
-!     end if
 
-!     if(nc_eff_r.gt.0._r8) then
-!        qc_eff_r = (qc_eff_r/(4._r8/3._r8*4._r8*pi*rhow*nc_eff_r))**(1._r8/3._r8)*1.e6
-!     end if
-!     if(nc_eff_r.lt.0._r8) then
-!        qc_eff_r = -999._r8
-!     end if
+!++ TAU
+  ! TAU check radius
+  if (trim(warm_rain) == 'tau') then
+  
+     do i=1,mgncol
+        do k=1,nlev
+           qc_eff_r = qcn(i,k)+qctend(i,k)*deltatin
+           nc_eff_r = ncn(i,k)+nctend(i,k)*deltatin
+           if(qc_eff_r.lt.0._r8) then
+              write(iulog,*) 'negative qc! ', qc_eff_r, proc_rates%qctend_TAU(i,k), proc_rates%qctend_MG2(i,k),&
+                              proc_rates%nctend_TAU(i,k), proc_rates%nctend_MG2(i,k)
+           end if
 
-!     if(qc_eff_r.gt.100._r8) then
-!        write(iulog,*) 'qc radius = ', qc_eff_r, proc_rates%qctend_TAU(i,k), proc_rates%qctend_MG2(i,k), proc_rates%nctend_TAU(i,k), proc_rates%nctend_MG2(i,k)
-!     end if
+           if(nc_eff_r.gt.0._r8) then
+              qc_eff_r = (qc_eff_r/(4._r8/3._r8*4._r8*pi*rhow*nc_eff_r))**(1._r8/3._r8)*1.e6
+           end if
+           if(nc_eff_r.lt.0._r8) then
+              qc_eff_r = -999._r8
+           end if
+
+           if(qc_eff_r.gt.100._r8) then
+              write(iulog,*) 'qc radius = ', qc_eff_r, proc_rates%qctend_TAU(i,k), proc_rates%qctend_MG2(i,k), &
+                              proc_rates%nctend_TAU(i,k), proc_rates%nctend_MG2(i,k)
+           end if
 
 
-!     qr_eff_r = qrn(i,k)+qrtend(i,k)*deltatin
-!     nr_eff_r = nrn(i,k)+nrtend(i,k)*deltatin
-!     if(qr_eff_r.lt.0._r8) then
-!        write(iulog,*) 'negative qr! ', qr_eff_r, proc_rates%qrtend_TAU(i,k), proc_rates%qrtend_MG2(i,k), proc_rates%nrtend_TAU(i,k), proc_rates%nrtend_MG2(i,k)
-!     end if
+           qr_eff_r = qrn(i,k)+qrtend(i,k)*deltatin
+           nr_eff_r = nrn(i,k)+nrtend(i,k)*deltatin
+           if(qr_eff_r.lt.0._r8) then
+              write(iulog,*) 'negative qr! ', qr_eff_r, proc_rates%qrtend_TAU(i,k), proc_rates%qrtend_MG2(i,k), &
+                              proc_rates%nrtend_TAU(i,k), proc_rates%nrtend_MG2(i,k)
+           end if
 
-!     if(nr_eff_r.gt.0._r8) then
-!        qr_eff_r = (qr_eff_r/(4._r8/3._r8*4._r8*pi*rhow*nr_eff_r))**(1._r8/3._r8)*1.e6
-!     end if
-!     if(nr_eff_r.lt.0._r8) then
-!        qr_eff_r = -999._r8
-!     end if
+           if(nr_eff_r.gt.0._r8) then
+              qr_eff_r = (qr_eff_r/(4._r8/3._r8*4._r8*pi*rhow*nr_eff_r))**(1._r8/3._r8)*1.e6
+           end if
+           if(nr_eff_r.lt.0._r8) then
+              qr_eff_r = -999._r8
+           end if
 
-!     if(qr_eff_r.gt.100._r8) then
-!        write(iulog,*) 'qr radius = ', qr_eff_r, proc_rates%qrtend_TAU(i,k), proc_rates%qrtend_MG2(i,k), proc_rates%nrtend_TAU(i,k), proc_rates%nrtend_MG2(i,k)
-!     end if
-!  end do
-!  end do
+           if(qr_eff_r.gt.100._r8) then
+              write(iulog,*) 'qr radius = ', qr_eff_r, proc_rates%qrtend_TAU(i,k), proc_rates%qrtend_MG2(i,k), &
+                              proc_rates%nrtend_TAU(i,k), proc_rates%nrtend_MG2(i,k)
+           end if
+        end do
+      end do
+   end if
 
+!-- TAU
   !$acc end parallel
 
   !$acc end data
