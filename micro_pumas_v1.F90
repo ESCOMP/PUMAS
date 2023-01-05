@@ -2205,10 +2205,7 @@ subroutine micro_pumas_tend ( &
 
   call heterogeneous_rain_freezing(t, qric, nric, lamr, mnuccr, nnuccr, mgncol*nlev)
 
-  if (trim(warm_rain) == 'sb2001') then
-     call sb2001v2_accre_cld_water_rain(qcic, ncic, qric, rho, relvar, pra, npra, mgncol*nlev)
-  else
-
+  if (trim(warm_rain) == 'sb2001' .or. trim(warm_rain) == 'kk2000')) then
      !$acc parallel vector_length(VLENS) default(present)
      !$acc loop gang vector collapse(2)
      do k = 1,nlev
@@ -2227,7 +2224,11 @@ subroutine micro_pumas_tend ( &
      end do
      !$acc end parallel
 
-     call accrete_cloud_water_rain(microp_uniform, rtmp, ctmp, ntmp, relvar, accre_enhan, pra, npra, mgncol*nlev)
+     if (trim(warm_rain) == 'sb2001') then
+        call sb2001v2_accre_cld_water_rain(ctmp, ntmp, rtmp, rho, relvar, pra, npra, mgncol*nlev)
+     else
+        call accrete_cloud_water_rain(microp_uniform, rtmp, ctmp, ntmp, relvar, accre_enhan, pra, npra, mgncol*nlev)
+     endif
   endif
 
   !$acc parallel vector_length(VLENS) default(present)
