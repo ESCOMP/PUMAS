@@ -2205,7 +2205,7 @@ subroutine micro_pumas_tend ( &
 
   call heterogeneous_rain_freezing(t, qric, nric, lamr, mnuccr, nnuccr, mgncol*nlev)
 
-  if (trim(warm_rain) == 'sb2001' .or. trim(warm_rain) == 'kk2000')) then
+  if (trim(warm_rain) == 'sb2001' .or. trim(warm_rain) == 'kk2000') then
      !$acc parallel vector_length(VLENS) default(present)
      !$acc loop gang vector collapse(2)
      do k = 1,nlev
