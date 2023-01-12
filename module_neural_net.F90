@@ -37,6 +37,7 @@ contains
         integer :: i, j, num_examples
         real(kind=8) :: alpha, beta
         external :: dgemm
+! CACNOTE - Cleanup this code (remove commented out code?)
         !real(kind=8) :: time_start, time_end
         alpha = 1
         beta = 1

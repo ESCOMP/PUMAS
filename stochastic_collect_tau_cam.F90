@@ -173,6 +173,7 @@ subroutine stochastic_kernel_init
 
      KNN(:,:)=0._r8 ! initialize values
      kkfac=1.5_r8   ! from Zach
+!CACNOTE  - Need to fix the opening and reading of this file
      open(unit=40,file='/glade/u/home/cchen/TAU/input/KBARF',status='old')
 
  941 FORMAT(2X,E12.5)

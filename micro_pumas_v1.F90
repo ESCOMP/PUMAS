@@ -336,6 +336,9 @@ subroutine micro_pumas_init( &
      errstring)
 
   use micro_pumas_utils, only: micro_pumas_utils_init
+  use stochastic_collect_tau_cam, only: stochastic_kernel_init
+  use tau_neural_net_batch, only:  initialize_tau_emulators
+
 
   !-----------------------------------------------------------------------
   !
@@ -522,6 +525,14 @@ subroutine micro_pumas_init( &
   xxls_squared=xxls**2
 
   !$acc update device (xxlv,xxls)
+
+  if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+     call stochastic_kernel_init
+  end if
+
+  if (trim(warm_rain) == 'emulated') then
+      call initialize_tau_emulators
+  end if
 
 end subroutine micro_pumas_init
 

@@ -30,6 +30,7 @@ module tau_neural_net_batch
             integer :: i
             call load_scale_values(neural_net_path // "input_scale_values.csv", num_inputs, input_scale_values)
             call load_scale_values(neural_net_path // "output_scale_values.csv", num_outputs, output_scale_values)
+!CACNOTE - Need to remove or change print statements to iulog writes
             print *, "Input Scale Values"
             do i=1, num_inputs
                 print *, input_scale_values(i, 1), input_scale_values(i, 2)

@@ -90,43 +90,40 @@ use stochastic_collect_tau_cam, only: ncd
   real(r8), allocatable :: nmeltgtot(:,:)        ! change n  due to Melting of graupel
 
   ! TAU diagnostic variables
-  ! CACNOTE - Probably need to get Jack to document what each variable is
-  real(r8), allocatable :: scale_qc(:,:)
-  real(r8), allocatable :: scale_nc(:,:)
-  real(r8), allocatable :: scale_qr(:,:)
-  real(r8), allocatable :: scale_nr(:,:)
-  real(r8), allocatable :: amk_c(:,:,:)
-  real(r8), allocatable :: ank_c(:,:,:)
-  real(r8), allocatable :: amk_r(:,:,:)
-  real(r8), allocatable :: ank_r(:,:,:)
-  real(r8), allocatable :: amk(:,:,:)
-  real(r8), allocatable :: ank(:,:,:)
-  real(r8), allocatable :: amk_out(:,:,:)
-  real(r8), allocatable :: ank_out(:,:,:)
-  real(r8), allocatable :: qc_out(:,:)
-  real(r8), allocatable :: nc_out(:,:)
-  real(r8), allocatable :: qr_out(:,:)
-  real(r8), allocatable :: nr_out(:,:)
-  real(r8), allocatable :: qctend_MG2(:,:)
-  real(r8), allocatable :: nctend_MG2(:,:)
-  real(r8), allocatable :: qrtend_MG2(:,:)
-  real(r8), allocatable :: nrtend_MG2(:,:)
-  real(r8), allocatable :: qctend_TAU(:,:)
-  real(r8), allocatable :: nctend_TAU(:,:)
-  real(r8), allocatable :: qrtend_TAU(:,:)
-  real(r8), allocatable :: nrtend_TAU(:,:)
-  real(r8), allocatable :: qctend_TAU_diag(:,:)
-  real(r8), allocatable :: nctend_TAU_diag(:,:)
-  real(r8), allocatable :: qrtend_TAU_diag(:,:)
-  real(r8), allocatable :: nrtend_TAU_diag(:,:)
-  real(r8), allocatable :: gmnnn_lmnnn_TAU(:,:)
-  real(r8), allocatable :: ML_fixer(:,:)
-  real(r8), allocatable :: QC_fixer(:,:)
-  real(r8), allocatable :: NC_fixer(:,:)
-  real(r8), allocatable :: QR_fixer(:,:)
-  real(r8), allocatable :: NR_fixer(:,:)
-
-
+  real(r8), allocatable :: scale_qc(:,:)      ! TAU scaling factor for liquid mass to ensure conservation
+  real(r8), allocatable :: scale_nc(:,:)       ! TAU scaling factor for liquid number to ensure conservation
+  real(r8), allocatable :: scale_qr(:,:)      ! TAU scaling factor for rain mass to ensure conservation
+  real(r8), allocatable :: scale_nr(:,:)       ! TAU scaling factor for rain_number to ensure conservation
+  real(r8), allocatable :: amk_c(:,:,:)       !TAU cloud liquid mass from bins
+  real(r8), allocatable :: ank_c(:,:,:)      !TAU cloud liquid number from bins
+  real(r8), allocatable :: amk_r(:,:,:)           !TAU cloud rain mass from bins
+  real(r8), allocatable :: ank_r(:,:,:)      !TAU cloud rain number from bins
+  real(r8), allocatable :: amk(:,:,:)        !TAU all liquid mass from bins
+  real(r8), allocatable :: ank(:,:,:)       !TAU all liquid number from bins
+  real(r8), allocatable :: amk_out(:,:,:) !TAU all liquid number from bins output
+  real(r8), allocatable :: ank_out(:,:,:) !TAU all liquid mass from bins output
+  real(r8), allocatable :: qc_out(:,:)      !TAU: output total cloud liquid mass
+  real(r8), allocatable :: nc_out(:,:)     !TAU: output total cloud liquid number
+  real(r8), allocatable :: qr_out(:,:)     !TAU: output total rain mass
+  real(r8), allocatable :: nr_out(:,:)     !TAU: output total cloud rain number
+  real(r8), allocatable :: qctend_MG2(:,:)   !cloud liquid mass tendency due to autoconversion & accretion in MG2
+  real(r8), allocatable :: nctend_MG2(:,:)   !cloud liquid number tendency due to autoconversion & accretion in MG2
+  real(r8), allocatable :: qrtend_MG2(:,:)   !rain mass tendency due to autoconversion & accretion in MG2
+  real(r8), allocatable :: nrtend_MG2(:,:)   !rain number tendency due to autoconversion & accretion in MG2
+  real(r8), allocatable :: qctend_TAU(:,:)   !cloud liquid mass tendency due to autoconversion & accretion from TAU or Emulator code
+  real(r8), allocatable :: nctend_TAU(:,:)   !cloud liquid number tendency due to autoconversion & accretion from TAU or Emulator code
+  real(r8), allocatable :: qrtend_TAU(:,:)   !rain mass tendency due to autoconversion & accretion from TAU or Emulator code
+  real(r8), allocatable :: nrtend_TAU(:,:)   !rain number tendency due to autoconversion & accretion from TAU or Emulatorcode
+  real(r8), allocatable :: qctend_TAU_diag(:,:)   !cloud liquid mass tendency due to autoconversion & accretion from TAU code only
+  real(r8), allocatable :: nctend_TAU_diag(:,:)  ! cloud liquid number tendency due to autoconversion & accretion from TAU code only
+  real(r8), allocatable :: qrtend_TAU_diag(:,:)   !rain mass tendency due to autoconversion & accretion from TAU code only
+  real(r8), allocatable :: nrtend_TAU_diag(:,:)   !rain number tendency due to autoconversion & accretion from TAU code only
+  real(r8), allocatable :: gmnnn_lmnnn_TAU(:,:) ! TAU sum of mass gain and loss from bin code
+  real(r8), allocatable :: ML_fixer(:,:)     !Emulated: frequency of ML fixer is activated
+  real(r8), allocatable :: QC_fixer(:,:)     !Emulated: change in cloud liquid mass due to ML fixer
+  real(r8), allocatable :: NC_fixer(:,:)     !Emulated: change in cloud number number due to ML fixer
+  real(r8), allocatable :: QR_fixer(:,:)     !Emulated: change in rain mass due to ML fixer
+  real(r8), allocatable :: NR_fixer(:,:)     !Emulated: change in rain number due to ML fixer
 
     contains
       procedure :: allocate => proc_rates_allocate
