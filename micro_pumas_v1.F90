@@ -2150,7 +2150,8 @@ subroutine micro_pumas_tend ( &
 
 !++ TAU
   if (trim(warm_rain) == 'tau') then
-     call stochastic_collect_tau_tend(deltatin, t(:,k), rho(:,k), qcn(1:mgncol,k), qrn(1:mgncol,k), &
+     do k=1,nlev
+        call stochastic_collect_tau_tend(deltatin, t(:,k), rho(:,k), qcn(1:mgncol,k), qrn(1:mgncol,k), &
                                       qcic(1:mgncol,k), ncic(1:mgncol,k), &
                                       qric(1:mgncol,k), nric(1:mgncol,k), lcldm(1:mgncol,k), precip_frac(1:mgncol,k), &
                                       pgam(1:mgncol,k), lamc(1:mgncol,k), n0r(1:mgncol,k), lamr(1:mgncol,k), &
@@ -2167,18 +2168,22 @@ subroutine micro_pumas_tend ( &
                                       proc_rates%amk(1:mgncol,k,1:ncd), proc_rates%ank(1:mgncol,k,1:ncd), &
                                       proc_rates%amk_out(1:mgncol,k,1:ncd), proc_rates%ank_out(1:mgncol,k,1:ncd), &
                                       proc_rates%gmnnn_lmnnn_TAU(1:mgncol,k), mgncol)
+     end do
   else if (trim(warm_rain) == 'emulated') then
 
-    call tau_emulate_cloud_rain_interactions(qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), rho(1:mgncol,k), &
+     do k=1,nlev
+        call tau_emulate_cloud_rain_interactions(qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), rho(1:mgncol,k), &
           lamc(1:mgncol,k), lamr(1:mgncol,k), lcldm(1:mgncol,k), n0r(1:mgncol,k), pgam(1:mgncol,k), precip_frac(1:mgncol,k), &
           qsmall, mgncol, proc_rates%qctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nctend_TAU(1:mgncol,k), &
           proc_rates%nrtend_TAU(1:mgncol,k))
 
-    call ML_fixer_calc(mgncol, deltatin, qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), &
+        call ML_fixer_calc(mgncol, deltatin, qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), &
           proc_rates%qctend_TAU(1:mgncol,k),&
           proc_rates%nctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nrtend_TAU(1:mgncol,k), &
           proc_rates%ML_fixer(1:mgncol,k), proc_rates%QC_fixer(1:mgncol,k), &
           proc_rates%NC_fixer(1:mgncol,k), proc_rates%QR_fixer(1:mgncol,k), proc_rates%NR_fixer(1:mgncol,k))
+     end do
+
   end if
 !-- TAU
 
