@@ -336,7 +336,7 @@ subroutine micro_pumas_init( &
      errstring)
 
   use micro_pumas_utils, only: micro_pumas_utils_init
-  use stochastic_collect_tau_cam, only: stochastic_kernel_init
+  use pumas_stochastic_collect_tau, only: pumas_stochastic_kernel_init
   use tau_neural_net_batch, only:  initialize_tau_emulators
 
 
@@ -526,10 +526,6 @@ subroutine micro_pumas_init( &
 
   !$acc update device (xxlv,xxls)
 
-  if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
-     call stochastic_kernel_init
-  end if
-
   if (trim(warm_rain) == 'emulated') then
       call initialize_tau_emulators
   end if
@@ -590,7 +586,7 @@ subroutine micro_pumas_tend ( &
      frzimm,             frzcnt,             frzdep)
 
 !++ TAU
-  use stochastic_collect_tau_cam, only: ncd, stochastic_collect_tau_tend
+  use pumas_stochastic_collect_tau, only: ncd, pumas_stochastic_collect_tau_tend
   use tau_neural_net_batch, only: tau_emulate_cloud_rain_interactions
   use cam_logfile,    only: iulog
   use ML_fixer_check, only: ML_fixer_calc
@@ -2151,7 +2147,7 @@ subroutine micro_pumas_tend ( &
 !++ TAU
   if (trim(warm_rain) == 'tau') then
      do k=1,nlev
-        call stochastic_collect_tau_tend(deltatin, t(:,k), rho(:,k), qcn(1:mgncol,k), qrn(1:mgncol,k), &
+        call pumas_stochastic_collect_tau_tend(deltatin, t(:,k), rho(:,k), qcn(1:mgncol,k), qrn(1:mgncol,k), &
                                       qcic(1:mgncol,k), ncic(1:mgncol,k), &
                                       qric(1:mgncol,k), nric(1:mgncol,k), lcldm(1:mgncol,k), precip_frac(1:mgncol,k), &
                                       pgam(1:mgncol,k), lamc(1:mgncol,k), n0r(1:mgncol,k), lamr(1:mgncol,k), &
