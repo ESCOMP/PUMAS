@@ -247,6 +247,82 @@ contains
 
     end subroutine init_neural_net
 
+    subroutine load_quantile_scale_values(filename, scale_values)
+        character(len = *), intent(in) :: filename
+        real(kind = 8), allocatable, intent(out) :: scale_values(:, :)
+        real(kind = 8), allocatable :: temp_scale_values(:, :)
+        character(len=8) :: quantile_dim_name = "quantile" 
+        character(len=7) :: column_dim_name = "column"
+        character(len=9) :: ref_var_name = "reference" 
+        character(len=9) :: quant_var_name = "quantiles"
+        integer :: ncid, quantile_id, column_id, quantile_dim, column_dim, ref_var_id, quant_var_id
+        call check(nf90_open(filename, nf90_nowrite, ncid))
+        call check(nf90_inq_dimid(ncid, quantile_dim_name, quantile_id))
+        call check(nf90_inq_dimid(ncid, column_dim_name, column_id))
+        call check(nf90_inquire_dimension(ncid, quantile_id, &
+                quantile_dim_name, quantile_dim))
+        call check(nf90_inquire_dimension(ncid, column_id, &
+                column_dim_name, column_dim))
+        allocate(scale_values(quantile_dim, column_dim + 1))
+        allocate(temp_scale_values(column_dim + 1, quantile_dim))
+        call check(nf90_inq_varid(ncid, ref_var_name, ref_var_id))
+        print*, "load ref var"
+        call check(nf90_get_var(ncid, ref_var_id, temp_scale_values(1, :)))
+        call check(nf90_inq_varid(ncid, quant_var_name, quant_var_id))
+        print*, "load quant var"
+        call check(nf90_get_var(ncid, quant_var_id, temp_scale_values(2:column_dim + 1, :)))
+        scale_values = transpose(temp_scale_values)
+        call check(nf90_close(ncid))
+    end subroutine load_quantile_scale_values
+
+    subroutine linear_interp(x_in, xs, ys, y_in)
+        real(kind = 8), dimension(:), intent(in) :: x_in
+        real(kind = 8), dimension(:), intent(in) :: xs
+        real(kind = 8), dimension(:), intent(in) :: ys
+        real(kind = 8), dimension(size(x_in, 1)), intent(out) :: y_in
+        integer :: i, j, x_in_size, xs_size, x_pos
+        x_in_size = size(x_in, 1)
+        xs_size = size(xs, 1)
+        do i = 1, x_in_size
+            if (x_in(i) <= xs(1)) then
+                y_in(i) = ys(1)
+            else if (x_in(i) >= xs(xs_size)) then
+                y_in(i) = ys(xs_size)
+            else
+                j = 1
+                do while (xs(j) < x_in(i))
+                    j = j + 1
+                end do
+                y_in(i) = (ys(j - 1) * (xs(j) - x_in(i)) + ys(j) * (x_in(i) - xs(j - 1))) / (xs(j) - xs(j - 1))
+            end if
+        end do
+    end subroutine linear_interp
+
+    subroutine quantile_transform(x_inputs, scale_values, x_transformed)
+        real(kind = 8), dimension(:, :), intent(in) :: x_inputs
+        real(kind = 8), dimension(:, :), intent(in) :: scale_values
+        real(kind = 8), dimension(size(x_inputs, 1), size(x_inputs, 2)), intent(out) :: x_transformed
+        integer :: j, x_size, scale_size
+        x_size = size(x_inputs, 1)
+        scale_size = size(scale_values, 1)
+        do j = 1, size(x_inputs, 2)
+            call linear_interp(x_inputs(:, j), scale_values(:, j + 1), &
+                    scale_values(:, 1), x_transformed(:, j))
+        end do
+    end subroutine quantile_transform
+
+    subroutine quantile_inv_transform(x_inputs, scale_values, x_transformed)
+        real(kind = 8), dimension(:, :), intent(in) :: x_inputs
+        real(kind = 8), dimension(:, :), intent(in) :: scale_values
+        real(kind = 8), dimension(size(x_inputs, 1), size(x_inputs, 2)), intent(out) :: x_transformed
+        integer :: j, x_size, scale_size
+        x_size = size(x_inputs, 1)
+        scale_size = size(scale_values, 1)
+        do j = 1, size(x_inputs, 2)
+            call linear_interp(x_inputs(:, j), scale_values(:, 1), scale_values(:, j + 1), x_transformed(:, j))
+        end do
+    end subroutine quantile_inv_transform
+
     subroutine neural_net_predict(input, neural_net_model, prediction)
         ! neural_net_predict
         ! Description: generate prediction from neural network model for an arbitrary set of input values

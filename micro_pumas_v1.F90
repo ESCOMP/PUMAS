@@ -337,8 +337,7 @@ subroutine micro_pumas_init( &
 
   use micro_pumas_utils, only: micro_pumas_utils_init
   use pumas_stochastic_collect_tau, only: pumas_stochastic_kernel_init
-  use tau_neural_net_batch, only:  initialize_tau_emulators
-
+  use tau_neural_net_quantile, only:  initialize_tau_emulators
 
   !-----------------------------------------------------------------------
   !
@@ -587,7 +586,7 @@ subroutine micro_pumas_tend ( &
 
 !++ TAU
   use pumas_stochastic_collect_tau, only: ncd, pumas_stochastic_collect_tau_tend
-  use tau_neural_net_batch, only: tau_emulate_cloud_rain_interactions
+  use tau_neural_net_quantile, only: tau_emulate_cloud_rain_interactions
   use cam_logfile,    only: iulog
   use ML_fixer_check, only: ML_fixer_calc
 !-- TAU
@@ -2169,8 +2168,8 @@ subroutine micro_pumas_tend ( &
 
      do k=1,nlev
         call tau_emulate_cloud_rain_interactions(qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), rho(1:mgncol,k), &
-          lamc(1:mgncol,k), lamr(1:mgncol,k), lcldm(1:mgncol,k), n0r(1:mgncol,k), pgam(1:mgncol,k), precip_frac(1:mgncol,k), &
-          qsmall, mgncol, proc_rates%qctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nctend_TAU(1:mgncol,k), &
+          lcldm(1:mgncol,k), precip_frac(1:mgncol,k), mgncol, &
+          qsmall, proc_rates%qctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nctend_TAU(1:mgncol,k), &
           proc_rates%nrtend_TAU(1:mgncol,k))
 
         call ML_fixer_calc(mgncol, deltatin, qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), &
