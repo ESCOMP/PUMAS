@@ -4412,12 +4412,11 @@ end if
 
            qr_eff_r = qrn(i,k)+qrtend(i,k)*deltatin
            nr_eff_r = nrn(i,k)+nrtend(i,k)*deltatin
-           if(qr_eff_r.lt.0._r8) then
+           if(qr_eff_r.lt.-1._r8*qsmall) then
               write(iulog,*) 'negative qr! ', qr_eff_r, proc_rates%qrtend_TAU(i,k), proc_rates%qrtend_MG2(i,k), &
                               proc_rates%nrtend_TAU(i,k), proc_rates%nrtend_MG2(i,k)
            end if
-
-           if(nr_eff_r.gt.0._r8) then
+           if((nr_eff_r.gt.0._r8) .and. (qr_eff_r .gt. 0)) then
               qr_eff_r = (qr_eff_r/(4._r8/3._r8*4._r8*pi*rhow*nr_eff_r))**(1._r8/3._r8)*1.e6
            end if
            if(nr_eff_r.lt.0._r8) then
