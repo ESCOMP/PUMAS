@@ -4392,12 +4392,12 @@ end if
         do k=1,nlev
            qc_eff_r = qcn(i,k)+qctend(i,k)*deltatin
            nc_eff_r = ncn(i,k)+nctend(i,k)*deltatin
-           if(qc_eff_r.lt.0._r8) then
+           if(qc_eff_r.lt.-1._r8*qsmall) then
               write(iulog,*) 'negative qc! ', qc_eff_r, proc_rates%qctend_TAU(i,k), proc_rates%qctend_MG2(i,k),&
                               proc_rates%nctend_TAU(i,k), proc_rates%nctend_MG2(i,k)
            end if
 
-           if(nc_eff_r.gt.0._r8) then
+           if((nc_eff_r.gt.0._r8) .and. (qc_eff_r .gt. 0)) then
               qc_eff_r = (qc_eff_r/(4._r8/3._r8*4._r8*pi*rhow*nc_eff_r))**(1._r8/3._r8)*1.e6
            end if
            if(nc_eff_r.lt.0._r8) then
@@ -4423,10 +4423,11 @@ end if
               qr_eff_r = -999._r8
            end if
 
-           if(qr_eff_r.gt.100._r8) then
-              write(iulog,*) 'qr radius = ', qr_eff_r, proc_rates%qrtend_TAU(i,k), proc_rates%qrtend_MG2(i,k), &
-                              proc_rates%nrtend_TAU(i,k), proc_rates%nrtend_MG2(i,k)
-           end if
+! CACNOTE - COMMENTED OUT AS WAS FLOODING LOG FILES FOR TAU RUNS
+!           if(qr_eff_r.gt.100._r8) then
+!              write(iulog,*) 'qr radius = ', qr_eff_r, proc_rates%qrtend_TAU(i,k), proc_rates%qrtend_MG2(i,k), &
+!                              proc_rates%nrtend_TAU(i,k), proc_rates%nrtend_MG2(i,k)
+!           end if
         end do
       end do
    end if
