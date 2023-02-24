@@ -178,6 +178,7 @@ contains
         character (len=12) :: layer_out_dim_name
         character (len=10) :: activation_name
         real (kind=r8), allocatable :: temp_weights(:, :)
+!CACNOTE - Check how CAM handles opening netCDF files - does anything need to change here?
         ! Open netCDF file
         call check(nf90_open(filename, nf90_nowrite, ncid))
         ! Get the number of layers in the neural network

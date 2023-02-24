@@ -1,7 +1,9 @@
 module tau_neural_net_quantile
+!CACNOTE - Need to add the things being used
     use module_neural_net
     implicit none
     integer, parameter, public :: i8 = selected_int_kind(18)
+!CACNOTE - Need to make this a namelist which is passed in
     character(len = *), parameter :: neural_net_path = "/glade/work/dgagne/cam_mp_run6_quantile_nn/"
     integer, parameter :: num_inputs = 7
     integer, parameter :: num_outputs = 3
