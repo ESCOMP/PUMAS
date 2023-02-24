@@ -9,13 +9,13 @@ module module_neural_net
         integer :: output_size
         integer :: batch_size
         integer :: activation
-        real(kind=8), allocatable :: weights(:, :)
-        real(kind=8), allocatable :: bias(:)
+        real(kind=r8), allocatable :: weights(:, :)
+        real(kind=r8), allocatable :: bias(:)
     end type Dense
 
     type DenseData
-        real(kind=8), allocatable :: input(:, :)
-        real(kind=8), allocatable :: output(:, :)
+        real(kind=r8), allocatable :: input(:, :)
+        real(kind=r8), allocatable :: output(:, :)
     end type DenseData
 
 contains
@@ -30,15 +30,15 @@ contains
         !
         ! Output:
         ! output: output of the dense layer as a 2D array with shape (number of inputs, number of neurons)
-        real(kind=8), dimension(:, :), intent(in) :: input
+        real(kind=r8), dimension(:, :), intent(in) :: input
         type(Dense), intent(in) :: layer
-        real(kind=8), dimension(size(input, 1), layer%output_size), intent(out) :: output
-        real(kind=8), dimension(size(input, 1), layer%output_size) :: dense_output
+        real(kind=r8), dimension(size(input, 1), layer%output_size), intent(out) :: output
+        real(kind=r8), dimension(size(input, 1), layer%output_size) :: dense_output
         integer :: i, j, num_examples
-        real(kind=8) :: alpha, beta
+        real(kind=r8) :: alpha, beta
         external :: dgemm
 ! CACNOTE - Cleanup this code (remove commented out code?)
-        !real(kind=8) :: time_start, time_end
+        !real(kindr=8) :: time_start, time_end
         alpha = 1
         beta = 1
         dense_output = 0
@@ -83,14 +83,14 @@ contains
         !           linear
         ! Output:
         ! output: Array of the same dimensions as input with the nonlinear activation applied.
-        real(kind=8), dimension(:, :), intent(in) :: input
+        real(kind=r8), dimension(:, :), intent(in) :: input
         integer, intent(in) :: activation_type
-        real(kind=8), dimension(size(input, 1), size(input, 2)), intent(out) :: output
+        real(kind=r8), dimension(size(input, 1), size(input, 2)), intent(out) :: output
 
-        real(kind=8), dimension(size(input, 1)) :: softmax_sum
-        real(kind=8), parameter :: selu_alpha = 1.6732
-        real(kind=8), parameter :: selu_lambda = 1.0507
-        real(kind=8), parameter :: zero = 0.0
+        real(kind=r8), dimension(size(input, 1)) :: softmax_sum
+        real(kind=r8), parameter :: selu_alpha = 1.6732
+        real(kind=r8), parameter :: selu_lambda = 1.0507
+        real(kind=r8), parameter :: zero = 0.0
         integer :: i, j
         select case (activation_type)
             case (0)
@@ -118,7 +118,7 @@ contains
                             output(i, j) = input(i, j)
                         else
                             output(i, j) = dexp(input(i, j))-1.0_r8
-                        end if 
+                        end if
                     end do
                 end do
             case (4)
@@ -126,7 +126,7 @@ contains
                 do i=1,size(input, 1)
                     do j=1, size(input,2)
                         if (input(i, j) >= 0) then
-                            output(i, j) = input(i, j) 
+                            output(i, j) = input(i, j)
                         else
                             output(i, j) = selu_lambda * ( selu_alpha * dexp(input(i, j)) - selu_alpha)
                         end if
@@ -137,7 +137,7 @@ contains
                 output = tanh(input)
             case (6)
              !   print*, "softmax"
-                softmax_sum = sum(dexp(input), dim=2) 
+                softmax_sum = sum(dexp(input), dim=2)
                 do i=1, size(input, 1)
                     do j=1, size(input, 2)
                         output(i, j) = dexp(input(i, j)) / softmax_sum(i)
@@ -177,7 +177,7 @@ contains
         character (len=11) :: layer_in_dim_name
         character (len=12) :: layer_out_dim_name
         character (len=10) :: activation_name
-        real (kind=8), allocatable :: temp_weights(:, :)
+        real (kind=r8), allocatable :: temp_weights(:, :)
         ! Open netCDF file
         call check(nf90_open(filename, nf90_nowrite, ncid))
         ! Get the number of layers in the neural network
@@ -249,11 +249,11 @@ contains
 
     subroutine load_quantile_scale_values(filename, scale_values)
         character(len = *), intent(in) :: filename
-        real(kind = 8), allocatable, intent(out) :: scale_values(:, :)
-        real(kind = 8), allocatable :: temp_scale_values(:, :)
-        character(len=8) :: quantile_dim_name = "quantile" 
+        real(kind = r8), allocatable, intent(out) :: scale_values(:, :)
+        real(kind = r8), allocatable :: temp_scale_values(:, :)
+        character(len=8) :: quantile_dim_name = "quantile"
         character(len=7) :: column_dim_name = "column"
-        character(len=9) :: ref_var_name = "reference" 
+        character(len=9) :: ref_var_name = "reference"
         character(len=9) :: quant_var_name = "quantiles"
         integer :: ncid, quantile_id, column_id, quantile_dim, column_dim, ref_var_id, quant_var_id
         call check(nf90_open(filename, nf90_nowrite, ncid))
@@ -276,10 +276,10 @@ contains
     end subroutine load_quantile_scale_values
 
     subroutine linear_interp(x_in, xs, ys, y_in)
-        real(kind = 8), dimension(:), intent(in) :: x_in
-        real(kind = 8), dimension(:), intent(in) :: xs
-        real(kind = 8), dimension(:), intent(in) :: ys
-        real(kind = 8), dimension(size(x_in, 1)), intent(out) :: y_in
+        real(kind = r8), dimension(:), intent(in) :: x_in
+        real(kind = r8), dimension(:), intent(in) :: xs
+        real(kind = r8), dimension(:), intent(in) :: ys
+        real(kind = r8), dimension(size(x_in, 1)), intent(out) :: y_in
         integer :: i, j, x_in_size, xs_size, x_pos
         x_in_size = size(x_in, 1)
         xs_size = size(xs, 1)
@@ -299,9 +299,9 @@ contains
     end subroutine linear_interp
 
     subroutine quantile_transform(x_inputs, scale_values, x_transformed)
-        real(kind = 8), dimension(:, :), intent(in) :: x_inputs
-        real(kind = 8), dimension(:, :), intent(in) :: scale_values
-        real(kind = 8), dimension(size(x_inputs, 1), size(x_inputs, 2)), intent(out) :: x_transformed
+        real(kind = r8), dimension(:, :), intent(in) :: x_inputs
+        real(kind = r8), dimension(:, :), intent(in) :: scale_values
+        real(kind = r8), dimension(size(x_inputs, 1), size(x_inputs, 2)), intent(out) :: x_transformed
         integer :: j, x_size, scale_size
         x_size = size(x_inputs, 1)
         scale_size = size(scale_values, 1)
@@ -312,9 +312,9 @@ contains
     end subroutine quantile_transform
 
     subroutine quantile_inv_transform(x_inputs, scale_values, x_transformed)
-        real(kind = 8), dimension(:, :), intent(in) :: x_inputs
-        real(kind = 8), dimension(:, :), intent(in) :: scale_values
-        real(kind = 8), dimension(size(x_inputs, 1), size(x_inputs, 2)), intent(out) :: x_transformed
+        real(kind = r8), dimension(:, :), intent(in) :: x_inputs
+        real(kind = r8), dimension(:, :), intent(in) :: scale_values
+        real(kind = r8), dimension(size(x_inputs, 1), size(x_inputs, 2)), intent(out) :: x_transformed
         integer :: j, x_size, scale_size
         x_size = size(x_inputs, 1)
         scale_size = size(scale_values, 1)
@@ -331,9 +331,9 @@ contains
         ! input (input): 2D array of input values. Each row is a separate instance and each column is a model input.
         ! neural_net_model (input): Array of type(Dense) objects
         ! prediction (output): The prediction of the neural network as a 2D array of dimension (examples, outputs)
-        real(kind=8), intent(in) :: input(:, :)
+        real(kind=r8), intent(in) :: input(:, :)
         type(Dense), intent(inout) :: neural_net_model(:)
-        real(kind=8), intent(out) :: prediction(size(input, 1), neural_net_model(size(neural_net_model))%output_size)
+        real(kind=r8), intent(out) :: prediction(size(input, 1), neural_net_model(size(neural_net_model))%output_size)
         integer :: bi, i, j, num_layers
         integer :: batch_size
         integer :: input_size
@@ -382,9 +382,9 @@ contains
         !   scale_values: 2D array where rows are the input variables and columns are mean and standard deviation
         ! Output:
         !   transformed_data: 2D array with the same shape as input_data containing the transformed values.
-        real(8), intent(in) :: input_data(:, :)
-        real(8), intent(in) :: scale_values(:, :)
-        real(8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
+        real(r8), intent(in) :: input_data(:, :)
+        real(r8), intent(in) :: scale_values(:, :)
+        real(r8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
         integer :: i
         if (size(input_data, 2) /= size(scale_values, 1)) then
             print *, "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
@@ -394,11 +394,11 @@ contains
             transformed_data(:, i) = (input_data(:, i) - scale_values(i, 1)) / scale_values(i, 2)
         end do
     end subroutine standard_scaler_transform
-    
+
     subroutine load_scale_values(filename, num_inputs, scale_values)
         character(len=*), intent(in) :: filename
         integer, intent(in) :: num_inputs
-        real(8), intent(out) :: scale_values(num_inputs, 2)
+        real(r8), intent(out) :: scale_values(num_inputs, 2)
         character(len=40) :: row_name
         integer :: isu, i
         isu = 2
@@ -410,7 +410,7 @@ contains
         close(isu)
     end subroutine load_scale_values
 
-    
+
     subroutine standard_scaler_inverse_transform(input_data, scale_values, transformed_data)
         ! Perform inverse z-score normalization of input_data table. Equivalent to scikit-learn StandardScaler.
         !
@@ -419,9 +419,9 @@ contains
         !   scale_values: 2D array where rows are the input variables and columns are mean and standard deviation
         ! Output:
         !   transformed_data: 2D array with the same shape as input_data containing the transformed values.
-        real(8), intent(in) :: input_data(:, :)
-        real(8), intent(in) :: scale_values(:, :)
-        real(8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
+        real(r8), intent(in) :: input_data(:, :)
+        real(r8), intent(in) :: scale_values(:, :)
+        real(r8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
         integer :: i
         if (size(input_data, 2) /= size(scale_values, 1)) then
             print *, "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
@@ -440,9 +440,9 @@ contains
         !   scale_values: 2D array where rows are the input variables and columns are min and max.
         ! Output:
         !   transformed_data: 2D array with the same shape as input_data containing the transformed values.
-        real(8), intent(in) :: input_data(:, :)
-        real(8), intent(in) :: scale_values(:, :)
-        real(8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
+        real(r8), intent(in) :: input_data(:, :)
+        real(r8), intent(in) :: scale_values(:, :)
+        real(r8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
         integer :: i
         if (size(input_data, 2) /= size(scale_values, 1)) then
             print *, "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
@@ -461,9 +461,9 @@ contains
         !   scale_values: 2D array where rows are the input variables and columns are min and max.
         ! Output:
         !   transformed_data: 2D array with the same shape as input_data containing the transformed values.
-        real(8), intent(in) :: input_data(:, :)
-        real(8), intent(in) :: scale_values(:, :)
-        real(8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
+        real(r8), intent(in) :: input_data(:, :)
+        real(r8), intent(in) :: scale_values(:, :)
+        real(r8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
         integer :: i
         if (size(input_data, 2) /= size(scale_values, 1)) then
             print *, "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
@@ -485,7 +485,7 @@ contains
 
     subroutine print_2d_array(input_array)
         ! Print 2D array in pretty format
-        real(kind=8), intent(in) :: input_array(:, :)
+        real(kind=r8), intent(in) :: input_array(:, :)
         integer :: i, j
         do i=1, size(input_array, 1)
             do j=1, size(input_array, 2)
