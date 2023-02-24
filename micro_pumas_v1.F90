@@ -2038,32 +2038,29 @@ subroutine micro_pumas_tend ( &
   !$acc end parallel
 
   if (do_cldice) then
-
-     ! heterogeneous freezing of cloud water
-     !----------------------------------------------
-     call immersion_freezing(microp_uniform, t, pgam, lamc, qcic, ncic, relvar, mnuccc, nnuccc, mgncol*nlev)
-
-     ! make sure number of droplets frozen does not exceed available ice nuclei concentration
-     ! this prevents 'runaway' droplet freezing
-
-     !$acc parallel vector_length(VLENS) default(present)
-     !$acc loop gang vector collapse(2)
-     do k=1,nlev
-        do i=1,mgncol
-           if (qcic(i,k).ge.qsmall .and. t(i,k).lt.269.15_r8 .and. &
-               nnuccc(i,k)*lcldm(i,k).gt.nnuccd(i,k)) then
-               ! scale mixing ratio of droplet freezing with limit
-               mnuccc(i,k)=mnuccc(i,k)*(nnuccd(i,k)/(nnuccc(i,k)*lcldm(i,k)))
-               nnuccc(i,k)=nnuccd(i,k)/lcldm(i,k)
-           else
-               mnuccc(i,k)=0._r8
-               nnuccc(i,k)=0._r8
-           end if
-        end do
-     end do
-     !$acc end parallel
-
      if (.not. use_hetfrz_classnuc) then
+        ! heterogeneous freezing of cloud water
+        !----------------------------------------------
+        call immersion_freezing(microp_uniform, t, pgam, lamc, qcic, ncic, relvar, mnuccc, nnuccc, mgncol*nlev)
+
+        ! make sure number of droplets frozen does not exceed available ice nuclei concentration
+        ! this prevents 'runaway' droplet freezing
+
+        !$acc parallel vector_length(VLENS) default(present)
+        !$acc loop gang vector collapse(2)
+        do k=1,nlev
+           do i=1,mgncol
+              if (qcic(i,k).ge.qsmall .and. t(i,k).lt.269.15_r8 .and. &
+                   nnuccc(i,k)*lcldm(i,k).gt.nnuccd(i,k)) then
+                 ! scale mixing ratio of droplet freezing with limit
+                 mnuccc(i,k)=mnuccc(i,k)*(nnuccd(i,k)/(nnuccc(i,k)*lcldm(i,k)))
+                 nnuccc(i,k)=nnuccd(i,k)/lcldm(i,k)
+              end if
+              mnudep(i,k)=0._r8
+              nnudep(i,k)=0._r8
+           end do
+        end do
+        !$acc end parallel
 
         call contact_freezing(microp_uniform, t, p, rndst, nacon, pgam, lamc, qcic, ncic, &
                               relvar, mnucct, nnucct, mgncol*nlev, mdust)
@@ -2079,11 +2076,15 @@ subroutine micro_pumas_tend ( &
               mi0l(i,k) = qcic(i,k)/max(ncic(i,k), 1.0e6_r8/rho(i,k))
               mi0l(i,k) = max(mi0l_min, mi0l(i,k))
               if (qcic(i,k) >= qsmall) then
+                 nnuccc(i,k) = frzimm(i,k)*1.0e6_r8/rho(i,k)
+                 mnuccc(i,k) = nnuccc(i,k)*mi0l(i,k)
                  nnucct(i,k) = frzcnt(i,k)*1.0e6_r8/rho(i,k)
                  mnucct(i,k) = nnucct(i,k)*mi0l(i,k)
                  nnudep(i,k) = frzdep(i,k)*1.0e6_r8/rho(i,k)
                  mnudep(i,k) = nnudep(i,k)*mi0
               else
+                 nnuccc(i,k) = 0._r8
+                 mnuccc(i,k) = 0._r8
                  nnucct(i,k) = 0._r8
                  mnucct(i,k) = 0._r8
                  nnudep(i,k) = 0._r8
@@ -2365,6 +2366,7 @@ subroutine micro_pumas_tend ( &
               mnuccd(i,k) = dum*mnuccd(i,k)/dum1
               vap_dep(i,k) = dum*vap_dep(i,k)/dum1
               vap_deps(i,k) = dum*vap_deps(i,k)/dum1
+
            end if
         end if
      end do
