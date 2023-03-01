@@ -3241,18 +3241,17 @@ SUBROUTINE init_lookup_table(lkuptable_filename)
     !character(100) :: lkuptable_filename = "/glade/p/work/katec/mg3work/lookup_table.dat"
     !character(100) :: lkuptable_filename = "./lookup_table.dat"
     character(len=256), intent(in) :: lkuptable_filename 
-    integer :: i,j,k,ii,jj,kk, tt
+    integer :: i,j,k,ii,jj,kk, tt, unitn
     real(r8)    :: dum
 
-    ! ++ trude
-    open(unit=10,file=lkuptable_filename,status='old')
+    open(newunit=unitn,file=lkuptable_filename,status='old')
 
     !------------------------------------------------------------------------------------------!
     ! read in ice microphysics table
      do tt = 1, tsize
        do i = 1,isize
           do k = 1,jsize
-             read(10,*) dum,dum,itab(tt,i,k,1),itab(tt,i,k,2),             &
+             read(unitn,*) dum,dum,itab(tt,i,k,1),itab(tt,i,k,2),             &
                   itab(tt,i,k,3),itab(tt,i,k,4),itab(tt,i,k,5),            &
                   itab(tt,i,k,6),itab(tt,i,k,7),itab(tt,i,k,8),            &
                   itab(tt,i,k,13),itab(tt,i,k,9),itab(tt,i,k,10),          &
@@ -3263,7 +3262,7 @@ SUBROUTINE init_lookup_table(lkuptable_filename)
        do i = 1,isize
           do k = 1,jsize
              do j = 1,rcollsize
-                read(10,*) dum,dum,dum,itabcoll(tt,i,k,j,1),                  &
+                read(unitn,*) dum,dum,dum,itabcoll(tt,i,k,j,1),                  &
                      itabcoll(tt,i,k,j,2),dum
                 itabcoll(tt,i,k,j,1) = dlog10(itabcoll(tt,i,k,j,1))
                 itabcoll(tt,i,k,j,2) = dlog10(itabcoll(tt,i,k,j,2))
@@ -3272,7 +3271,7 @@ SUBROUTINE init_lookup_table(lkuptable_filename)
        end do
     end do
 
-    close(unit=10)
+    close(unitn)
 
 END SUBROUTINE init_lookup_table
 

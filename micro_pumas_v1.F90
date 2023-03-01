@@ -2039,7 +2039,7 @@ subroutine micro_pumas_tend ( &
 
   if (do_cldice) then
      if (.not. use_hetfrz_classnuc) then
-        ! heterogeneous freezing of cloud water
+        ! heterogeneous freezing of cloud water via Bigg, 1953
         !----------------------------------------------
         call immersion_freezing(microp_uniform, t, pgam, lamc, qcic, ncic, relvar, mnuccc, nnuccc, mgncol*nlev)
 
@@ -2056,8 +2056,6 @@ subroutine micro_pumas_tend ( &
                  mnuccc(i,k)=mnuccc(i,k)*(nnuccd(i,k)/(nnuccc(i,k)*lcldm(i,k)))
                  nnuccc(i,k)=nnuccd(i,k)/lcldm(i,k)
               end if
-              mnudep(i,k)=0._r8
-              nnudep(i,k)=0._r8
            end do
         end do
         !$acc end parallel
