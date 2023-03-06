@@ -5,7 +5,6 @@ module micro_pumas_diags
 !----------------------------------------
 
 use shr_kind_mod,   only: r8=>shr_kind_r8
-use stochastic_collect_tau_cam, only: ncd
 
   type, public :: proc_rates_type
 
@@ -132,7 +131,7 @@ use stochastic_collect_tau_cam, only: ncd
 
 contains
 
-   subroutine proc_rates_allocate(this, psetcols, nlev, errstring)
+   subroutine proc_rates_allocate(this, psetcols, nlev, ncd, errstring)
    !--------------------------------------------------------------
    ! Routine to allocate the elements of the proc_rates DDT
    !--------------------------------------------------------------

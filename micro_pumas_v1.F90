@@ -333,6 +333,8 @@ subroutine micro_pumas_init( &
      micro_mg_accre_sees_auto_in, micro_mg_implicit_fall_in, &
      nccons_in, nicons_in, ncnst_in, ninst_in, ngcons_in, ngnst_in, &
      nrcons_in, nrnst_in, nscons_in, nsnst_in, &
+     stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
+     stochastic_emulated_filename_output_scale, &
      errstring)
 
   use micro_pumas_utils, only: micro_pumas_utils_init
@@ -415,6 +417,9 @@ subroutine micro_pumas_init( &
   real(r8), intent(in)  :: nrnst_in
   logical, intent(in)   :: nscons_in
   real(r8), intent(in)  :: nsnst_in
+
+  character(len=*), intent(in) :: stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
+                                  stochastic_emulated_filename_output_scale   ! Files for emulated machine learning 
 
   character(128), intent(out) :: errstring    ! Output status (non-blank for error return)
 
@@ -526,7 +531,8 @@ subroutine micro_pumas_init( &
   !$acc update device (xxlv,xxls)
 
   if (trim(warm_rain) == 'emulated') then
-      call initialize_tau_emulators
+      call initialize_tau_emulators(stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
+                                    stochastic_emulated_filename_output_scale)
   end if
 
 end subroutine micro_pumas_init
@@ -586,7 +592,7 @@ subroutine micro_pumas_tend ( &
 
 !++ TAU
   use pumas_stochastic_collect_tau, only: ncd, pumas_stochastic_collect_tau_tend
-  use tau_neural_net_quantile, only: tau_emulate_cloud_rain_interactions
+  use tau_neural_net_quantile, only: tau_emulated_cloud_rain_interactions
   use cam_logfile,    only: iulog
   use ML_fixer_check, only: ML_fixer_calc
 !-- TAU
@@ -2167,7 +2173,7 @@ subroutine micro_pumas_tend ( &
   else if (trim(warm_rain) == 'emulated') then
 
      do k=1,nlev
-        call tau_emulate_cloud_rain_interactions(qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), rho(1:mgncol,k), &
+        call tau_emulated_cloud_rain_interactions(qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), rho(1:mgncol,k), &
           lcldm(1:mgncol,k), precip_frac(1:mgncol,k), mgncol, &
           qsmall, proc_rates%qctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nctend_TAU(1:mgncol,k), &
           proc_rates%nrtend_TAU(1:mgncol,k))
