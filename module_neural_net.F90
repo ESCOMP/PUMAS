@@ -3,7 +3,6 @@ module module_neural_net
     use shr_kind_mod,   only: r8=>shr_kind_r8
 
     implicit none
-!    integer, parameter, public :: r8 = selected_real_kind(12)
     type Dense
         integer :: input_size
         integer :: output_size
@@ -37,33 +36,20 @@ contains
         integer :: i, j, num_examples
         real(kind=r8) :: alpha, beta
         external :: dgemm
-! CACNOTE - Cleanup this code (remove commented out code?)
-        !real(kindr=8) :: time_start, time_end
+
         alpha = 1
         beta = 1
         dense_output = 0
         output = 0
         num_examples = size(input, 1)
-        !call cpu_time(time_start)
-        !print*, "Input", size(input, 1), size(input, 2), input
         call dgemm('n', 'n', num_examples, layer%output_size, layer%input_size, &
             alpha, input, num_examples, layer%weights, layer%input_size, beta, dense_output, num_examples)
-        !call cpu_time(time_end)
-        !print *, num_examples, layer%output_size, layer%input_size
-        !print *, "After dgemm ", dense_output(1, 1), time_end - time_start
-        !call cpu_time(time_start)
-        !dense_output = matmul(input, layer%weights)
-        !call cpu_time(time_end)
-        !print *, "After matmul", dense_output(1, 1), time_end - time_start
         do i=1, num_examples
             do j=1, layer%output_size
                 dense_output(i, j) = dense_output(i, j) + layer%bias(j)
             end do
         end do
-        !print*, "Dense", size(dense_output, 1), size(dense_output, 2), dense_output
         call apply_activation(dense_output, layer%activation, output)
-        !print*, "Activated", size(output, 1), size(output, 2), output
-        return
     end subroutine apply_dense
 
     subroutine apply_activation(input, activation_type, output)
@@ -96,22 +82,14 @@ contains
             case (0)
                 output = input
             case (1)
-         !      print*, "relu"
-                !where(input < 0)
-                !    output = 0
-                !elsewhere
-                !    output = input
-                !endwhere
                 do i=1,size(input, 1)
                     do j=1, size(input,2)
                         output(i, j) = dmax1(input(i, j), zero)
                     end do
                 end do
             case (2)
-            !    print*, "sigmoid"
                 output = 1.0 / (1.0 + dexp(-input))
             case (3)
-          !      print*, "elu"
                 do i=1,size(input, 1)
                     do j=1, size(input,2)
                         if (input(i, j) >= 0) then
@@ -122,7 +100,6 @@ contains
                     end do
                 end do
             case (4)
-           !     print*, "selu"
                 do i=1,size(input, 1)
                     do j=1, size(input,2)
                         if (input(i, j) >= 0) then
@@ -133,10 +110,8 @@ contains
                     end do
                 end do
             case (5)
-             !   print*, "tanh"
                 output = tanh(input)
             case (6)
-             !   print*, "softmax"
                 softmax_sum = sum(dexp(input), dim=2)
                 do i=1, size(input, 1)
                     do j=1, size(input, 2)
@@ -144,13 +119,11 @@ contains
                     end do
                 end do
             case default
-             !   print*, "default linear"
                 output = input
         end select
-        return
     end subroutine apply_activation
 
-    subroutine init_neural_net(filename, batch_size, neural_net_model)
+    subroutine init_neural_net(filename, batch_size, neural_net_model, iulog, errstring)
         ! init_neuralnet
         ! Description: Loads dense neural network weights from a netCDF file and builds an array of
         ! Dense types from the weights and activations.
@@ -165,6 +138,9 @@ contains
         character(len=*), intent(in) :: filename
         integer, intent(in) :: batch_size
         type(Dense), allocatable, intent(out) :: neural_net_model(:)
+        integer,          intent(in)  :: iulog
+        character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
+
         integer :: ncid, num_layers_id, num_layers
         integer :: layer_names_var_id, i, layer_in_dimid, layer_out_dimid
         integer :: layer_in_dim, layer_out_dim
@@ -178,17 +154,24 @@ contains
         character (len=12) :: layer_out_dim_name
         character (len=10) :: activation_name
         real (kind=r8), allocatable :: temp_weights(:, :)
-!CACNOTE - Check how CAM handles opening netCDF files - does anything need to change here?
+
+        errstring = ''
+
         ! Open netCDF file
-        call check(nf90_open(filename, nf90_nowrite, ncid))
+        call check(nf90_open(filename, nf90_nowrite, ncid),errstring)
+        if (trim(errstring) /= '') return
         ! Get the number of layers in the neural network
-        call check(nf90_inq_dimid(ncid, num_layers_dim_name, num_layers_id))
+        call check(nf90_inq_dimid(ncid, num_layers_dim_name, num_layers_id),errstring)
+        if (trim(errstring) /= '') return
         call check(nf90_inquire_dimension(ncid, num_layers_id, &
-                                          num_layers_dim_name, num_layers))
-        call check(nf90_inq_varid(ncid, layer_name_var, layer_names_var_id))
+                                          num_layers_dim_name, num_layers),errstring)
+        if (trim(errstring) /= '') return
+        call check(nf90_inq_varid(ncid, layer_name_var, layer_names_var_id),errstring)
+        if (trim(errstring) /= '') return
         allocate(layer_names(num_layers))
-        call check(nf90_get_var(ncid, layer_names_var_id, layer_names))
-        print *, "load neural network " // filename
+        call check(nf90_get_var(ncid, layer_names_var_id, layer_names),errstring)
+        if (trim(errstring) /= '') return
+        write(iulog,*) "load neural network " // filename
         allocate(neural_net_model(1:num_layers))
         ! Loop through each layer and load the weights, bias term, and activation function
         do i=1, num_layers
@@ -196,14 +179,20 @@ contains
             layer_out_dim_name = trim(layer_names(i)) // "_out"
             layer_in_dimid = -1
             ! Get layer input and output dimensions
-            call check(nf90_inq_dimid(ncid, trim(layer_in_dim_name), layer_in_dimid))
-            call check(nf90_inquire_dimension(ncid, layer_in_dimid, layer_in_dim_name, layer_in_dim))
-            call check(nf90_inq_dimid(ncid, trim(layer_out_dim_name), layer_out_dimid))
-            call check(nf90_inquire_dimension(ncid, layer_out_dimid, layer_out_dim_name, layer_out_dim))
+            call check(nf90_inq_dimid(ncid, trim(layer_in_dim_name), layer_in_dimid),errstring)
+            if (trim(errstring) /= '') return
+            call check(nf90_inquire_dimension(ncid, layer_in_dimid, layer_in_dim_name, layer_in_dim),errstring)
+            if (trim(errstring) /= '') return
+            call check(nf90_inq_dimid(ncid, trim(layer_out_dim_name), layer_out_dimid),errstring)
+            if (trim(errstring) /= '') return
+            call check(nf90_inquire_dimension(ncid, layer_out_dimid, layer_out_dim_name, layer_out_dim),errstring)
+            if (trim(errstring) /= '') return
             call check(nf90_inq_varid(ncid, trim(layer_names(i)) // "_weights", &
-                                      layer_weight_var_id))
+                                      layer_weight_var_id),errstring)
+            if (trim(errstring) /= '') return
             call check(nf90_inq_varid(ncid, trim(layer_names(i)) // "_bias", &
-                                      layer_bias_var_id))
+                                      layer_bias_var_id),errstring)
+            if (trim(errstring) /= '') return
             neural_net_model(i)%input_size = layer_in_dim
             neural_net_model(i)%output_size = layer_out_dim
             neural_net_model(i)%batch_size = batch_size
@@ -214,16 +203,19 @@ contains
             allocate(temp_weights(layer_out_dim, layer_in_dim))
 
             call check(nf90_get_var(ncid, layer_weight_var_id, &
-                                    temp_weights))
+                                    temp_weights),errstring)
+            if (trim(errstring) /= '') return
             neural_net_model(i)%weights = transpose(temp_weights)
             deallocate(temp_weights)
             ! Load the bias weights
             allocate(neural_net_model(i)%bias(layer_out_dim))
             call check(nf90_get_var(ncid, layer_bias_var_id, &
-                                    neural_net_model(i)%bias))
+                                    neural_net_model(i)%bias),errstring)
+            if (trim(errstring) /= '') return
             ! Get the name of the activation function, which is stored as an attribute of the weights variable
             call check(nf90_get_att(ncid, layer_weight_var_id, "activation", &
-                                    activation_name))
+                                    activation_name),errstring)
+            if (trim(errstring) /= '') return
             select case (trim(activation_name))
                 case ("linear")
                     neural_net_model(i)%activation = 0
@@ -243,37 +235,53 @@ contains
                     neural_net_model(i)%activation = 7
             end select
         end do
-        !print *, "finished loading neural network " // filename
-        call check(nf90_close(ncid))
+        call check(nf90_close(ncid),errstring)
+        if (trim(errstring) /= '') return
 
     end subroutine init_neural_net
 
-    subroutine load_quantile_scale_values(filename, scale_values)
+    subroutine load_quantile_scale_values(filename, scale_values, iulog, errstring)
         character(len = *), intent(in) :: filename
         real(kind = r8), allocatable, intent(out) :: scale_values(:, :)
+        integer,          intent(in)  :: iulog
+        character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
+
         real(kind = r8), allocatable :: temp_scale_values(:, :)
         character(len=8) :: quantile_dim_name = "quantile"
         character(len=7) :: column_dim_name = "column"
         character(len=9) :: ref_var_name = "reference"
         character(len=9) :: quant_var_name = "quantiles"
         integer :: ncid, quantile_id, column_id, quantile_dim, column_dim, ref_var_id, quant_var_id
-        call check(nf90_open(filename, nf90_nowrite, ncid))
-        call check(nf90_inq_dimid(ncid, quantile_dim_name, quantile_id))
-        call check(nf90_inq_dimid(ncid, column_dim_name, column_id))
+        
+        errstring = ''
+
+        call check(nf90_open(filename, nf90_nowrite, ncid),errstring)
+        if (trim(errstring) /= '') return
+        call check(nf90_inq_dimid(ncid, quantile_dim_name, quantile_id),errstring)
+        if (trim(errstring) /= '') return
+        call check(nf90_inq_dimid(ncid, column_dim_name, column_id),errstring)
+        if (trim(errstring) /= '') return
         call check(nf90_inquire_dimension(ncid, quantile_id, &
-                quantile_dim_name, quantile_dim))
+                quantile_dim_name, quantile_dim),errstring)
+        if (trim(errstring) /= '') return
         call check(nf90_inquire_dimension(ncid, column_id, &
-                column_dim_name, column_dim))
+                column_dim_name, column_dim),errstring)
+        if (trim(errstring) /= '') return
         allocate(scale_values(quantile_dim, column_dim + 1))
         allocate(temp_scale_values(column_dim + 1, quantile_dim))
-        call check(nf90_inq_varid(ncid, ref_var_name, ref_var_id))
-        print*, "load ref var"
-        call check(nf90_get_var(ncid, ref_var_id, temp_scale_values(1, :)))
-        call check(nf90_inq_varid(ncid, quant_var_name, quant_var_id))
-        print*, "load quant var"
-        call check(nf90_get_var(ncid, quant_var_id, temp_scale_values(2:column_dim + 1, :)))
+        call check(nf90_inq_varid(ncid, ref_var_name, ref_var_id),errstring)
+        if (trim(errstring) /= '') return
+        write(iulog,*) "load ref var"
+        call check(nf90_get_var(ncid, ref_var_id, temp_scale_values(1, :)),errstring)
+        if (trim(errstring) /= '') return
+        call check(nf90_inq_varid(ncid, quant_var_name, quant_var_id),errstring)
+        if (trim(errstring) /= '') return
+        write(iulog,*) "load quant var"
+        call check(nf90_get_var(ncid, quant_var_id, temp_scale_values(2:column_dim + 1, :)),errstring)
+        if (trim(errstring) /= '') return
         scale_values = transpose(temp_scale_values)
-        call check(nf90_close(ncid))
+        call check(nf90_close(ncid),errstring)
+        if (trim(errstring) /= '') return
     end subroutine load_quantile_scale_values
 
     subroutine linear_interp(x_in, xs, ys, y_in)
@@ -366,7 +374,6 @@ contains
                              neural_net_data(num_layers)%output)
             prediction(batch_indices(bi)-batch_size + 1:batch_indices(bi), :) = &
                     neural_net_data(num_layers)%output
-        !    print*,"Prediction", prediction(batch_indices(bi)-batch_size + 1:batch_indices(bi), :)
         end do
         do j=1, num_layers
             deallocate(neural_net_data(j)%input)
@@ -375,7 +382,7 @@ contains
         deallocate(batch_indices)
     end subroutine neural_net_predict
 
-    subroutine standard_scaler_transform(input_data, scale_values, transformed_data)
+    subroutine standard_scaler_transform(input_data, scale_values, transformed_data, errstring)
         ! Perform z-score normalization of input_data table. Equivalent to scikit-learn StandardScaler.
         !
         ! Inputs:
@@ -386,10 +393,13 @@ contains
         real(r8), intent(in) :: input_data(:, :)
         real(r8), intent(in) :: scale_values(:, :)
         real(r8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
+        character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
         integer :: i
+ 
+        errstring = ''
         if (size(input_data, 2) /= size(scale_values, 1)) then
-            print *, "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
-            stop 2
+            write(errstring,*) "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
+            return
         end if
         do i=1, size(input_data, 2)
             transformed_data(:, i) = (input_data(:, i) - scale_values(i, 1)) / scale_values(i, 2)
@@ -412,7 +422,7 @@ contains
     end subroutine load_scale_values
 
 
-    subroutine standard_scaler_inverse_transform(input_data, scale_values, transformed_data)
+    subroutine standard_scaler_inverse_transform(input_data, scale_values, transformed_data, errstring)
         ! Perform inverse z-score normalization of input_data table. Equivalent to scikit-learn StandardScaler.
         !
         ! Inputs:
@@ -423,17 +433,18 @@ contains
         real(r8), intent(in) :: input_data(:, :)
         real(r8), intent(in) :: scale_values(:, :)
         real(r8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
+        character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
         integer :: i
         if (size(input_data, 2) /= size(scale_values, 1)) then
-            print *, "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
-            stop 2
+            write(errstring,*) "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
+            return
         end if
         do i=1, size(input_data, 2)
             transformed_data(:, i) = input_data(:, i) * scale_values(i, 2) + scale_values(i, 1)
         end do
     end subroutine standard_scaler_inverse_transform
 
-    subroutine minmax_scaler_transform(input_data, scale_values, transformed_data)
+    subroutine minmax_scaler_transform(input_data, scale_values, transformed_data, errstring)
         ! Perform min-max scaling of input_data table. Equivalent to scikit-learn MinMaxScaler.
         !
         ! Inputs:
@@ -444,17 +455,19 @@ contains
         real(r8), intent(in) :: input_data(:, :)
         real(r8), intent(in) :: scale_values(:, :)
         real(r8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
+        character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
+
         integer :: i
         if (size(input_data, 2) /= size(scale_values, 1)) then
-            print *, "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
-            stop 2
+            write(errstring,*) "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
+            return
         end if
         do i=1, size(input_data, 2)
             transformed_data(:, i) = (input_data(:, i) - scale_values(i, 1)) / (scale_values(i, 2) - scale_values(i ,1))
         end do
     end subroutine minmax_scaler_transform
 
-    subroutine minmax_scaler_inverse_transform(input_data, scale_values, transformed_data)
+    subroutine minmax_scaler_inverse_transform(input_data, scale_values, transformed_data, errstring)
         ! Perform inverse min-max scaling of input_data table. Equivalent to scikit-learn MinMaxScaler.
         !
         ! Inputs:
@@ -465,34 +478,27 @@ contains
         real(r8), intent(in) :: input_data(:, :)
         real(r8), intent(in) :: scale_values(:, :)
         real(r8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
+        character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
+
         integer :: i
         if (size(input_data, 2) /= size(scale_values, 1)) then
-            print *, "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
-            stop 2
+            write(errstring,*) "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)
+            return
         end if
         do i=1, size(input_data, 2)
             transformed_data(:, i) = input_data(:, i) * (scale_values(i, 2) - scale_values(i ,1)) + scale_values(i, 1)
         end do
     end subroutine minmax_scaler_inverse_transform
 
-    subroutine check(status)
+    subroutine check(status, errstring)
         ! Check for netCDF errors
         integer, intent ( in) :: status
+        character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
+
+        errstring = ''
         if(status /= nf90_noerr) then
-          print *, trim(nf90_strerror(status))
-          stop 2
+          errstring = trim(nf90_strerror(status))
         end if
     end subroutine check
 
-    subroutine print_2d_array(input_array)
-        ! Print 2D array in pretty format
-        real(kind=r8), intent(in) :: input_array(:, :)
-        integer :: i, j
-        do i=1, size(input_array, 1)
-            do j=1, size(input_array, 2)
-                write(*, fmt="(1x,a,f6.3)", advance="no") "", input_array(i, j)
-            end do
-            write(*, *)
-        end do
-    end subroutine print_2d_array
 end module module_neural_net

@@ -49,6 +49,10 @@ real(r8), public :: mmean(ncd), diammean(ncd)       ! kg & m at bin mid-points
 real(r8), public :: medge(ncdp), diamedge(ncdp)     ! kg & m at bin edges 
 integer, private  :: cutoff_id                       ! cutoff between cloud water and rain drop, D = 40 microns
 
+! Assume 6 microns for each...
+real(r8), parameter :: m1 = 4._r8/3._r8*pi*rhow*(6.e-6_r8)**3
+
+
 !===============================================================================
 contains
 !===============================================================================
@@ -235,6 +239,7 @@ real(r8) :: nrin_old(mgncol)
 integer :: i, n, lcl, cutoff_amk, cutoff(mgncol)
 
 real(r8) :: all_gmnnn, all_lmnnn
+real(r8) :: qscl
 
 integer, parameter :: sub_step = 60
 
@@ -393,7 +398,65 @@ end do
    nrin_new(i) = nrin_new(i)+nrin_old(i)
 end do
 
+
+! Conservation checks 
+! AG: Added May 2023
+
+do i = 1,mgncol
+
+! First make sure all not negative
+
+qcin_new(i)=max(qcin_new(i),0._r8)
+ncin_new(i)=max(ncin_new(i),0._r8)
+qrin_new(i)=max(qrin_new(i),0._r8)
+nrin_new(i)=max(nrin_new(i),0._r8)
+
+! Next scale mass...so output qc+qr is the same as input
+
+
+if ((qcin_new(i)+qrin_new(i)) .gt. 0._r8) then
+   qscl = (qcin(i)+qrin(i))/(qcin_new(i)+qrin_new(i))
+else
+   qscl = 0._r8
+end if
+
+qcin_new(i) = qcin_new(i) * qscl
+qrin_new(i) = qrin_new(i) * qscl
+
+! Now zero nr,nc if either small or no mass?
+
+if (qcin_new(i) < qsmall) then
+   ncin_new(i) = 0._r8
+end if
+
+if (qrin_new(i) < qsmall) then
+   nrin_new(i) = 0._r8
+end if
+
+!Finally add number if mass but no number
+
+if (qcin_new(i) > qsmall .and. ncin_new(i) < 1._r8) then
+   ncin_new(i) = qcin_new(i)/m1
+end if
+
+if (qrin_new(i) > qsmall .and. nrin_new(i) < 1._r8) then
+   nrin_new(i) = qrin_new(i)/m1
+end if
+
+! Then recalculate tendencies based on difference
+
+qctend_TAU(i)= (qcin_new(i) - qcin(i)) / deltatin
+nctend_TAU(i)= (ncin_new(i) - ncin(i)) / deltatin
+qrtend_TAU(i)= (qrin_new(i) - qrin(i)) / deltatin
+nrtend_TAU(i)= (nrin_new(i) - nrin(i)) / deltatin
+
+
+end do 
+
 end subroutine pumas_stochastic_collect_tau_tend
+
+
+
 
 
 subroutine cam_bin_distribute(qc_all, qr_all, qc,nc,qr,nr,mu_c,lambda_c,lambda_r,n0r, &

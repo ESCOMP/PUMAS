@@ -20,20 +20,25 @@ contains
 
 
     subroutine initialize_tau_emulators( stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
-                                         stochastic_emulated_filename_output_scale)
+                                         stochastic_emulated_filename_output_scale, iulog, errstring)
 
     ! Load neural network netCDF files and scaling values. Values are placed in to emulators,
     ! input_scale_values, and output_scale_values.
     character(len=*), intent(in) ::  stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
                                      stochastic_emulated_filename_output_scale
-!CACNOTE - Need to remove print statements 
-        print*, "Begin loading neural nets"
-        call init_neural_net(trim(stochastic_emulated_filename_quantile), batch_size, q_all)
-        print*, "End loading neural nets"
+    integer,          intent(in)  :: iulog
+    character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
+
+        errstring = ''
+
+        write(iulog,*) "Begin loading neural nets"
+        call init_neural_net(trim(stochastic_emulated_filename_quantile), batch_size, q_all, iulog, errstring)
+        if (trim(errstring) /= '') return
+        write(iulog,*) "End loading neural nets"
         ! Load the scale values from a csv file.
-        call load_quantile_scale_values(trim(stochastic_emulated_filename_input_scale), input_scale_values)
-        call load_quantile_scale_values(trim(stochastic_emulated_filename_output_scale), output_scale_values)
-        print*, "Loaded neural nets scaling values"
+        call load_quantile_scale_values(trim(stochastic_emulated_filename_input_scale), input_scale_values, iulog, errstring)
+        call load_quantile_scale_values(trim(stochastic_emulated_filename_output_scale), output_scale_values, iulog, errstring)
+        write(iulog,*) "Loaded neural nets scaling values"
     end subroutine initialize_tau_emulators
 
 

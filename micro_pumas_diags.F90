@@ -139,7 +139,7 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
 
 contains
 
-   subroutine proc_rates_allocate(this, psetcols, nlev, ncd, errstring)
+   subroutine proc_rates_allocate(this, psetcols, nlev, ncd, warm_rain, errstring)
    !--------------------------------------------------------------
    ! Routine to allocate the elements of the proc_rates DDT
    !--------------------------------------------------------------
@@ -148,7 +148,8 @@ contains
 
       class(proc_rates_type) :: this
 
-      integer, intent(in) :: psetcols, nlev
+      integer,           intent(in) :: psetcols, nlev
+      character(len=16), intent(in) :: warm_rain            ! 'tau','emulated','sb2001' or 'kk2000'
       character(128),   intent(out) :: errstring
 
       integer :: ierr
@@ -460,183 +461,171 @@ contains
         errstring='Error allocating this%nmeltgtot'
       end if
 
-!CACNOTE -- Only allocate these variables if machine learning turned on
-      allocate(this%scale_qc(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%scale_qc'
-      end if
-      allocate(this%scale_nc(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%scale_nc'
-      end if
-      allocate(this%scale_qr(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%scale_qr'
-      end if
-      allocate(this%scale_nr(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%scale_nr'
-      end if
-      allocate(this%amk_c(psetcols,nlev,ncd), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%amk_c'
-      end if
-      allocate(this%ank_c(psetcols,nlev,ncd), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%ank_c'
-      end if
-      allocate(this%amk_r(psetcols,nlev,ncd), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%amk_r'
-      end if
-      allocate(this%ank_r(psetcols,nlev,ncd), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%ank_r'
-      end if
-      allocate(this%amk(psetcols,nlev,ncd), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%amk'
-      end if
-      allocate(this%ank(psetcols,nlev,ncd), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%ank'
-      end if
-      allocate(this%amk_out(psetcols,nlev,ncd), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%amk_out'
-      end if
-      allocate(this%ank_out(psetcols,nlev,ncd), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%ank_out'
-      end if
-      allocate(this%qc_out(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%qc_out'
-      end if
-      allocate(this%nc_out(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nc_out'
-      end if
-      allocate(this%qr_out(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%qr_out'
-      end if
-      allocate(this%nr_out(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nr_out'
-      end if
-      allocate(this%qc_in(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%qc_in'
-      end if
-      allocate(this%nc_in(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nc_in'
-      end if
-      allocate(this%qr_in(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%qr_in'
-      end if
-      allocate(this%nr_in(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nr_in'
-      end if
-      allocate(this%qctend_KK2000(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%qctend_KK2000'
-      end if
-      allocate(this%nctend_KK2000(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nctend_KK2000'
-      end if
-      allocate(this%qrtend_KK2000(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%artend_KK2000'
-      end if
-      allocate(this%nrtend_KK2000(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nrtend_KK2000'
-      end if
-      allocate(this%qctend_SB2001(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%qctend_SB2001'
-      end if
-      allocate(this%nctend_SB2001(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nctend_SB2001'
-      end if
-      allocate(this%qrtend_SB2001(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%artend_SB2001'
-      end if
-      allocate(this%nrtend_SB2001(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nrtend_SB2001'
-      end if
-      allocate(this%qctend_TAU(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%qctend_TAU'
-      end if
-      allocate(this%nctend_TAU(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nctend_TAU'
-      end if
-      allocate(this%qrtend_TAU(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%qrtend_TAU'
-      end if
-      allocate(this%nrtend_TAU(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nrtend_TAU'
-      end if
-!      allocate(this%qctend_TAU_diag(psetcols,nlev), stat=ierr)
-!      if (ierr /= 0) then
-!        errstring='Error allocating this%qctend_TAU_diag'
-!      end if
-!      allocate(this%nctend_TAU_diag(psetcols,nlev), stat=ierr)
-!      if (ierr /= 0) then
-!        errstring='Error allocating this%nctend_TAU_diag'
-!      end if
-!      allocate(this%qrtend_TAU_diag(psetcols,nlev), stat=ierr)
-!      if (ierr /= 0) then
-!        errstring='Error allocating this%qrtend_TAU_diag'
-!      end if
-!      allocate(this%nrtend_TAU_diag(psetcols,nlev), stat=ierr)
-!      if (ierr /= 0) then
-!        errstring='Error allocating this%nrtend_TAU_diag'
-!      end if
-      allocate(this%gmnnn_lmnnn_TAU(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%gmnnn_lmnnn_TAU'
-      end if
-      allocate(this%ML_fixer(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%ML_fixer'
-      end if
-      allocate(this%QC_fixer(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%QC_fixer'
-      end if
-      allocate(this%NC_fixer(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%NC_fixer'
-      end if
-      allocate(this%QR_fixer(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%QR_fixer'
-      end if
-      allocate(this%NR_fixer(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%NR_fixer'
+      ! Only allocate these variables if machine learning turned on
+
+      if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+         allocate(this%scale_qc(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%scale_qc'
+         end if
+         allocate(this%scale_nc(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%scale_nc'
+         end if
+         allocate(this%scale_qr(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%scale_qr'
+         end if
+         allocate(this%scale_nr(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%scale_nr'
+         end if
+         allocate(this%amk_c(psetcols,nlev,ncd), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%amk_c'
+         end if
+         allocate(this%ank_c(psetcols,nlev,ncd), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%ank_c'
+         end if
+         allocate(this%amk_r(psetcols,nlev,ncd), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%amk_r'
+         end if
+         allocate(this%ank_r(psetcols,nlev,ncd), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%ank_r'
+         end if
+         allocate(this%amk(psetcols,nlev,ncd), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%amk'
+         end if
+         allocate(this%ank(psetcols,nlev,ncd), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%ank'
+         end if
+         allocate(this%amk_out(psetcols,nlev,ncd), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%amk_out'
+         end if
+         allocate(this%ank_out(psetcols,nlev,ncd), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%ank_out'
+         end if
+         allocate(this%qc_out(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qc_out'
+         end if
+         allocate(this%nc_out(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nc_out'
+         end if
+         allocate(this%qr_out(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qr_out'
+         end if
+         allocate(this%nr_out(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nr_out'
+         end if
+         allocate(this%qc_in(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qc_in'
+         end if
+         allocate(this%nc_in(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nc_in'
+         end if
+         allocate(this%qr_in(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qr_in'
+         end if
+         allocate(this%nr_in(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nr_in'
+         end if
+         allocate(this%qctend_KK2000(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qctend_KK2000'
+         end if
+         allocate(this%nctend_KK2000(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nctend_KK2000'
+         end if
+         allocate(this%qrtend_KK2000(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%artend_KK2000'
+         end if
+         allocate(this%nrtend_KK2000(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nrtend_KK2000'
+         end if
+         allocate(this%qctend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qctend_SB2001'
+         end if
+         allocate(this%nctend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nctend_SB2001'
+         end if
+         allocate(this%qrtend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%artend_SB2001'
+         end if
+         allocate(this%nrtend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nrtend_SB2001'
+         end if
+         allocate(this%qctend_TAU(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qctend_TAU'
+         end if
+         allocate(this%nctend_TAU(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nctend_TAU'
+         end if
+         allocate(this%qrtend_TAU(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qrtend_TAU'
+         end if
+         allocate(this%nrtend_TAU(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nrtend_TAU'
+         end if
+         allocate(this%gmnnn_lmnnn_TAU(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%gmnnn_lmnnn_TAU'
+         end if
+         allocate(this%ML_fixer(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%ML_fixer'
+         end if
+         allocate(this%QC_fixer(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%QC_fixer'
+         end if
+         allocate(this%NC_fixer(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%NC_fixer'
+         end if
+         allocate(this%QR_fixer(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%QR_fixer'
+         end if
+         allocate(this%NR_fixer(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%NR_fixer'
+         end if
       end if
    end subroutine proc_rates_allocate
 
-   subroutine proc_rates_deallocate(this)
+   subroutine proc_rates_deallocate(this, warm_rain)
    !--------------------------------------------------------------
    ! Routine to deallocate the elements of the proc_rates DDT
    !--------------------------------------------------------------
 
       class(proc_rates_type) :: this
+      character(len=16), intent(in) :: warm_rain            ! 'tau','emulated','sb2001' or 'kk2000'
 
       deallocate(this%prodsnow)
       deallocate(this%evapsnow)
@@ -715,48 +704,46 @@ contains
       deallocate(this%nmeltstot)
       deallocate(this%nmeltgtot)
 
-      deallocate(this%scale_qc)
-      deallocate(this%scale_nc)
-      deallocate(this%scale_qr)
-      deallocate(this%scale_nr)
-      deallocate(this%amk_c)
-      deallocate(this%ank_c)
-      deallocate(this%amk_r)
-      deallocate(this%ank_r)
-      deallocate(this%amk)
-      deallocate(this%ank)
-      deallocate(this%amk_out)
-      deallocate(this%ank_out)
-      deallocate(this%qc_out)
-      deallocate(this%nc_out)
-      deallocate(this%qr_out)
-      deallocate(this%nr_out)
-      deallocate(this%qc_in)
-      deallocate(this%nc_in)
-      deallocate(this%qr_in)
-      deallocate(this%nr_in)
-      deallocate(this%qctend_KK2000)
-      deallocate(this%nctend_KK2000)
-      deallocate(this%qrtend_KK2000)
-      deallocate(this%nrtend_KK2000)
-      deallocate(this%qctend_SB2001)
-      deallocate(this%nctend_SB2001)
-      deallocate(this%qrtend_SB2001)
-      deallocate(this%nrtend_SB2001)
-      deallocate(this%qctend_TAU)
-      deallocate(this%nctend_TAU)
-      deallocate(this%qrtend_TAU)
-      deallocate(this%nrtend_TAU)
-!      deallocate(this%qctend_TAU_diag)
-!      deallocate(this%nctend_TAU_diag)
-!      deallocate(this%qrtend_TAU_diag)
-!      deallocate(this%nrtend_TAU_diag)
-      deallocate(this%gmnnn_lmnnn_TAU)
-      deallocate(this%ML_fixer)
-      deallocate(this%QC_fixer)
-      deallocate(this%NC_fixer)
-      deallocate(this%QR_fixer)
-      deallocate(this%NR_fixer)
+      if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+         deallocate(this%scale_qc)
+         deallocate(this%scale_nc)
+         deallocate(this%scale_qr)
+         deallocate(this%scale_nr)
+         deallocate(this%amk_c)
+         deallocate(this%ank_c)
+         deallocate(this%amk_r)
+         deallocate(this%ank_r)
+         deallocate(this%amk)
+         deallocate(this%ank)
+         deallocate(this%amk_out)
+         deallocate(this%ank_out)
+         deallocate(this%qc_out)
+         deallocate(this%nc_out)
+         deallocate(this%qr_out)
+         deallocate(this%nr_out)
+         deallocate(this%qc_in)
+         deallocate(this%nc_in)
+         deallocate(this%qr_in)
+         deallocate(this%nr_in)
+         deallocate(this%qctend_KK2000)
+         deallocate(this%nctend_KK2000)
+         deallocate(this%qrtend_KK2000)
+         deallocate(this%nrtend_KK2000)
+         deallocate(this%qctend_SB2001)
+         deallocate(this%nctend_SB2001)
+         deallocate(this%qrtend_SB2001)
+         deallocate(this%nrtend_SB2001)
+         deallocate(this%qctend_TAU)
+         deallocate(this%nctend_TAU)
+         deallocate(this%qrtend_TAU)
+         deallocate(this%nrtend_TAU)
+         deallocate(this%gmnnn_lmnnn_TAU)
+         deallocate(this%ML_fixer)
+         deallocate(this%QC_fixer)
+         deallocate(this%NC_fixer)
+         deallocate(this%QR_fixer)
+         deallocate(this%NR_fixer)
+      end if
 
    end subroutine proc_rates_deallocate
 

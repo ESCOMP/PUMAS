@@ -335,7 +335,7 @@ subroutine micro_pumas_init( &
      nrcons_in, nrnst_in, nscons_in, nsnst_in, &
      stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
      stochastic_emulated_filename_output_scale, &
-     errstring)
+     iulog, errstring)
 
   use micro_pumas_utils, only: micro_pumas_utils_init
   use pumas_stochastic_collect_tau, only: pumas_stochastic_kernel_init
@@ -421,6 +421,7 @@ subroutine micro_pumas_init( &
   character(len=*), intent(in) :: stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
                                   stochastic_emulated_filename_output_scale   ! Files for emulated machine learning 
 
+  integer, intent(in) :: iulog
   character(128), intent(out) :: errstring    ! Output status (non-blank for error return)
 
   !-----------------------------------------------------------------------
@@ -532,7 +533,7 @@ subroutine micro_pumas_init( &
 
   if (trim(warm_rain) == 'emulated') then
       call initialize_tau_emulators(stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
-                                    stochastic_emulated_filename_output_scale)
+                                    stochastic_emulated_filename_output_scale, iulog, errstring)
   end if
 
 end subroutine micro_pumas_init
@@ -1194,7 +1195,7 @@ subroutine micro_pumas_tend ( &
 
   ! Copies of input concentrations that may be changed internally.
 
-  !$acc parallel vector_length(VLNS) default(present)
+  !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector collapse(2)
   do k = 1,nlev
      do i = 1,mgncol
@@ -1908,19 +1909,20 @@ subroutine micro_pumas_tend ( &
   do k=1,nlev
      do i=1,mgncol
 
-        if (qr(i,k)>= qsmall) then
+!        if (qr(i,k)>= qsmall) then
         ! assign qric based on prognostic qr, using assumed precip fraction
         ! note: this could be moved above for consistency with qcic and qiic calculations
-           qric(i,k) = qr(i,k)/precip_frac(i,k)
-           nric(i,k) = nr(i,k)/precip_frac(i,k)
+        qric(i,k) = qr(i,k)/precip_frac(i,k)
+        nric(i,k) = nr(i,k)/precip_frac(i,k)
 
         ! limit in-precip mixing ratios to 10 g/kg
-           qric(i,k)=min(qric(i,k),0.01_r8)
+        qric(i,k)=min(qric(i,k),0.01_r8)
 
         ! add autoconversion to precip from above to get provisional rain mixing ratio
         ! and number concentration (qric and nric)
 
-        else
+        if (qric(i,k).lt.qsmall) then
+!        else
            qric(i,k)=0._r8
            nric(i,k)=0._r8
         end if
@@ -1994,10 +1996,10 @@ subroutine micro_pumas_tend ( &
                                       proc_rates%amk_out(1:mgncol,k,1:ncd), proc_rates%ank_out(1:mgncol,k,1:ncd), &
                                       proc_rates%gmnnn_lmnnn_TAU(1:mgncol,k), mgncol)
 
-        prc(1:mgncol,k)=abs(proc_rates%qctend_TAU(1:mgncol,k))
-        nprc(1:mgncol,k)=abs(proc_rates%nrtend_TAU(1:mgncol,k))
-        nprc1(1:mgncol,k)=abs(proc_rates%nctend_TAU(1:mgncol,k))
-        proc_rates%qrtend_TAU(1:mgncol,k)= -proc_rates%qctend_TAU(1:mgncol,k)
+        prc(1:mgncol,k)= -proc_rates%qctend_TAU(1:mgncol,k)
+        nprc1(1:mgncol,k)= -proc_rates%nctend_TAU(1:mgncol,k)
+        nprc(1:mgncol,k)= proc_rates%nrtend_TAU(1:mgncol,k)
+        proc_rates%qrtend_TAU(1:mgncol,k)= proc_rates%qctend_TAU(1:mgncol,k)
 
         proc_rates%qc_in(1:mgncol,k)=qcic(1:mgncol,k)
         proc_rates%nc_in(1:mgncol,k)=ncic(1:mgncol,k)
@@ -2025,10 +2027,10 @@ subroutine micro_pumas_tend ( &
           proc_rates%ML_fixer(1:mgncol,k), proc_rates%QC_fixer(1:mgncol,k), &
           proc_rates%NC_fixer(1:mgncol,k), proc_rates%QR_fixer(1:mgncol,k), proc_rates%NR_fixer(1:mgncol,k))
 
-        prc(1:mgncol,k)=proc_rates%qctend_TAU(1:mgncol,k)
-        nprc(1:mgncol,k)=proc_rates%nrtend_TAU(1:mgncol,k)
-        nprc1(1:mgncol,k)=proc_rates%nctend_TAU(1:mgncol,k)
-        proc_rates%qrtend_TAU(1:mgncol,k)= -proc_rates%qctend_TAU(1:mgncol,k)
+        prc(1:mgncol,k)= -proc_rates%qctend_TAU(1:mgncol,k)
+        nprc1(1:mgncol,k)= -proc_rates%nctend_TAU(1:mgncol,k)
+        nprc(1:mgncol,k)= proc_rates%nrtend_TAU(1:mgncol,k)
+        proc_rates%qrtend_TAU(1:mgncol,k)= proc_rates%qctend_TAU(1:mgncol,k)
 
      end do
 
@@ -2118,7 +2120,7 @@ subroutine micro_pumas_tend ( &
   ! get size distribution parameters for precip
   !......................................................................
   ! rain (calculated above)
-  call size_dist_param_basic(mg_rain_props, qric, nric, lamr, mgncol, nlev, n0=n0r)
+!  call size_dist_param_basic(mg_rain_props, qric, nric, lamr, mgncol, nlev, n0=n0r)
 
   !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector collapse(2)
@@ -2307,7 +2309,7 @@ subroutine micro_pumas_tend ( &
     do k=1,nlev
        proc_rates%nctend_SB2001(1:mgncol,k)=proc_rates%nctend_SB2001(1:mgncol,k)+npra(1:mgncol,k)
        proc_rates%qctend_SB2001(1:mgncol,k)=proc_rates%qctend_SB2001(1:mgncol,k)+pra(1:mgncol,k)
-       proc_rates%nrtend_SB2001(1:mgncol,k)=proc_rates%nrtend_SB2001(1:mgncol,k)+npra(1:mgncol,k)  !Sign should be same as prc
+       proc_rates%nrtend_SB2001(1:mgncol,k)=proc_rates%nrtend_SB2001(1:mgncol,k)+npra(1:mgncol,k)  !Sign should be same as prc?
        proc_rates%qrtend_SB2001(1:mgncol,k)=proc_rates%qrtend_SB2001(1:mgncol,k)-pra(1:mgncol,k)
     end do
   end if
@@ -2622,7 +2624,9 @@ subroutine micro_pumas_tend ( &
            nsubr(i,k) = 0._r8
         end if
 
-!        write(iulog,*) 'k,qr,nr,nprc,lcldm,precip_frac,nsubr,npracs,nnuccr,nnuccri,nragg,npracg,ngracs ',k,qr(i,k),nr(i,k),nprc(i,k),lcldm(i,k),precip_frac(i,k), !&
+! CACNOTE - removed as swamping the log files
+!        write(iulog,*) 'k,qr,nr,nprc,lcldm,precip_frac,nsubr,npracs,nnuccr,nnuccri,nragg,npracg,ngracs ', & 
+!             k,qr(i,k),nr(i,k),nprc(i,k),lcldm(i,k),precip_frac(i,k), &
 !             nsubr(i,k),npracs(i,k),nnuccr(i,k),nnuccri(i,k),nragg(i,k),npracg(i,k),ngracs(i,k)
 
         dum = ((-nsubr(i,k)+npracs(i,k)+nnuccr(i,k)+nnuccri(i,k)-nragg(i,k)+npracg(i,k)+ngracs(i,k)) &
