@@ -105,18 +105,26 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: nc_out(:,:)     !TAU: output total cloud liquid number
   real(r8), allocatable :: qr_out(:,:)     !TAU: output total rain mass
   real(r8), allocatable :: nr_out(:,:)     !TAU: output total cloud rain number
-  real(r8), allocatable :: qctend_MG2(:,:)   !cloud liquid mass tendency due to autoconversion & accretion in MG2
-  real(r8), allocatable :: nctend_MG2(:,:)   !cloud liquid number tendency due to autoconversion & accretion in MG2
-  real(r8), allocatable :: qrtend_MG2(:,:)   !rain mass tendency due to autoconversion & accretion in MG2
-  real(r8), allocatable :: nrtend_MG2(:,:)   !rain number tendency due to autoconversion & accretion in MG2
+  real(r8), allocatable :: qc_in(:,:)      !TAU: input total cloud liquid mass
+  real(r8), allocatable :: nc_in(:,:)     !TAU: input total cloud liquid number
+  real(r8), allocatable :: qr_in(:,:)     !TAU: input total rain mass
+  real(r8), allocatable :: nr_in(:,:)     !TAU: input total cloud rain number
+  real(r8), allocatable :: qctend_KK2000(:,:)   !cloud liquid mass tendency due to autoconversion  & accretion from KK2000
+  real(r8), allocatable :: nctend_KK2000(:,:)   !cloud liquid number tendency due to autoconversion  & accretion from KK2000
+  real(r8), allocatable :: qrtend_KK2000(:,:)   !rain mass tendency due to autoconversion  & accretion from KK2000
+  real(r8), allocatable :: nrtend_KK2000(:,:)   !rain number tendency due to autoconversion   & accretion from KK2000
+  real(r8), allocatable :: qctend_SB2001(:,:)   !cloud liquid mass tendency due to autoconversion  & accretion from SB2001
+  real(r8), allocatable :: nctend_SB2001(:,:)   !cloud liquid number tendency due to autoconversion  & accretion from SB2001 
+  real(r8), allocatable :: qrtend_SB2001(:,:)   !rain mass tendency due to autoconversion  & accretion from SB2001 
+  real(r8), allocatable :: nrtend_SB2001(:,:)   !rain number tendency due to autoconversion  & accretion from SB2001 
   real(r8), allocatable :: qctend_TAU(:,:)   !cloud liquid mass tendency due to autoconversion & accretion from TAU or Emulator code
   real(r8), allocatable :: nctend_TAU(:,:)   !cloud liquid number tendency due to autoconversion & accretion from TAU or Emulator code
   real(r8), allocatable :: qrtend_TAU(:,:)   !rain mass tendency due to autoconversion & accretion from TAU or Emulator code
   real(r8), allocatable :: nrtend_TAU(:,:)   !rain number tendency due to autoconversion & accretion from TAU or Emulatorcode
-  real(r8), allocatable :: qctend_TAU_diag(:,:)   !cloud liquid mass tendency due to autoconversion & accretion from TAU code only
-  real(r8), allocatable :: nctend_TAU_diag(:,:)  ! cloud liquid number tendency due to autoconversion & accretion from TAU code only
-  real(r8), allocatable :: qrtend_TAU_diag(:,:)   !rain mass tendency due to autoconversion & accretion from TAU code only
-  real(r8), allocatable :: nrtend_TAU_diag(:,:)   !rain number tendency due to autoconversion & accretion from TAU code only
+!  real(r8), allocatable :: qctend_TAU_diag(:,:)   !cloud liquid mass tendency due to autoconversion & accretion from TAU code only
+!  real(r8), allocatable :: nctend_TAU_diag(:,:)  ! cloud liquid number tendency due to autoconversion & accretion from TAU code only
+!  real(r8), allocatable :: qrtend_TAU_diag(:,:)   !rain mass tendency due to autoconversion & accretion from TAU code only
+!  real(r8), allocatable :: nrtend_TAU_diag(:,:)   !rain number tendency due to autoconversion & accretion from TAU code only
   real(r8), allocatable :: gmnnn_lmnnn_TAU(:,:) ! TAU sum of mass gain and loss from bin code
   real(r8), allocatable :: ML_fixer(:,:)     !Emulated: frequency of ML fixer is activated
   real(r8), allocatable :: QC_fixer(:,:)     !Emulated: change in cloud liquid mass due to ML fixer
@@ -517,21 +525,53 @@ contains
       if (ierr /= 0) then
         errstring='Error allocating this%nr_out'
       end if
-      allocate(this%qctend_MG2(psetcols,nlev), stat=ierr)
+      allocate(this%qc_in(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
-        errstring='Error allocating this%qctend_MG2'
+        errstring='Error allocating this%qc_in'
       end if
-      allocate(this%nctend_MG2(psetcols,nlev), stat=ierr)
+      allocate(this%nc_in(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
-        errstring='Error allocating this%nctend_MG2'
+        errstring='Error allocating this%nc_in'
       end if
-      allocate(this%qrtend_MG2(psetcols,nlev), stat=ierr)
+      allocate(this%qr_in(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
-        errstring='Error allocating this%artend_MG2'
+        errstring='Error allocating this%qr_in'
       end if
-      allocate(this%nrtend_MG2(psetcols,nlev), stat=ierr)
+      allocate(this%nr_in(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
-        errstring='Error allocating this%nrtend_MG2'
+        errstring='Error allocating this%nr_in'
+      end if
+      allocate(this%qctend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qctend_KK2000'
+      end if
+      allocate(this%nctend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nctend_KK2000'
+      end if
+      allocate(this%qrtend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%artend_KK2000'
+      end if
+      allocate(this%nrtend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nrtend_KK2000'
+      end if
+      allocate(this%qctend_SB2001(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qctend_SB2001'
+      end if
+      allocate(this%nctend_SB2001(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nctend_SB2001'
+      end if
+      allocate(this%qrtend_SB2001(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%artend_SB2001'
+      end if
+      allocate(this%nrtend_SB2001(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nrtend_SB2001'
       end if
       allocate(this%qctend_TAU(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
@@ -549,22 +589,22 @@ contains
       if (ierr /= 0) then
         errstring='Error allocating this%nrtend_TAU'
       end if
-      allocate(this%qctend_TAU_diag(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%qctend_TAU_diag'
-      end if
-      allocate(this%nctend_TAU_diag(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nctend_TAU_diag'
-      end if
-      allocate(this%qrtend_TAU_diag(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%qrtend_TAU_diag'
-      end if
-      allocate(this%nrtend_TAU_diag(psetcols,nlev), stat=ierr)
-      if (ierr /= 0) then
-        errstring='Error allocating this%nrtend_TAU_diag'
-      end if
+!      allocate(this%qctend_TAU_diag(psetcols,nlev), stat=ierr)
+!      if (ierr /= 0) then
+!        errstring='Error allocating this%qctend_TAU_diag'
+!      end if
+!      allocate(this%nctend_TAU_diag(psetcols,nlev), stat=ierr)
+!      if (ierr /= 0) then
+!        errstring='Error allocating this%nctend_TAU_diag'
+!      end if
+!      allocate(this%qrtend_TAU_diag(psetcols,nlev), stat=ierr)
+!      if (ierr /= 0) then
+!        errstring='Error allocating this%qrtend_TAU_diag'
+!      end if
+!      allocate(this%nrtend_TAU_diag(psetcols,nlev), stat=ierr)
+!      if (ierr /= 0) then
+!        errstring='Error allocating this%nrtend_TAU_diag'
+!      end if
       allocate(this%gmnnn_lmnnn_TAU(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%gmnnn_lmnnn_TAU'
@@ -691,18 +731,26 @@ contains
       deallocate(this%nc_out)
       deallocate(this%qr_out)
       deallocate(this%nr_out)
-      deallocate(this%qctend_MG2)
-      deallocate(this%nctend_MG2)
-      deallocate(this%qrtend_MG2)
-      deallocate(this%nrtend_MG2)
+      deallocate(this%qc_in)
+      deallocate(this%nc_in)
+      deallocate(this%qr_in)
+      deallocate(this%nr_in)
+      deallocate(this%qctend_KK2000)
+      deallocate(this%nctend_KK2000)
+      deallocate(this%qrtend_KK2000)
+      deallocate(this%nrtend_KK2000)
+      deallocate(this%qctend_SB2001)
+      deallocate(this%nctend_SB2001)
+      deallocate(this%qrtend_SB2001)
+      deallocate(this%nrtend_SB2001)
       deallocate(this%qctend_TAU)
       deallocate(this%nctend_TAU)
       deallocate(this%qrtend_TAU)
       deallocate(this%nrtend_TAU)
-      deallocate(this%qctend_TAU_diag)
-      deallocate(this%nctend_TAU_diag)
-      deallocate(this%qrtend_TAU_diag)
-      deallocate(this%nrtend_TAU_diag)
+!      deallocate(this%qctend_TAU_diag)
+!      deallocate(this%nctend_TAU_diag)
+!      deallocate(this%qrtend_TAU_diag)
+!      deallocate(this%nrtend_TAU_diag)
       deallocate(this%gmnnn_lmnnn_TAU)
       deallocate(this%ML_fixer)
       deallocate(this%QC_fixer)

@@ -320,6 +320,9 @@ gmnnn = 0._r8
 lnnnn = 0._r8
 lmnnn = 0._r8
 
+
+!write(iulog,*) 'rho,medge,amk0(i,1:ncd),ank0(i,1:ncd),gnnnn0,gmnnn0,lnnnn0,lmnnn0', rho(i),medge,amk0(i,1:ncd),ank0(i,1:ncd),gnnnn0,gmnnn0,lnnnn0,lmnnn0
+
 ! substep bin code
 do n=1,sub_step
    call compute_coll_params(rho(i),medge,amk0(i,1:ncd),ank0(i,1:ncd),gnnnn0,gmnnn0,lnnnn0,lmnnn0)
@@ -389,7 +392,6 @@ end do
    qrin_new(i) = qrin_new(i)+qrin_old(i)
    nrin_new(i) = nrin_new(i)+nrin_old(i)
 end do
-
 
 end subroutine pumas_stochastic_collect_tau_tend
 
@@ -473,6 +475,13 @@ end do
 
 scale_nr = scale_nr/nr
 scale_qr = scale_qr/qr
+
+
+!write(iulog,*) 'ank_r = ', ank_r(:)
+!write(iulog,*) 'scale_nr = ', scale_nr
+!write(iulog,*) 'amk_r = ', amk_r(:)
+!write(iulog,*) 'scale_qr = ', scale_qr
+
 
 ank_r = ank_r/scale_nr*precip_frac
 amk_r = amk_r/scale_qr*precip_frac
