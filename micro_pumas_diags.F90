@@ -466,7 +466,8 @@ contains
         errstring='Error allocating this%nmeltgtot'
       end if
 
-!CACNOTE -- Only allocate these variables if machine learning turned on
+      ! Note: Only allocate these variables if machine learning
+      ! is turned on?
       allocate(this%scale_qc(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%scale_qc'
@@ -738,10 +739,6 @@ contains
       deallocate(this%nctend_TAU)
       deallocate(this%qrtend_TAU)
       deallocate(this%nrtend_TAU)
-!      deallocate(this%qctend_TAU_diag)
-!      deallocate(this%nctend_TAU_diag)
-!      deallocate(this%qrtend_TAU_diag)
-!      deallocate(this%nrtend_TAU_diag)
       deallocate(this%gmnnn_lmnnn_TAU)
       deallocate(this%ML_fixer)
       deallocate(this%QC_fixer)
