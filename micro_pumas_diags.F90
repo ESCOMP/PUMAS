@@ -595,22 +595,6 @@ contains
       if (ierr /= 0) then
         errstring='Error allocating this%nrtend_TAU'
       end if
-!      allocate(this%qctend_TAU_diag(psetcols,nlev), stat=ierr)
-!      if (ierr /= 0) then
-!        errstring='Error allocating this%qctend_TAU_diag'
-!      end if
-!      allocate(this%nctend_TAU_diag(psetcols,nlev), stat=ierr)
-!      if (ierr /= 0) then
-!        errstring='Error allocating this%nctend_TAU_diag'
-!      end if
-!      allocate(this%qrtend_TAU_diag(psetcols,nlev), stat=ierr)
-!      if (ierr /= 0) then
-!        errstring='Error allocating this%qrtend_TAU_diag'
-!      end if
-!      allocate(this%nrtend_TAU_diag(psetcols,nlev), stat=ierr)
-!      if (ierr /= 0) then
-!        errstring='Error allocating this%nrtend_TAU_diag'
-!      end if
       allocate(this%gmnnn_lmnnn_TAU(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%gmnnn_lmnnn_TAU'
