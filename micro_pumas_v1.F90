@@ -1,37 +1,21 @@
 module micro_pumas_v1
 !---------------------------------------------------------------------------------
-! Purpose:
-!   MG microphysics version 3.0 - Update of MG microphysics with
-!                                 prognostic hail OR graupel.
-!
-! Author: Andrew Gettelman, Hugh Morrison
-!
-! Version 3 history: Sep 2016: development begun for hail, graupel
-!
-! Version 2 history: Sep 2011: Development begun.
-!                    Feb 2013: Added of prognostic precipitation.
-!                    Aug 2015: Published and released version
-! Contributions from:  Sean Santos, Peter Caldwell, Xiaohong Liu and Steve Ghan
-!
-! invoked in CAM by specifying -microphys=mg3
+! Parameterization of Unified Microphysics Across Scales version 1 (PUMASv1)
 !
 ! References:
 !
-!           Gettelman, A. and H. Morrison, Advanced Two-Moment Microphysics for Global Models.
+!           Gettelman, A., H. Morrison, T. Eidhammer, K. Thayer-Calder, J. Sun,
 !
-!           Part I: Off line tests and comparisons with other schemes.
+!           R. Forbes, Z. McGraw, J. Zhu, T. Storelvmo, and J. Dennis (2023):
 !
-!           J. Climate, 28, 1268-1287. doi: 10.1175/JCLI-D-14-00102.1, 2015.
+!           Importance of Ice Nucleation and Precipitation on Climate with the
 !
+!           Parameterization of Unified Microphysics Across Scales version 1 
 !
+!           (PUMASv1). Geosci. Model Dev., 16, 1735-1754. 
 !
-!           Gettelman, A., H. Morrison, S. Santos, P. Bogenschutz and P. H. Caldwell
+!           https://doi.org/10.5194/gmd-16-1735-2023
 !
-!           Advanced Two-Moment Microphysics for Global Models.
-!
-!           Part II: Global model solutions and Aerosol-Cloud Interactions.
-!
-!           J. Climate, 28, 1288-1307. doi:10.1175/JCLI-D-14-00103.1 , 2015.
 !
 ! for questions contact Hugh Morrison, Andrew Gettelman
 ! e-mail: morrison@ucar.edu, andrew@ucar.edu
@@ -591,12 +575,10 @@ subroutine micro_pumas_tend ( &
      prer_evap,                                                      &
      frzimm,             frzcnt,             frzdep)
 
-!++ TAU
   use pumas_stochastic_collect_tau, only: ncd, pumas_stochastic_collect_tau_tend
   use tau_neural_net_quantile, only: tau_emulated_cloud_rain_interactions
   use cam_logfile,    only: iulog
   use ML_fixer_check, only: ML_fixer_calc
-!-- TAU
 
   ! Constituent properties.
   use micro_pumas_utils, only: &
@@ -803,12 +785,10 @@ subroutine micro_pumas_tend ( &
   real(r8) :: ng(mgncol,nlev)      ! graupel number concentration (1/kg)
   real(r8) :: rhogtmp              ! hail or graupel density (kg m-3)
 
-!++ TAU
   real(r8) :: qc_eff_r
   real(r8) :: qr_eff_r
   real(r8) :: nc_eff_r
   real(r8) :: nr_eff_r
-!-- TAU
 
   ! general purpose variables
   real(r8) :: deltat            ! sub-time step (s)
@@ -1007,7 +987,7 @@ subroutine micro_pumas_tend ( &
   ! dummies for checking RH
   real(r8) :: ttmpA(mgncol,nlev), qtmpAI(mgncol,nlev)
   ! dummies for conservation check
-  real(r8) :: ratio
+  real(r8) :: ratio, tmpnr,tmpp
   real(r8) :: tmpfrz
   ! dummies for in-cloud variables
   real(r8) :: dumc(mgncol,nlev)   ! qc
@@ -1167,7 +1147,7 @@ subroutine micro_pumas_tend ( &
   !$acc               proc_rates%nnuccritot,proc_rates%nsacwitot,             &
   !$acc               proc_rates%npratot,proc_rates%npsacwstot,               &
   !$acc               proc_rates%npraitot,proc_rates%npracstot,               &
-  !$acc               proc_rates%nprctot,proc_rates%nprcitot,                 &
+  !$acc               proc_rates%nprctot,proc_rates%nprcitot,proc_rates%nraggtot, &
   !$acc               proc_rates%ncsedten,proc_rates%nisedten,                &
   !$acc               proc_rates%nrsedten,proc_rates%nssedten,                &
   !$acc               proc_rates%ngsedten,proc_rates%nmelttot,                &
@@ -1400,6 +1380,7 @@ subroutine micro_pumas_tend ( &
         proc_rates%npraitot(i,k)           = 0._r8
         proc_rates%npracstot(i,k)          = 0._r8
         proc_rates%nprctot(i,k)            = 0._r8
+        proc_rates%nraggtot(i,k)           = 0._r8
         proc_rates%nprcitot(i,k)           = 0._r8
         proc_rates%ncsedten(i,k)           = 0._r8
         proc_rates%nisedten(i,k)           = 0._r8
@@ -1602,6 +1583,36 @@ subroutine micro_pumas_tend ( &
 
         nnudep(i,k) = 0._r8
         mnudep(i,k) = 0._r8
+        
+        nragg(i,k) = 0._r8
+
+        proc_rates%qctend_KK2000(i,k) = 0._r8
+        proc_rates%nctend_KK2000(i,k) = 0._r8
+        proc_rates%qrtend_KK2000(i,k) = 0._r8
+        proc_rates%nrtend_KK2000(i,k) = 0._r8
+
+        if (trim(warm_rain) == 'sb2001') then
+           proc_rates%qctend_SB2001(i,k) = 0._r8
+           proc_rates%nctend_SB2001(i,k) = 0._r8
+           proc_rates%qrtend_SB2001(i,k) = 0._r8
+           proc_rates%nrtend_SB2001(i,k) = 0._r8
+        end if
+
+        if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+           proc_rates%qctend_TAU(i,k) = 0._r8
+           proc_rates%nctend_TAU(i,k) = 0._r8
+           proc_rates%qrtend_TAU(i,k) = 0._r8
+           proc_rates%nrtend_TAU(i,k) = 0._r8
+           proc_rates%qc_out(i,k) = 0._r8
+           proc_rates%nc_out(i,k) = 0._r8
+           proc_rates%qr_out(i,k) = 0._r8
+           proc_rates%nr_out(i,k) = 0._r8
+           proc_rates%qc_in(i,k) = 0._r8
+           proc_rates%nc_in(i,k) = 0._r8
+           proc_rates%qr_in(i,k) = 0._r8
+           proc_rates%nr_in(i,k) = 0._r8
+           proc_rates%gmnnn_lmnnn_TAU(i,k) = 0._r8
+        end if
 
 !++ TAU
 
@@ -1945,20 +1956,12 @@ subroutine micro_pumas_tend ( &
   ! formula from Khrouditnov and Kogan (2000), modified for sub-grid distribution of qc
   ! minimum qc of 1 x 10^-8 prevents floating point error
 
-!  if (trim(warm_rain) == 'kk2000') then
-!    call kk2000_liq_autoconversion(microp_uniform, qcic, ncic, rho, relvar, &
-!         proc_rates%qctend_KK2000, proc_rates%nrtend_KK2000, proc_rates%nctend_KK2000, &
-!         micro_mg_autocon_fact, micro_mg_autocon_nd_exp, micro_mg_autocon_lwp_exp, mgncol*nlev)
-!
-!    prc=proc_rates%qctend_KK2000
-!    nprc1=proc_rates%nctend_KK2000
-!    nprc=proc_rates%nrtend_KK2000
-!    proc_rates%qrtend_KK2000=-proc_rates%qctend_KK2000
-
     do k=1,nlev
        call kk2000_liq_autoconversion(microp_uniform, qcic(1:mgncol,k), ncic(1:mgncol,k), rho(1:mgncol,k), relvar(1:mgncol,k), &
          proc_rates%qctend_KK2000(1:mgncol,k), proc_rates%nrtend_KK2000(1:mgncol,k), proc_rates%nctend_KK2000(1:mgncol,k), &
          micro_mg_autocon_fact, micro_mg_autocon_nd_exp, micro_mg_autocon_lwp_exp, mgncol)
+
+       ! Write to pumas tendency arrays if kk2000 is active, otherwise just record diagnostics
 
        if (trim(warm_rain) == 'kk2000') then
           prc(1:mgncol,k)=proc_rates%qctend_KK2000(1:mgncol,k)
@@ -1969,13 +1972,6 @@ subroutine micro_pumas_tend ( &
 
     end do
 
-!    write(iulog,*) "qctend_KK2000: ",proc_rates%qctend_KK2000(1,:)
-!    write(iulog,*) "prctot: ",prc(1,:)
-
-! write(iulog,*) "precip_frac: ",precip_frac(1,:)
-
-
-!++ TAU
   if (trim(warm_rain) == 'tau') then
      do k=1,nlev
         call pumas_stochastic_collect_tau_tend(deltatin, t(:,k), rho(:,k), qcn(1:mgncol,k), qrn(1:mgncol,k), &
@@ -1996,10 +1992,18 @@ subroutine micro_pumas_tend ( &
                                       proc_rates%amk_out(1:mgncol,k,1:ncd), proc_rates%ank_out(1:mgncol,k,1:ncd), &
                                       proc_rates%gmnnn_lmnnn_TAU(1:mgncol,k), mgncol)
 
+        ! PUMAS expects prc and nprc1 (cloud rates) are positive
         prc(1:mgncol,k)= -proc_rates%qctend_TAU(1:mgncol,k)
         nprc1(1:mgncol,k)= -proc_rates%nctend_TAU(1:mgncol,k)
-        nprc(1:mgncol,k)= proc_rates%nrtend_TAU(1:mgncol,k)
-        proc_rates%qrtend_TAU(1:mgncol,k)= proc_rates%qctend_TAU(1:mgncol,k)
+
+        ! PUMAS expects nprc to be positive. Negative nrtend_TAU is from self collection, so put it into nragg
+        do i=1,mgncol
+           if (proc_rates%nrtend_TAU(i,k).gt.0._r8) then
+              nprc(i,k)= proc_rates%nrtend_TAU(i,k)
+           else
+              nragg(i,k) = proc_rates%nrtend_TAU(i,k)
+           end if
+        end do
 
         proc_rates%qc_in(1:mgncol,k)=qcic(1:mgncol,k)
         proc_rates%nc_in(1:mgncol,k)=ncic(1:mgncol,k)
@@ -2007,12 +2011,6 @@ subroutine micro_pumas_tend ( &
         proc_rates%nr_in(1:mgncol,k)=nric(1:mgncol,k)
 
      end do
-
-!    write(iulog,*) "pumas: nrtend_TAU: ",proc_rates%nrtend_TAU(1,:)
-!    write(iulog,*) "pumas: nctend_TAU: ",proc_rates%nctend_TAU(1,:)
-!    write(iulog,*) "pumas: qctend_TAU: ",proc_rates%qctend_TAU(1,:)
-!     write(iulog,*) "pumas: prctot: ",prc(1,:)
-
 
   else if (trim(warm_rain) == 'emulated') then
      do k=1,nlev
@@ -2027,15 +2025,22 @@ subroutine micro_pumas_tend ( &
           proc_rates%ML_fixer(1:mgncol,k), proc_rates%QC_fixer(1:mgncol,k), &
           proc_rates%NC_fixer(1:mgncol,k), proc_rates%QR_fixer(1:mgncol,k), proc_rates%NR_fixer(1:mgncol,k))
 
+        ! PUMAS expects prc and nprc1 (cloud rates) are positive
         prc(1:mgncol,k)= -proc_rates%qctend_TAU(1:mgncol,k)
         nprc1(1:mgncol,k)= -proc_rates%nctend_TAU(1:mgncol,k)
-        nprc(1:mgncol,k)= proc_rates%nrtend_TAU(1:mgncol,k)
-        proc_rates%qrtend_TAU(1:mgncol,k)= proc_rates%qctend_TAU(1:mgncol,k)
+
+        ! PUMAS expects nprc to be positive. Negative nrtend_TAU is from self collection, so put it into nragg
+        do i=1,mgncol
+           if (proc_rates%nrtend_TAU(i,k).gt.0._r8) then
+              nprc(i,k)= proc_rates%nrtend_TAU(i,k)
+           else
+              nragg(i,k)= proc_rates%nrtend_TAU(i,k)
+           end if
+        end do
 
      end do
 
   end if
-!-- TAU
 
   ! Alternative autoconversion
   if (trim(warm_rain) == 'sb2001') then
@@ -2198,32 +2203,27 @@ subroutine micro_pumas_tend ( &
   !$acc end parallel
 
   if (do_cldice) then
-
-     ! heterogeneous freezing of cloud water
-     !----------------------------------------------
-     call immersion_freezing(microp_uniform, t, pgam, lamc, qcic, ncic, relvar, mnuccc, nnuccc, mgncol*nlev)
-
-     ! make sure number of droplets frozen does not exceed available ice nuclei concentration
-     ! this prevents 'runaway' droplet freezing
-
-     !$acc parallel vector_length(VLENS) default(present)
-     !$acc loop gang vector collapse(2)
-     do k=1,nlev
-        do i=1,mgncol
-           if (qcic(i,k).ge.qsmall .and. t(i,k).lt.269.15_r8 .and. &
-               nnuccc(i,k)*lcldm(i,k).gt.nnuccd(i,k)) then
-               ! scale mixing ratio of droplet freezing with limit
-               mnuccc(i,k)=mnuccc(i,k)*(nnuccd(i,k)/(nnuccc(i,k)*lcldm(i,k)))
-               nnuccc(i,k)=nnuccd(i,k)/lcldm(i,k)
-           else
-               mnuccc(i,k)=0._r8
-               nnuccc(i,k)=0._r8
-           end if
-        end do
-     end do
-     !$acc end parallel
-
      if (.not. use_hetfrz_classnuc) then
+        ! heterogeneous freezing of cloud water via Bigg, 1953
+        !----------------------------------------------
+        call immersion_freezing(microp_uniform, t, pgam, lamc, qcic, ncic, relvar, mnuccc, nnuccc, mgncol*nlev)
+
+        ! make sure number of droplets frozen does not exceed available ice nuclei concentration
+        ! this prevents 'runaway' droplet freezing
+
+        !$acc parallel vector_length(VLENS) default(present)
+        !$acc loop gang vector collapse(2)
+        do k=1,nlev
+           do i=1,mgncol
+              if (qcic(i,k).ge.qsmall .and. t(i,k).lt.269.15_r8 .and. &
+                   nnuccc(i,k)*lcldm(i,k).gt.nnuccd(i,k)) then
+                 ! scale mixing ratio of droplet freezing with limit
+                 mnuccc(i,k)=mnuccc(i,k)*(nnuccd(i,k)/(nnuccc(i,k)*lcldm(i,k)))
+                 nnuccc(i,k)=nnuccd(i,k)/lcldm(i,k)
+              end if
+           end do
+        end do
+        !$acc end parallel
 
         call contact_freezing(microp_uniform, t, p, rndst, nacon, pgam, lamc, qcic, ncic, &
                               relvar, mnucct, nnucct, mgncol*nlev, mdust)
@@ -2239,11 +2239,15 @@ subroutine micro_pumas_tend ( &
               mi0l(i,k) = qcic(i,k)/max(ncic(i,k), 1.0e6_r8/rho(i,k))
               mi0l(i,k) = max(mi0l_min, mi0l(i,k))
               if (qcic(i,k) >= qsmall) then
+                 nnuccc(i,k) = frzimm(i,k)*1.0e6_r8/rho(i,k)
+                 mnuccc(i,k) = nnuccc(i,k)*mi0l(i,k)
                  nnucct(i,k) = frzcnt(i,k)*1.0e6_r8/rho(i,k)
                  mnucct(i,k) = nnucct(i,k)*mi0l(i,k)
                  nnudep(i,k) = frzdep(i,k)*1.0e6_r8/rho(i,k)
                  mnudep(i,k) = nnudep(i,k)*mi0
               else
+                 nnuccc(i,k) = 0._r8
+                 mnuccc(i,k) = 0._r8
                  nnucct(i,k) = 0._r8
                  mnucct(i,k) = 0._r8
                  nnudep(i,k) = 0._r8
@@ -2331,10 +2335,11 @@ subroutine micro_pumas_tend ( &
            endif
         end do
 
-        call accrete_cloud_water_rain(microp_uniform, rtmp(1:mgncol,k), ctmp(1:mgncol,k), ntmp(1:mgncol,k), relvar(1:mgncol,k), accre_enhan(1:mgncol,k), pra(1:mgncol,k), npra(1:mgncol,k), mgncol)
+        call accrete_cloud_water_rain(microp_uniform, rtmp(1:mgncol,k), ctmp(1:mgncol,k), ntmp(1:mgncol,k), &
+             relvar(1:mgncol,k), accre_enhan(1:mgncol,k), pra(1:mgncol,k), npra(1:mgncol,k), mgncol)
         proc_rates%nctend_KK2000(1:mgncol,k)=proc_rates%nctend_KK2000(1:mgncol,k)+npra(1:mgncol,k)
         proc_rates%qctend_KK2000(1:mgncol,k)=proc_rates%qctend_KK2000(1:mgncol,k)+pra(1:mgncol,k)
-        proc_rates%nrtend_KK2000(1:mgncol,k)=proc_rates%nrtend_KK2000(1:mgncol,k)+npra(1:mgncol,k)  !Check sign?
+        proc_rates%nrtend_KK2000(1:mgncol,k)=proc_rates%nrtend_KK2000(1:mgncol,k)+npra(1:mgncol,k)  !Sign consistent with prc,nprc
         proc_rates%qrtend_KK2000(1:mgncol,k)=proc_rates%qrtend_KK2000(1:mgncol,k)-pra(1:mgncol,k)
 
      end do
@@ -2543,6 +2548,7 @@ subroutine micro_pumas_tend ( &
               mnuccd(i,k) = dum*mnuccd(i,k)/dum1
               vap_dep(i,k) = dum*vap_dep(i,k)/dum1
               vap_deps(i,k) = dum*vap_deps(i,k)/dum1
+
            end if
         end if
      end do
@@ -2632,11 +2638,16 @@ subroutine micro_pumas_tend ( &
         dum = ((-nsubr(i,k)+npracs(i,k)+nnuccr(i,k)+nnuccri(i,k)-nragg(i,k)+npracg(i,k)+ngracs(i,k)) &
              *precip_frac(i,k)- nprc(i,k)*lcldm(i,k))*deltat
 
-!        write(iulog,*) 'dum ',dum
+        ! Added a check to trap for division by zero errors
 
-        if (dum.gt.nr(i,k)) then
+        tmpnr = -nsubr(i,k)+npracs(i,k)+nnuccr(i,k)+nnuccri(i,k)-nragg(i,k)+npracg(i,k)+ngracs(i,k)
+        tmpp  = nr(i,k)*rdeltat + nprc(i,k)*lcldm(i,k)
+
+        if (dum.gt.nr(i,k) .and. tmpnr.gt.0._r8 .and. tmpp.gt.0._r8 .and. precip_frac(i,k).gt.0._r8) then
+!        if (dum.gt.nr(i,k)) then
            ratio = (nr(i,k)*rdeltat+nprc(i,k)*lcldm(i,k))/precip_frac(i,k)/ &
                 (-nsubr(i,k)+npracs(i,k)+nnuccr(i,k)+nnuccri(i,k)-nragg(i,k)+npracg(i,k)+ngracs(i,k))*omsm
+
            npracg(i,k)=npracg(i,k)*ratio
            ngracs(i,k)=ngracs(i,k)*ratio
            nragg(i,k)=nragg(i,k)*ratio
@@ -2869,13 +2880,12 @@ subroutine micro_pumas_tend ( &
              -prdg(i,k)*precip_frac(i,k)
         tlat(i,k) = tlat(i,k)+((pre(i,k)*precip_frac(i,k))*xxlv+ &
              ((prds(i,k)+prdg(i,k))*precip_frac(i,k)+vap_dep(i,k)+vap_deps(i,k)+ice_sublim(i,k)+ &
-                 mnuccd(i,k)+mnudep(i,k)*lcldm(i,k))*xxls+ &
+             mnuccd(i,k)+mnudep(i,k)*lcldm(i,k))*xxls+ &
              ((bergs(i,k)+psacws(i,k)+mnuccc(i,k)+mnucct(i,k)+msacwi(i,k)+psacwg(i,k)+ &
-                  qmultg(i,k)+pgsacw(i,k))*lcldm(i,k)+ &
+             qmultg(i,k)+pgsacw(i,k))*lcldm(i,k)+ &
              (mnuccr(i,k)+pracs(i,k)+mnuccri(i,k)+pracg(i,k)+pgracs(i,k)+qmultrg(i,k))*precip_frac(i,k)+ &
-                  berg(i,k))*xlf)
-!        if (trim(warm_rain) == 'kk2000' .or. trim(warm_rain) == 'sb2001') then
-          qctend(i,k) = qctend(i,k)+ &
+             berg(i,k))*xlf)
+        qctend(i,k) = qctend(i,k)+ &
              (-pra(i,k)-prc(i,k)-mnuccc(i,k)-mnucct(i,k)-msacwi(i,k)- &
              psacws(i,k)-bergs(i,k)-qmultg(i,k)-psacwg(i,k)-pgsacw(i,k))*lcldm(i,k)-berg(i,k)
 !!++ TAU
@@ -2892,9 +2902,9 @@ subroutine micro_pumas_tend ( &
 
         if (do_cldice) then
            qitend(i,k) = qitend(i,k)+ &
-              (mnuccc(i,k)+mnucct(i,k)+mnudep(i,k)+msacwi(i,k)+qmultg(i,k))*lcldm(i,k)+(-prci(i,k)- &
-              prai(i,k))*icldm(i,k)+vap_dep(i,k)+berg(i,k)+ice_sublim(i,k)+ &
-              mnuccd(i,k)+(mnuccri(i,k)+qmultrg(i,k))*precip_frac(i,k)
+                (mnuccc(i,k)+mnucct(i,k)+mnudep(i,k)+msacwi(i,k)+qmultg(i,k))*lcldm(i,k)+(-prci(i,k)- &
+                prai(i,k))*icldm(i,k)+vap_dep(i,k)+berg(i,k)+ice_sublim(i,k)+ &
+                mnuccd(i,k)+(mnuccri(i,k)+qmultrg(i,k))*precip_frac(i,k)
         end if
 
 !        if (trim(warm_rain) == 'kk2000' .or. trim(warm_rain) == 'sb2001') then
@@ -3015,6 +3025,7 @@ subroutine micro_pumas_tend ( &
         proc_rates%npraitot(i,k) = nprai(i,k)*icldm(i,k)
         proc_rates%npracstot(i,k) = npracs(i,k)*precip_frac(i,k)
         proc_rates%nprctot(i,k) = nprc(i,k)*lcldm(i,k)
+        proc_rates%nraggtot(i,k) = nragg(i,k)*precip_frac(i,k)
         proc_rates%nprcitot(i,k) = nprci(i,k)*icldm(i,k)
         proc_rates%nmeltstot(i,k) = ninstsm(i,k)/deltat
         proc_rates%nmeltgtot(i,k) = ninstgm(i,k)/deltat
@@ -3026,21 +3037,9 @@ subroutine micro_pumas_tend ( &
   !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
-!        if (trim(warm_rain) == 'kk2000' .or. trim(warm_rain) == 'sb2001') then
            nctend(i,k) = nctend(i,k)+&
               (-nnuccc(i,k)-nnucct(i,k)-npsacws(i,k)+nsubc(i,k) &
               -npra(i,k)-nprc1(i,k)-npsacwg(i,k))*lcldm(i,k)
-!!++ TAU
-!        else if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
-!           nctend(i,k) = nctend(i,k)+proc_rates%nctend_TAU(i,k)+&
-!             (-nnuccc(i,k)-nnucct(i,k)-npsacws(i,k)+nsubc(i,k) &
-!             )*lcldm(i,k)
-!           proc_rates%nctend_KK2000(i,k) = (-npra(i,k)-nprc1(i,k)-npsacwg(i,k))*lcldm(i,k)
-!        else
-!           errstring = 'Invalid value for warm_rain in micro_pumas_tend'
-!           return
-!        end if
-!!-- TAU
 
         if (do_cldice) then
            if (use_hetfrz_classnuc) then
@@ -4505,7 +4504,6 @@ end if
 !++ TAU
   ! TAU check radius
   if (trim(warm_rain) == 'tau') then
-  
      do i=1,mgncol
         do k=1,nlev
            qc_eff_r = qcn(i,k)+qctend(i,k)*deltatin
@@ -4541,16 +4539,9 @@ end if
               qr_eff_r = -999._r8
            end if
 
-! CACNOTE - COMMENTED OUT AS WAS FLOODING LOG FILES FOR TAU RUNS
-!           if(qr_eff_r.gt.100._r8) then
-!              write(iulog,*) 'qr radius = ', qr_eff_r, proc_rates%qrtend_TAU(i,k), proc_rates%qrtend_KK2000(i,k), &
-!                              proc_rates%nrtend_TAU(i,k), proc_rates%nrtend_KK2000(i,k)
-!           end if
         end do
       end do
    end if
-
-!-- TAU
   !$acc end parallel
 
   !$acc end data

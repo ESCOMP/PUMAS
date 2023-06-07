@@ -411,6 +411,15 @@ ncin_new(i)=max(ncin_new(i),0._r8)
 qrin_new(i)=max(qrin_new(i),0._r8)
 nrin_new(i)=max(nrin_new(i),0._r8)
 
+! Now adjust so that sign is correct. qc_new,nc_new <= input, qr_new >= input
+! NOte that due to self collection nr can be larger or smaller than input....
+! Makes above check redundant I think.
+
+qcin_new(i)=min(qcin_new(i),qcin(i))
+ncin_new(i)=min(ncin_new(i),ncin(i))
+qrin_new(i)=max(qrin_new(i),qrin(i))
+!nrin_new(i)=max(nrin_new(i),nrin(i))
+
 ! Next scale mass...so output qc+qr is the same as input
 
 
@@ -433,23 +442,25 @@ if (qrin_new(i) < qsmall) then
    nrin_new(i) = 0._r8
 end if
 
-!Finally add number if mass but no number
+!Finally add number if mass but no (or super small) number
 
-if (qcin_new(i) > qsmall .and. ncin_new(i) < 1._r8) then
+if (qcin_new(i) > qsmall .and. ncin_new(i) < qsmall) then
    ncin_new(i) = qcin_new(i)/m1
 end if
 
-if (qrin_new(i) > qsmall .and. nrin_new(i) < 1._r8) then
+if (qrin_new(i) > qsmall .and. nrin_new(i) < qsmall) then
    nrin_new(i) = qrin_new(i)/m1
 end if
 
 ! Then recalculate tendencies based on difference
+! Clip tendencies for cloud (qc,nc) to be <= 0. 
+! Qrtend is not used in pumas (-qctend is used) but clip that too). 
+! Nr tend can be muliply signed. 
 
-qctend_TAU(i)= (qcin_new(i) - qcin(i)) / deltatin
-nctend_TAU(i)= (ncin_new(i) - ncin(i)) / deltatin
-qrtend_TAU(i)= (qrin_new(i) - qrin(i)) / deltatin
+qctend_TAU(i)= min((qcin_new(i) - qcin(i)) / deltatin,0._r8)
+nctend_TAU(i)= min((ncin_new(i) - ncin(i)) / deltatin,0._r8)
+qrtend_TAU(i)= max((qrin_new(i) - qrin(i)) / deltatin,0._r8)
 nrtend_TAU(i)= (nrin_new(i) - nrin(i)) / deltatin
-
 
 end do 
 

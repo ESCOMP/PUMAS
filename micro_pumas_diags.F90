@@ -77,7 +77,7 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: npsacwstot(:,:)       ! change n  due to Accretion of cloud water by snow
   real(r8), allocatable :: npraitot(:,:)         ! change n  due to Accretion of cloud ice to snow
   real(r8), allocatable :: npracstot(:,:)        ! change n  due to Accretion of rain by snow
-  real(r8), allocatable :: nprctot(:,:)          ! change n  due to Autoconversion of cloud water [to rain]
+  real(r8), allocatable :: nprctot(:,:)          ! change nr  due to Autoconversion of cloud water [to rain]
   real(r8), allocatable :: nprcitot(:,:)         ! change n  due to Autoconversion of cloud ice to snow
   real(r8), allocatable :: ncsedten(:,:)         ! change n  due to cloud liquid sedimentation
   real(r8), allocatable :: nisedten(:,:)         ! change n  due to cloud ice sedimentation
@@ -89,6 +89,8 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: nmeltgtot(:,:)        ! change n  due to Melting of graupel
 
   ! TAU diagnostic variables
+  real(r8), allocatable :: nraggtot(:,:)          ! change nr  due to self collection of rain
+
   real(r8), allocatable :: scale_qc(:,:)      ! TAU scaling factor for liquid mass to ensure conservation
   real(r8), allocatable :: scale_nc(:,:)       ! TAU scaling factor for liquid number to ensure conservation
   real(r8), allocatable :: scale_qr(:,:)      ! TAU scaling factor for rain mass to ensure conservation
@@ -139,7 +141,7 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
 
 contains
 
-   subroutine proc_rates_allocate(this, psetcols, nlev, ncd, warm_rain, errstring)
+   subroutine proc_rates_allocate(this, psetcols, nlev, ncd, errstring)
    !--------------------------------------------------------------
    ! Routine to allocate the elements of the proc_rates DDT
    !--------------------------------------------------------------
@@ -424,6 +426,10 @@ contains
       if (ierr /= 0) then
         errstring='Error allocating this%nprctot'
       end if
+      allocate(this%nraggtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nraggtot'
+      end if
       allocate(this%nprcitot(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%nprcitot'
@@ -694,6 +700,7 @@ contains
       deallocate(this%npraitot)
       deallocate(this%npracstot)
       deallocate(this%nprctot)
+      deallocate(this%nraggtot)
       deallocate(this%nprcitot)
       deallocate(this%ncsedten)
       deallocate(this%nisedten)

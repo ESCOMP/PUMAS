@@ -39,6 +39,7 @@ contains
         call load_quantile_scale_values(trim(stochastic_emulated_filename_input_scale), input_scale_values, iulog, errstring)
         call load_quantile_scale_values(trim(stochastic_emulated_filename_output_scale), output_scale_values, iulog, errstring)
         write(iulog,*) "Loaded neural nets scaling values"
+
     end subroutine initialize_tau_emulators
 
 

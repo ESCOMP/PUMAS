@@ -36,7 +36,6 @@ contains
         integer :: i, j, num_examples
         real(kind=r8) :: alpha, beta
         external :: dgemm
-
         alpha = 1
         beta = 1
         dense_output = 0

@@ -1,4 +1,10 @@
 ====================================
+.. pumas_cam-release_v1.30
+June 5, 2023 - Adding in support for the machine learning emulators. Will be b4b when this is turned off. CAM support in PR phase, to run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr until the CAM PR is done.
+====================================
+.. pumas_cam-release_v1.29
+March 1, 2023 - Mainly updates to the heterogenious ice nucleation methods for cam_dev tuning. These tags are currently supported on the cam_development branch. 
+====================================
 .. pumas_cam-release_v1.28
 October 11, 2022 - Creation and implimentation of a derived data type (DDT) for process rates. Not supported by cam_development yet. The CAM changes are currently in https://github.com/ESCOMP/CAM/pull/632
 ====================================
