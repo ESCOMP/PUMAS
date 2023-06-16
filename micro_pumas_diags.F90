@@ -141,7 +141,7 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
 
 contains
 
-   subroutine proc_rates_allocate(this, psetcols, nlev, ncd, errstring)
+   subroutine proc_rates_allocate(this, psetcols, nlev, ncd, warm_rain, errstring)
    !--------------------------------------------------------------
    ! Routine to allocate the elements of the proc_rates DDT
    !--------------------------------------------------------------
