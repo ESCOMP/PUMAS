@@ -1605,11 +1605,6 @@ subroutine micro_pumas_tend ( &
 
 !++ TAU
 
-   proc_rates%qctend_KK2000(i,k) = 0._r8
-   proc_rates%nctend_KK2000(i,k) = 0._r8
-   proc_rates%qrtend_KK2000(i,k) = 0._r8
-   proc_rates%nrtend_KK2000(i,k) = 0._r8
-
    if (trim(warm_rain) == 'sb2001') then
      proc_rates%qctend_SB2001(i,k) = 0._r8
      proc_rates%nctend_SB2001(i,k) = 0._r8
@@ -1618,6 +1613,11 @@ subroutine micro_pumas_tend ( &
    end if
 
    if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+     proc_rates%qctend_KK2000(i,k) = 0._r8
+     proc_rates%nctend_KK2000(i,k) = 0._r8
+     proc_rates%qrtend_KK2000(i,k) = 0._r8
+     proc_rates%nrtend_KK2000(i,k) = 0._r8
+
      proc_rates%qctend_TAU(i,k) = 0._r8
      proc_rates%nctend_TAU(i,k) = 0._r8
      proc_rates%qrtend_TAU(i,k) = 0._r8
@@ -2625,14 +2625,14 @@ subroutine micro_pumas_tend ( &
         end if
 
 ! CACNOTE - removed as swamping the log files
-!        write(iulog,*) 'k,qr,nr,nprc,lcldm,precip_frac,nsubr,npracs,nnuccr,nnuccri,nragg,npracg,ngracs ', & 
-!             k,qr(i,k),nr(i,k),nprc(i,k),lcldm(i,k),precip_frac(i,k), &
-!             nsubr(i,k),npracs(i,k),nnuccr(i,k),nnuccri(i,k),nragg(i,k),npracg(i,k),ngracs(i,k)
+         write(iulog,*) 'k,qr,nr,nprc,lcldm,precip_frac,nsubr,npracs,nnuccr,nnuccri,nragg,npracg,ngracs ', & 
+              k,qr(i,k),nr(i,k),nprc(i,k),lcldm(i,k),precip_frac(i,k), &
+              nsubr(i,k),npracs(i,k),nnuccr(i,k),nnuccri(i,k),nragg(i,k),npracg(i,k),ngracs(i,k)
 
         dum = ((-nsubr(i,k)+npracs(i,k)+nnuccr(i,k)+nnuccri(i,k)-nragg(i,k)+npracg(i,k)+ngracs(i,k)) &
              *precip_frac(i,k)- nprc(i,k)*lcldm(i,k))*deltat
 
-!        write(iulog,*) 'dum ',dum
+         write(iulog,*) 'dum ',dum
 
         if (dum.gt.nr(i,k)) then
            ratio = (nr(i,k)*rdeltat+nprc(i,k)*lcldm(i,k))/precip_frac(i,k)/ &
