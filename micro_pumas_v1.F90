@@ -2625,16 +2625,19 @@ subroutine micro_pumas_tend ( &
         end if
 
 ! CACNOTE - removed as swamping the log files
-         write(iulog,*) 'k,qr,nr,nprc,lcldm,precip_frac,nsubr,npracs,nnuccr,nnuccri,nragg,npracg,ngracs ', & 
-              k,qr(i,k),nr(i,k),nprc(i,k),lcldm(i,k),precip_frac(i,k), &
-              nsubr(i,k),npracs(i,k),nnuccr(i,k),nnuccri(i,k),nragg(i,k),npracg(i,k),ngracs(i,k)
+!         write(iulog,*) 'k,qr,nr,nprc,lcldm,precip_frac,nsubr,npracs,nnuccr,nnuccri,nragg,npracg,ngracs ', & 
+!              k,qr(i,k),nr(i,k),nprc(i,k),lcldm(i,k),precip_frac(i,k), &
+!              nsubr(i,k),npracs(i,k),nnuccr(i,k),nnuccri(i,k),nragg(i,k),npracg(i,k),ngracs(i,k)
 
         dum = ((-nsubr(i,k)+npracs(i,k)+nnuccr(i,k)+nnuccri(i,k)-nragg(i,k)+npracg(i,k)+ngracs(i,k)) &
              *precip_frac(i,k)- nprc(i,k)*lcldm(i,k))*deltat
 
-         write(iulog,*) 'dum ',dum
+!         write(iulog,*) 'dum ',dum
 
-        if (dum.gt.nr(i,k)) then
+        if (dum.gt.nr(i,k) .and. &
+              (nsubr(i,k)/=0._r8 .or. npracs(i,k)/=0._r8 .or. nnuccr(i,k)/=0._r8 .or. nnuccri(i,k)/=0._r8 .or. &
+               nragg(i,k)/=0._r8 .or. npracg(i,k)/=0._r8 .or. ngracs(i,k)/=0._r8)) then
+           
            ratio = (nr(i,k)*rdeltat+nprc(i,k)*lcldm(i,k))/precip_frac(i,k)/ &
                 (-nsubr(i,k)+npracs(i,k)+nnuccr(i,k)+nnuccri(i,k)-nragg(i,k)+npracg(i,k)+ngracs(i,k))*omsm
            npracg(i,k)=npracg(i,k)*ratio
