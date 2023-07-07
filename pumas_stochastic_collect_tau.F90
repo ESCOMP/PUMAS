@@ -118,14 +118,17 @@ real(r8) :: kkfac
          
 end subroutine calc_bins
 
-subroutine pumas_stochastic_kernel_init(iunit)
+subroutine pumas_stochastic_kernel_init(kernel_filename)
 
     use cam_history_support, only: add_hist_coord
 
-    integer, intent(in) :: iunit ! unit number of opened file for collection kernel code from a lookup table.
+    character(len=*), intent(in) :: kernel_filename  ! Full pathname to kernel file
+
+    integer :: iunit ! unit number of opened file for collection kernel code from a lookup table.
 
     integer :: idd, jdd
     real(r8) :: kkfac
+
 
     call calc_bins
 
@@ -135,18 +138,21 @@ subroutine pumas_stochastic_kernel_init(iunit)
      KNN(:,:)=0._r8 ! initialize values
      kkfac=1.5_r8   ! from Zach
 
- 941 FORMAT(2X,E12.5)
+     open(newunit=iunit,file=kernel_filename,status='old')
 
      do idd=1,ncd
         do jdd=1,idd
    	  READ(iunit,941) KNN(IDD,JDD)
-!     KNN(IDD,JDD)=(XK_GR(IDD)*kkfac+XK_GR(JDD)*kkfac)*KNN(IDD,JDD)
+941       FORMAT(2X,E12.5)
+
 	  KNN(IDD,JDD)=(mmean(IDD)*kkfac+mmean(JDD)*kkfac)*KNN(IDD,JDD)
 
       	  if (knn(idd,jdd).lt.0._r8) knn(idd,jdd)=0._r8
 
      	end do
      end do
+
+     write(0,*) 'knn=',knn
 
 end subroutine pumas_stochastic_kernel_init
 

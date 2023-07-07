@@ -1591,12 +1591,12 @@ subroutine micro_pumas_tend ( &
         proc_rates%qrtend_KK2000(i,k) = 0._r8
         proc_rates%nrtend_KK2000(i,k) = 0._r8
 
-        if (trim(warm_rain) == 'sb2001') then
-           proc_rates%qctend_SB2001(i,k) = 0._r8
-           proc_rates%nctend_SB2001(i,k) = 0._r8
-           proc_rates%qrtend_SB2001(i,k) = 0._r8
-           proc_rates%nrtend_SB2001(i,k) = 0._r8
-        end if
+   if (trim(warm_rain) == 'sb2001') then
+     proc_rates%qctend_SB2001(i,k) = 0._r8
+     proc_rates%nctend_SB2001(i,k) = 0._r8
+     proc_rates%qrtend_SB2001(i,k) = 0._r8
+     proc_rates%nrtend_SB2001(i,k) = 0._r8
+   end if
 
         if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
            proc_rates%qctend_TAU(i,k) = 0._r8
