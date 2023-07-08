@@ -11,9 +11,6 @@ module pumas_stochastic_collect_tau
 use shr_spfn_mod, only: gamma => shr_spfn_gamma
 #endif
 
-!use statements here
-!use
-  
 use shr_kind_mod,      only: r8=>shr_kind_r8
 use cam_history,       only: addfld
 use micro_pumas_utils, only: pi, rhow, qsmall
@@ -35,18 +32,13 @@ integer, parameter, public  :: ncdp = ncd + 1
 integer, parameter, public  :: ncdl = ncd
 integer, parameter, public  :: ncdpl = ncdl+1
 
-!integer, private :: ncd,ncdp
-!integer, private :: ncdl,ncdpl
-!PARAMETER(ncd=35,ncdl=ncd) ! set number of ice and liquid bins
-!PARAMETER(ncdp=ncd+1,ncdpl=ncdl+1)
-
 ! for Zach's collision-coalescence code
 
 
 real(r8), private :: knn(ncd,ncd)
 
-real(r8), public :: mmean(ncd), diammean(ncd)       ! kg & m at bin mid-points
-real(r8), public :: medge(ncdp), diamedge(ncdp)     ! kg & m at bin edges 
+real(r8), private :: mmean(ncd), diammean(ncd)       ! kg & m at bin mid-points
+real(r8), private :: medge(ncdp), diamedge(ncdp)     ! kg & m at bin edges 
 integer, private  :: cutoff_id                       ! cutoff between cloud water and rain drop, D = 40 microns
 
 ! Assume 6 microns for each...
@@ -72,17 +64,13 @@ real(r8) :: kkfac
 
 ! use mass doubling bins from Graham Feingold (note cgs units)
 
-!      PI=3.14159_r8
-!      rho_w=1000._r8                         ! kg/m3
       DIAM(1)=1.5625*2.E-04_r8                ! cm
       X(1)=PI/6._r8*DIAM(1)**3*rhow/1000._r8  ! rhow kg/m3 --> g/cm3 
       radsl(1) = X(1)                         ! grams 
-!      radsl(1) = X(1)/1000._r8       
 
       DO l=2,ncdp
          X(l)=2._r8*X(l-1)
          DIAM(l)=(6._r8/pi*X(l)*1000._r8/rhow)**(1._r8/3._r8)  ! cm
-!         radsl(l)=X(l)/1000._r8 ! convert from g to kg
          radsl(l)=X(l)             
       ENDDO
 
@@ -90,7 +78,6 @@ real(r8) :: kkfac
 
       do l=1,ncd
          radl(l)=(radsl(l)+radsl(l+1))/2._r8         ! grams   
-!         diammean(l) = (DIAM(l)+DIAM(l+1))/2._r8     ! cm
          diammean(l) = (6._r8/pi*radl(l)*1000._r8/rhow)**(1._r8/3._r8) ! cm
       end do
 
@@ -99,13 +86,11 @@ real(r8) :: kkfac
         ! for method of moments
 
       do lcl = 1,ncd+1
-!         medge(lcl) = radsl(lcl)*1000._r8     ! convert to grams
          medge(lcl) = radsl(lcl)               ! grams
          diamedge(lcl) = DIAM(lcl)             ! cm
       enddo
 
       do lcl = 1,ncd
-!         mmean(lcl) = radl(lcl)*1000._r8
          mmean(lcl) = radl(lcl)  
          diammean(lcl) = diammean(lcl)
       enddo
@@ -114,8 +99,6 @@ real(r8) :: kkfac
          if( diamedge(lcl).ge.40.e-4_r8 ) cutoff_id = lcl
       end do  
 
-      write(*,*) 'cutoff_id = ', cutoff_id
-         
 end subroutine calc_bins
 
 subroutine pumas_stochastic_kernel_init(kernel_filename)
@@ -152,7 +135,7 @@ subroutine pumas_stochastic_kernel_init(kernel_filename)
      	end do
      end do
 
-     write(0,*) 'knn=',knn
+!     write(0,*) 'knn=',knn
 
 end subroutine pumas_stochastic_kernel_init
 
@@ -165,15 +148,6 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin, t,rho, qc, qr, qcin,ncin,
                                        qctend,nctend,qrtend,nrtend,qctend_TAU,nctend_TAU,qrtend_TAU,nrtend_TAU, &
                                        scale_qc,scale_nc,scale_qr,scale_nr, &
                                        amk_c, ank_c, amk_r, ank_r, amk, ank, amk_out, ank_out, gmnnn_lmnnn_TAU, mgncol)
-
-
-!use micro_pumas_utils, only: &
-!       mg_liq_props, &
-!       mg_rain_props
-
-!use micro_pumasmg_utils, only: &
-!       size_dist_param_liq, &
-!       size_dist_param_basic
 
 !inputs: mgncol,nlev,t,rho,qcin,ncin,qrin,nrin
 !outputs: qctend,nctend,qrtend,nrtend
@@ -251,28 +225,16 @@ integer, parameter :: sub_step = 60
 
 cutoff = cutoff_id-1
 
-
-!write(iulog,*) 'TAU time step = ', deltatin
-
-!do k = 1,nlev
-!call size_dist_param_liq(mg_liq_props, qcin, ncin, rho, mu_c, lambda_c, mgncol)
-!call size_dist_param_basic(mg_rain_props, qrin, nrin, lambda_r, mgncol, n0=n0r)
-!end do
-
 ! First make bins from cam size distribution (bins are diagnostic)
   
-!call cam_bin_distribute(qcin,ncin,qrin,nrin,medge,amk,ank)  
 do i=1,mgncol
-!do k=1,nlev
    call cam_bin_distribute(qc(i), qr(i), qcin(i),ncin(i),qrin(i),nrin(i), &
                            mu_c(i),lambda_c(i),lambda_r(i),n0r(i), lcldm(i), precip_frac(i), &
                            scale_qc(i), scale_nc(i), scale_qr(i), scale_nr(i), &
                            amk_c(i,1:ncd),ank_c(i,1:ncd), amk_r(i,1:ncd), ank_r(i,1:ncd), amk(i,1:ncd), ank(i,1:ncd), cutoff_amk)
-!end do
    if( cutoff_amk.gt.0 ) then
       cutoff(i) = cutoff_amk
    end if
-!   cutoff(i) = cutoff_id-1
 end do
   
 !Then call the subroutines that actually do the calculations. The inputs/ouputs are described in comments below. 
@@ -299,12 +261,6 @@ end do
 
 ! Call Kernel
 
-!do i=1,mgncol
-!do k=1,nlev
-!   call do_nn_n(gnnnn(i,:),gmnnn(i,:),lnnnn(i,:),lmnnn(i,:),medge)
-!end do
-!end do
-
 qcin_new = 0._r8
 ncin_new = 0._r8
 qrin_new = 0._r8
@@ -330,9 +286,6 @@ gnnnn = 0._r8
 gmnnn = 0._r8
 lnnnn = 0._r8
 lmnnn = 0._r8
-
-
-!write(iulog,*) 'rho,medge,amk0(i,1:ncd),ank0(i,1:ncd),gnnnn0,gmnnn0,lnnnn0,lmnnn0', rho(i),medge,amk0(i,1:ncd),ank0(i,1:ncd),gnnnn0,gmnnn0,lnnnn0,lmnnn0
 
 ! substep bin code
 do n=1,sub_step
@@ -372,8 +325,6 @@ end do
       qcin_new(i) = qcin_new(i)+(gmnnn(lcl)-lmnnn(lcl))*1.e3_r8/rho(i)*deltatin
       ncin_new(i) = ncin_new(i)+(gnnnn(lcl)-lnnnn(lcl))*1.e6_r8/rho(i)*deltatin
 
-!      qctend_TAU(i) = qctend_TAU(i)+(gmnnn(lcl)-lmnnn(lcl))*1.e3_r8/rho(i)
-!      nctend_TAU(i) = nctend_TAU(i)+(gnnnn(lcl)-lnnnn(lcl))*1.e6_r8/rho(i)
       qctend_TAU(i) = qctend_TAU(i)+(amk0(i,lcl)-amk(i,lcl))/deltatin
       nctend_TAU(i) = nctend_TAU(i)+(ank0(i,lcl)-ank(i,lcl))/deltatin
 
@@ -386,8 +337,6 @@ end do
       qrin_new(i) = qrin_new(i)+(gmnnn(lcl)-lmnnn(lcl))*1.e3_r8/rho(i)*deltatin
       nrin_new(i) = nrin_new(i)+(gnnnn(lcl)-lnnnn(lcl))*1.e6_r8/rho(i)*deltatin
 
-!      qrtend_TAU(i) = qrtend_TAU(i)+(gmnnn(lcl)-lmnnn(lcl))*1.e3_r8/rho(i)
-!      nrtend_TAU(i) = nrtend_TAU(i)+(gnnnn(lcl)-lnnnn(lcl))*1.e6_r8/rho(i)
       qrtend_TAU(i) = qrtend_TAU(i)+(amk0(i,lcl)-amk(i,lcl))/deltatin
       nrtend_TAU(i) = nrtend_TAU(i)+(ank0(i,lcl)-ank(i,lcl))/deltatin
       gmnnn_lmnnn_TAU(i) = gmnnn_lmnnn_TAU(i)+gmnnn(lcl)-lmnnn(lcl)
@@ -424,7 +373,6 @@ nrin_new(i)=max(nrin_new(i),0._r8)
 qcin_new(i)=min(qcin_new(i),qcin(i))
 ncin_new(i)=min(ncin_new(i),ncin(i))
 qrin_new(i)=max(qrin_new(i),qrin(i))
-!nrin_new(i)=max(nrin_new(i),nrin(i))
 
 ! Next scale mass...so output qc+qr is the same as input
 
@@ -523,8 +471,6 @@ scale_qc = scale_qc/qc
 
 ank_c = ank_c/scale_nc*lcldm
 amk_c = amk_c/scale_qc*lcldm
-!ank_c = ank_c*lcldm
-!amk_c = amk_c*lcldm
 
 do i=1,ncd
    if( amk_c(i).gt.max_qc ) then
@@ -532,13 +478,6 @@ do i=1,ncd
       max_qc = amk_c(i)
    end if
 end do
-
-!else
-
-!do i=1,ncd
-!   ank_c(i) = 0._r8
-!   amk_c(i) = 0._r8
-!end do
 
 end if
 
@@ -556,24 +495,8 @@ end do
 scale_nr = scale_nr/nr
 scale_qr = scale_qr/qr
 
-
-!write(iulog,*) 'ank_r = ', ank_r(:)
-!write(iulog,*) 'scale_nr = ', scale_nr
-!write(iulog,*) 'amk_r = ', amk_r(:)
-!write(iulog,*) 'scale_qr = ', scale_qr
-
-
 ank_r = ank_r/scale_nr*precip_frac
 amk_r = amk_r/scale_qr*precip_frac
-!ank_r = ank_r*precip_frac
-!amk_r = amk_r*precip_frac
-
-!else
-
-!do i=1,ncd
-!   ank_r(i) = 0._r8
-!   amk_r(i) = 0._r8
-!end do
 
 do i=1,ncd
    if( amk_r(i).gt.max_qr ) then
@@ -602,17 +525,6 @@ if( (id_max_qc.gt.0).and.(id_max_qr.gt.0) ) then
 end if
 
 
-!if( qc_all.gt.qsmall.OR.qr_all.gt.qsmall ) then
-!   do i=1,ncd
-!      ank(i) = ank_c(i) + ank_r(i)
-!      amk(i) = amk_c(i) + amk_r(i)
-!   end do
-!else
-!   do i=1,ncd
-!      amk(i) = 0._r8
-!      ank(i) = 0._r8
-!   end do
-!end if
 !input: qc,nc,qr,nr, medge (bin edges). May also need # bins?
 !output: amk, ank (mixing ratio and number in each bin)
 
@@ -663,7 +575,6 @@ SUBROUTINE COMPUTE_COLL_PARAMS(rhon,xk_gr,qc,qn,gnnnn,gmnnn,lnnnn,lmnnn)
   real(r8), dimension(ncd) :: qc,qn
   real(r8), dimension(ncdp) :: xk_gr
   real(r8) :: tbase,rhon
-!  real(r8) :: TAIRC,UMMS,UMMS2
   integer :: lk
   integer :: l
   real(r8), parameter :: lsmall = 1.e-12_r8
@@ -676,20 +587,7 @@ SUBROUTINE COMPUTE_COLL_PARAMS(rhon,xk_gr,qc,qn,gnnnn,gmnnn,lnnnn,lmnnn)
 
   lk=ncd
 
-
-
-!....................................................................................
-!  TAIRC=TBASE(K)-273.15
-!  TAIRC=TBASE-273.15_r8
-!  UMMS=UMM(TAIRC)
-!!  UMMS2=UMMS*4.66/(RHON(K)/1.E3)
-!!  UMMS=UMMS/(RHON(K)/1.E3)
-!  UMMS2=UMMS*4.66_r8/(RHON/1.E3_r8)
-!  UMMS=UMMS/(RHON/1.E3_r8)
-
   DO L=1,LK
-!     SMN0(L)=QC(L,K)*RHON(K)/1.E3
-!     SNN0(L)=QN(L,K)*RHON(K)/1.E6
      SMN0(L)=QC(L)*RHON/1.E3_r8
      SNN0(L)=QN(L)*RHON/1.E6_r8
 
@@ -703,7 +601,6 @@ SUBROUTINE COMPUTE_COLL_PARAMS(rhon,xk_gr,qc,qn,gnnnn,gmnnn,lnnnn,lmnnn)
      IF(SMN0(L) .gt. 0._r8.AND.SNN0(L) .gt. 0._r8)THEN
         SMCN(L)=SMN0(L)/SNN0(L)
         IF((SMCN(L) .GT. 2._r8*XK_GR(L)))THEN
-!           SMCN(L) = (2*XK_GR(L))
            SMCN(L) = (2._r8*XK_GR(L))
         ENDIF
         IF((SMCN(L) .LT. XK_GR(L)))THEN
@@ -715,7 +612,6 @@ SUBROUTINE COMPUTE_COLL_PARAMS(rhon,xk_gr,qc,qn,gnnnn,gmnnn,lnnnn,lmnnn)
      IF (SMCN(L).LT.XK_GR(L).OR.SMCN(L).GT.(2._r8*XK_GR(L)).OR.SMCN(L).EQ.0.0_r8)THEN
         APN=1.0_r8
      ELSE
-!        APN=0.5*(1.+3.*(XK_GR(L)/SMCN(L))-2*((XK_GR(L)/SMCN(L))**2.))
         APN=0.5_r8*(1._r8+3._r8*(XK_GR(L)/SMCN(L))-2._r8*((XK_GR(L)/SMCN(L))**2._r8))
      ENDIF
 
@@ -775,8 +671,6 @@ SUBROUTINE COMPUTE_COLL_PARAMS(rhon,xk_gr,qc,qn,gnnnn,gmnnn,lnnnn,lmnnn)
   DO L=3,LK-1
      LM1=L-1
      DO LL=1,L-2
-!        GNNNN(L,K)=GNNNN(L,K)+(PSIN(LM1)*SMN0(LL)-FPSIN(LM1)*AMN2(LL))*KNN(LM1,LL)
-!        GMNNN(L,K)=GMNNN(L,K)+(XK_GR(L)*PSIN(LM1)*SMN0(LL)+FN2(LM1)*AMN2(LL)-FPSIN(LM1)*AMN3(LL))*KNN(LM1,LL)
         GNNNN(L)=GNNNN(L)+(PSIN(LM1)*SMN0(LL)-FPSIN(LM1)*AMN2(LL))*KNN(LM1,LL)
         GMNNN(L)=GMNNN(L)+(XK_GR(L)*PSIN(LM1)*SMN0(LL)+FN2(LM1)*AMN2(LL)-FPSIN(LM1)*AMN3(LL))*KNN(LM1,LL)
      ENDDO
@@ -787,9 +681,6 @@ SUBROUTINE COMPUTE_COLL_PARAMS(rhon,xk_gr,qc,qn,gnnnn,gmnnn,lnnnn,lmnnn)
      GNNNN(L)=GNNNN(L)+0.5_r8*SNN0(LM1)*SNN0(LM1)*KNN(LM1,LM1)
      GMNNN(L)=GMNNN(L)+0.5_r8*(SNN0(LM1)*SMN0(LM1)+SMN0(LM1)*SNN0(LM1))*KNN(LM1,LM1)
      DO LL=1,L-1
-!        LNNNN(L,K)=LNNNN(L,K)+(PSIN(L)*SMN0(LL)-FPSIN(L)*AMN2(LL))*KNN(L,LL)
-!        GMNNN(L,K)=GMNNN(L,K)+(SMN0(LL)*SNN0(L)-PSIN(L)*AMN2(LL)+FPSIN(L)*AMN3(LL))*KNN(L,LL)
-!        LMNNN(L,K)=LMNNN(L,K)+(XPSIN(L)*SMN0(LL)-HPSIN(L)*AMN2(LL))*KNN(L,LL)
         LNNNN(L)=LNNNN(L)+(PSIN(L)*SMN0(LL)-FPSIN(L)*AMN2(LL))*KNN(L,LL)
         GMNNN(L)=GMNNN(L)+(SMN0(LL)*SNN0(L)-PSIN(L)*AMN2(LL)+FPSIN(L)*AMN3(LL))*KNN(L,LL)
         LMNNN(L)=LMNNN(L)+(XPSIN(L)*SMN0(LL)-HPSIN(L)*AMN2(LL))*KNN(L,LL)
@@ -798,8 +689,6 @@ SUBROUTINE COMPUTE_COLL_PARAMS(rhon,xk_gr,qc,qn,gnnnn,gmnnn,lnnnn,lmnnn)
 
   DO L=1,LK-1
      DO LL=L,LK-1
-!        LNNNN(L,K)=LNNNN(L,K)+(SNN0(LL)*SNN0(L))*KNN(LL,L)
-!        LMNNN(L,K)=LMNNN(L,K)+(SNN0(LL)*SMN0(L))*KNN(LL,L)
         LNNNN(L)=LNNNN(L)+(SNN0(LL)*SNN0(L))*KNN(LL,L)
         LMNNN(L)=LMNNN(L)+(SNN0(LL)*SMN0(L))*KNN(LL,L)
      ENDDO
