@@ -4164,7 +4164,7 @@ end if
         if (qs(i,k)+qstend(i,k)*deltat.lt.qsmall) nstend(i,k)=-ns(i,k)*rdeltat
         if (qg(i,k)+qgtend(i,k)*deltat.lt.qsmall) ngtend(i,k)=-ng(i,k)*rdeltat
 
-       if (trim(warm_rain) == 'tau') then
+       if (trim(warm_rain) == 'never') then
            if(qc(i,k)+qctend(i,k)*deltat.le.0._r8.or.nc(i,k)+nctend(i,k)*deltat.le.0._r8) then
               qctend(i,k) = -qc(i,k)/deltat
               nctend(i,k) = -nc(i,k)/deltat
@@ -4456,7 +4456,7 @@ end if
   end do
 
   ! TAU check radius
-  if (trim(warm_rain) == 'tau') then
+  if (trim(warm_rain) == 'never') then
      do i=1,mgncol
         do k=1,nlev
            qc_eff_r = qcn(i,k)+qctend(i,k)*deltatin
