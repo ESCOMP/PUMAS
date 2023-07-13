@@ -534,54 +534,22 @@ contains
          if (ierr /= 0) then
            errstring='Error allocating this%nr_out'
          end if
-         allocate(this%qc_in(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%qc_in'
-         end if
-         allocate(this%nc_in(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nc_in'
-         end if
-         allocate(this%qr_in(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%qr_in'
-         end if
-         allocate(this%nr_in(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nr_in'
-         end if
-         allocate(this%qctend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%qctend_KK2000'
-         end if
-         allocate(this%nctend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nctend_KK2000'
-         end if
-         allocate(this%qrtend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%artend_KK2000'
-         end if
-         allocate(this%nrtend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nrtend_KK2000'
-         end if
-         allocate(this%qctend_SB2001(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%qctend_SB2001'
-         end if
-         allocate(this%nctend_SB2001(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nctend_SB2001'
-         end if
-         allocate(this%qrtend_SB2001(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%artend_SB2001'
-         end if
-         allocate(this%nrtend_SB2001(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nrtend_SB2001'
-         end if
+         !allocate(this%qc_in(psetcols,nlev), stat=ierr)
+         !if (ierr /= 0) then
+         !  errstring='Error allocating this%qc_in'
+         !end if
+         !allocate(this%nc_in(psetcols,nlev), stat=ierr)
+         !if (ierr /= 0) then
+         !  errstring='Error allocating this%nc_in'
+         !end if
+         !allocate(this%qr_in(psetcols,nlev), stat=ierr)
+         !if (ierr /= 0) then
+         !  errstring='Error allocating this%qr_in'
+         !end if
+         !allocate(this%nr_in(psetcols,nlev), stat=ierr)
+         !if (ierr /= 0) then
+         !  errstring='Error allocating this%nr_in'
+         !end if
          allocate(this%qctend_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
            errstring='Error allocating this%qctend_TAU'
@@ -622,7 +590,42 @@ contains
          if (ierr /= 0) then
            errstring='Error allocating this%NR_fixer'
          end if
+      else
+         ! Classic default (non-ML) microphysics
+         allocate(this%qctend_KK2000(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qctend_KK2000'
+         end if
+         allocate(this%nctend_KK2000(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nctend_KK2000'
+         end if
+         allocate(this%qrtend_KK2000(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%artend_KK2000'
+         end if
+         allocate(this%nrtend_KK2000(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nrtend_KK2000'
+         end if
+         allocate(this%qctend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qctend_SB2001'
+         end if
+         allocate(this%nctend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nctend_SB2001'
+         end if
+         allocate(this%qrtend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%artend_SB2001'
+         end if
+         allocate(this%nrtend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nrtend_SB2001'
+         end if
       end if
+
    end subroutine proc_rates_allocate
 
    subroutine proc_rates_deallocate(this, warm_rain)

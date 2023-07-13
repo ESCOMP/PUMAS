@@ -1607,10 +1607,10 @@ subroutine micro_pumas_tend ( &
            proc_rates%nc_out(i,k) = 0._r8
            proc_rates%qr_out(i,k) = 0._r8
            proc_rates%nr_out(i,k) = 0._r8
-           proc_rates%qc_in(i,k) = 0._r8
-           proc_rates%nc_in(i,k) = 0._r8
-           proc_rates%qr_in(i,k) = 0._r8
-           proc_rates%nr_in(i,k) = 0._r8
+           !proc_rates%qc_in(i,k) = 0._r8
+           !proc_rates%nc_in(i,k) = 0._r8
+           !proc_rates%qr_in(i,k) = 0._r8
+           !proc_rates%nr_in(i,k) = 0._r8
            proc_rates%gmnnn_lmnnn_TAU(i,k) = 0._r8
         end if
 
@@ -2002,10 +2002,10 @@ subroutine micro_pumas_tend ( &
            end if
         end do
 
-        proc_rates%qc_in(1:mgncol,k)=qcic(1:mgncol,k)
-        proc_rates%nc_in(1:mgncol,k)=ncic(1:mgncol,k)
-        proc_rates%qr_in(1:mgncol,k)=qric(1:mgncol,k)
-        proc_rates%nr_in(1:mgncol,k)=nric(1:mgncol,k)
+        !proc_rates%qc_in(1:mgncol,k)=qcic(1:mgncol,k)
+        !proc_rates%nc_in(1:mgncol,k)=ncic(1:mgncol,k)
+        !proc_rates%qr_in(1:mgncol,k)=qric(1:mgncol,k)
+        !proc_rates%nr_in(1:mgncol,k)=nric(1:mgncol,k)
 
      end do
 
