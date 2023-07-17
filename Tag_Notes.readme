@@ -1,4 +1,7 @@
 ====================================
+.. pumas_cam-release_v1.30
+July 17, 2023 - Adding in support for the machine learning emulators. CAM support in PR phase, to run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR is done.
+====================================
 .. pumas_cam-release_v1.29
 March 1, 2023 - Mainly updates to the heterogenious ice nucleation methods for cam_dev tuning. These tags are currently supported on the cam_development branch. 
 ====================================
