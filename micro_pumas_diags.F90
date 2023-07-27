@@ -590,24 +590,8 @@ contains
          if (ierr /= 0) then
            errstring='Error allocating this%NR_fixer'
          end if
-      else
+      else if (warm_rain == 'sb2001') then
          ! Classic default (non-ML) microphysics
-         allocate(this%qctend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%qctend_KK2000'
-         end if
-         allocate(this%nctend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nctend_KK2000'
-         end if
-         allocate(this%qrtend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%artend_KK2000'
-         end if
-         allocate(this%nrtend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nrtend_KK2000'
-         end if
          allocate(this%qctend_SB2001(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
            errstring='Error allocating this%qctend_SB2001'
@@ -624,6 +608,24 @@ contains
          if (ierr /= 0) then
            errstring='Error allocating this%nrtend_SB2001'
          end if
+      end if
+
+      ! Variables which are needed by all code (Machine Learning and non-ML)
+      allocate(this%qctend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qctend_KK2000'
+      end if
+      allocate(this%nctend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nctend_KK2000'
+      end if
+      allocate(this%qrtend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%artend_KK2000'
+      end if
+      allocate(this%nrtend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nrtend_KK2000'
       end if
 
    end subroutine proc_rates_allocate
@@ -714,6 +716,11 @@ contains
       deallocate(this%nmeltstot)
       deallocate(this%nmeltgtot)
 
+      deallocate(this%qctend_KK2000)
+      deallocate(this%nctend_KK2000)
+      deallocate(this%qrtend_KK2000)
+      deallocate(this%nrtend_KK2000)
+
       if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
          deallocate(this%scale_qc)
          deallocate(this%scale_nc)
@@ -731,18 +738,6 @@ contains
          deallocate(this%nc_out)
          deallocate(this%qr_out)
          deallocate(this%nr_out)
-         deallocate(this%qc_in)
-         deallocate(this%nc_in)
-         deallocate(this%qr_in)
-         deallocate(this%nr_in)
-         deallocate(this%qctend_KK2000)
-         deallocate(this%nctend_KK2000)
-         deallocate(this%qrtend_KK2000)
-         deallocate(this%nrtend_KK2000)
-         deallocate(this%qctend_SB2001)
-         deallocate(this%nctend_SB2001)
-         deallocate(this%qrtend_SB2001)
-         deallocate(this%nrtend_SB2001)
          deallocate(this%qctend_TAU)
          deallocate(this%nctend_TAU)
          deallocate(this%qrtend_TAU)
@@ -753,6 +748,11 @@ contains
          deallocate(this%NC_fixer)
          deallocate(this%QR_fixer)
          deallocate(this%NR_fixer)
+      else if (trim(warm_rain) == 'sb2001') then
+         deallocate(this%qctend_SB2001)
+         deallocate(this%nctend_SB2001)
+         deallocate(this%qrtend_SB2001)
+         deallocate(this%nrtend_SB2001)
       end if
 
    end subroutine proc_rates_deallocate
