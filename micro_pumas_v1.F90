@@ -1607,10 +1607,6 @@ subroutine micro_pumas_tend ( &
            proc_rates%nc_out(i,k) = 0._r8
            proc_rates%qr_out(i,k) = 0._r8
            proc_rates%nr_out(i,k) = 0._r8
-           !proc_rates%qc_in(i,k) = 0._r8
-           !proc_rates%nc_in(i,k) = 0._r8
-           !proc_rates%qr_in(i,k) = 0._r8
-           !proc_rates%nr_in(i,k) = 0._r8
            proc_rates%gmnnn_lmnnn_TAU(i,k) = 0._r8
         end if
 
@@ -2002,17 +1998,12 @@ subroutine micro_pumas_tend ( &
            end if
         end do
 
-        !proc_rates%qc_in(1:mgncol,k)=qcic(1:mgncol,k)
-        !proc_rates%nc_in(1:mgncol,k)=ncic(1:mgncol,k)
-        !proc_rates%qr_in(1:mgncol,k)=qric(1:mgncol,k)
-        !proc_rates%nr_in(1:mgncol,k)=nric(1:mgncol,k)
-
      end do
 
   else if (trim(warm_rain) == 'emulated') then
      do k=1,nlev
-        call tau_emulated_cloud_rain_interactions(qcic(1:mgncol,k), ncic(1:mgncol,k), qric(1:mgncol,k), nric(1:mgncol,k), rho(1:mgncol,k), &
-          lcldm(1:mgncol,k), precip_frac(1:mgncol,k), mgncol, &
+        call tau_emulated_cloud_rain_interactions(qcic(1:mgncol,k), ncic(1:mgncol,k), qric(1:mgncol,k), nric(1:mgncol,k), &
+          rho(1:mgncol,k), lcldm(1:mgncol,k), precip_frac(1:mgncol,k), mgncol, &
           qsmall, proc_rates%qctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nctend_TAU(1:mgncol,k), &
           proc_rates%nrtend_TAU(1:mgncol,k))
 
@@ -2042,7 +2033,9 @@ subroutine micro_pumas_tend ( &
   ! Alternative autoconversion
   if (trim(warm_rain) == 'sb2001') then
      do k=1,nlev
-        call sb2001v2_liq_autoconversion(pgam(1:mgncol,k), qcic(1:mgncol,k), ncic(1:mgncol,k), qric(1:mgncol,k), rho(1:mgncol,k), relvar(1:mgncol,k), proc_rates%qctend_SB2001(1:mgncol,k), proc_rates%nrtend_SB2001(1:mgncol,k), proc_rates%nctend_SB2001(1:mgncol,k), mgncol)
+        call sb2001v2_liq_autoconversion(pgam(1:mgncol,k), qcic(1:mgncol,k), ncic(1:mgncol,k), qric(1:mgncol,k), rho(1:mgncol,k), &
+                                         relvar(1:mgncol,k), proc_rates%qctend_SB2001(1:mgncol,k), &
+                                         proc_rates%nrtend_SB2001(1:mgncol,k), proc_rates%nctend_SB2001(1:mgncol,k), mgncol)
         prc(1:mgncol,k)=proc_rates%qctend_SB2001(1:mgncol,k)
         nprc(1:mgncol,k)=proc_rates%nrtend_SB2001(1:mgncol,k)
         nprc1(1:mgncol,k)=proc_rates%nctend_SB2001(1:mgncol,k)
@@ -2561,9 +2554,6 @@ subroutine micro_pumas_tend ( &
         !-------------------------------------------------------------------
         dum = (nprc1(i,k)+npra(i,k)+nnuccc(i,k)+nnucct(i,k)+ &
                npsacws(i,k)-nsubc(i,k)+npsacwg(i,k))*lcldm(i,k)*deltat
-
-!    write(iulog,*) "npra,nprc1: ",npra(i,k),nprc1(i,k)
-!    write(iulog,*) "nc,k: ",nc(i,k),k
 
         if (dum.gt.nc(i,k)) then
            ratio = nc(i,k)*rdeltat/((nprc1(i,k)+npra(i,k)+nnuccc(i,k)+nnucct(i,k)+&

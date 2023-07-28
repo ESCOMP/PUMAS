@@ -135,8 +135,6 @@ subroutine pumas_stochastic_kernel_init(kernel_filename)
      	end do
      end do
 
-!     write(0,*) 'knn=',knn
-
 end subroutine pumas_stochastic_kernel_init
 
 !main driver routine
