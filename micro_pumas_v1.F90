@@ -124,7 +124,7 @@ use micro_pumas_utils, only: &
      rhog,rhoh, &
      mi0, &
      rising_factorial, &
-     VLEN
+     VLENS
 
 implicit none
 private
@@ -2021,7 +2021,7 @@ subroutine micro_pumas_tend ( &
   call kk2000_liq_autoconversion(microp_uniform, qcic, ncic, rho, relvar, &
                       proc_rates%qctend_KK2000, proc_rates%nrtend_KK2000, &
                       proc_rates%nctend_KK2000, micro_mg_autocon_fact, &
-                      micro_mg_autocon_nd_exp, micro_mg_autocon_lwp_exp, &,
+                      micro_mg_autocon_nd_exp, micro_mg_autocon_lwp_exp, &
                       mgncol*nlev)
 
   ! Write to pumas tendency arrays if kk2000 is active, otherwise just record diagnostics
