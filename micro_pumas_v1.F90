@@ -10,9 +10,9 @@ module micro_pumas_v1
 !
 !           Importance of Ice Nucleation and Precipitation on Climate with the
 !
-!           Parameterization of Unified Microphysics Across Scales version 1 
+!           Parameterization of Unified Microphysics Across Scales version 1
 !
-!           (PUMASv1). Geosci. Model Dev., 16, 1735-1754. 
+!           (PUMASv1). Geosci. Model Dev., 16, 1735-1754.
 !
 !           https://doi.org/10.5194/gmd-16-1735-2023
 !
@@ -403,7 +403,7 @@ subroutine micro_pumas_init( &
   real(r8), intent(in)  :: nsnst_in
 
   character(len=*), intent(in) :: stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
-                                  stochastic_emulated_filename_output_scale   ! Files for emulated machine learning 
+                                  stochastic_emulated_filename_output_scale   ! Files for emulated machine learning
 
   integer, intent(in) :: iulog
   character(128), intent(out) :: errstring    ! Output status (non-blank for error return)
@@ -1583,7 +1583,7 @@ subroutine micro_pumas_tend ( &
 
         nnudep(i,k) = 0._r8
         mnudep(i,k) = 0._r8
-        
+
         nragg(i,k) = 0._r8
 
         proc_rates%qctend_KK2000(i,k) = 0._r8
@@ -1941,7 +1941,7 @@ subroutine micro_pumas_tend ( &
 
   ! get size distribution parameters for rain
   !......................................................................
-  
+
   call size_dist_param_basic(mg_rain_props, qric, nric, lamr, mgncol, nlev, n0=n0r)
 
   !========================================================================
@@ -4154,32 +4154,6 @@ end if
         if (qs(i,k)+qstend(i,k)*deltat.lt.qsmall) nstend(i,k)=-ns(i,k)*rdeltat
         if (qg(i,k)+qgtend(i,k)*deltat.lt.qsmall) ngtend(i,k)=-ng(i,k)*rdeltat
 
-       if (trim(warm_rain) == 'never') then
-           if(qc(i,k)+qctend(i,k)*deltat.le.0._r8.or.nc(i,k)+nctend(i,k)*deltat.le.0._r8) then
-              qctend(i,k) = -qc(i,k)/deltat
-              nctend(i,k) = -nc(i,k)/deltat
-           end if
-           if(qr(i,k)+qrtend(i,k)*deltat.le.0._r8.or.nr(i,k)+nrtend(i,k)*deltat.le.0._r8) then
-              qrtend(i,k) = -qr(i,k)/deltat
-              nrtend(i,k) = -nr(i,k)/deltat
-           end if
-
-          ! cap effective radius at 100 microns & 1000 microns for qc & qr
-          if(qc(i,k)+qctend(i,k)*deltat.gt.0._r8.or.nc(i,k)+nctend(i,k)*deltat.gt.0._r8) then
-             qc_eff_r = 100.e-6_r8
-             nc_eff_r = (qc(i,k)+qctend(i,k)*deltat)/(4._r8/3._r8*pi*qc_eff_r**3.*rhow)
-             if(nc(i,k)+nctend(i,k)*deltat.lt.nc_eff_r) then
-                nctend(i,k) = (nc_eff_r-nc(i,k))/deltat
-             end if
-          end if
-          if(qr(i,k)+qrtend(i,k)*deltat.gt.0._r8.or.nr(i,k)+nrtend(i,k)*deltat.gt.0._r8) then
-             qr_eff_r = 1000.e-6_r8
-             nr_eff_r = (qr(i,k)+qrtend(i,k)*deltat)/(4._r8/3._r8*pi*qr_eff_r**3.*rhow)
-             if(nr(i,k)+nrtend(i,k)*deltat.lt.nr_eff_r) then
-                nrtend(i,k) = (nr_eff_r-nc(i,k))/deltat
-             end if
-          end if
-       end if
 
   ! DO STUFF FOR OUTPUT:
   !==================================================
@@ -4445,46 +4419,6 @@ end if
      end do
   end do
 
-  ! TAU check radius
-  if (trim(warm_rain) == 'never') then
-     do i=1,mgncol
-        do k=1,nlev
-           qc_eff_r = qcn(i,k)+qctend(i,k)*deltatin
-           nc_eff_r = ncn(i,k)+nctend(i,k)*deltatin
-           if(qc_eff_r.lt.-1._r8*qsmall) then
-              write(iulog,*) 'negative qc! ', qc_eff_r, proc_rates%qctend_TAU(i,k), proc_rates%qctend_KK2000(i,k),&
-                              proc_rates%nctend_TAU(i,k), proc_rates%nctend_KK2000(i,k)
-           end if
-
-           if((nc_eff_r.gt.0._r8) .and. (qc_eff_r .gt. 0)) then
-              qc_eff_r = (qc_eff_r/(4._r8/3._r8*4._r8*pi*rhow*nc_eff_r))**(1._r8/3._r8)*1.e6
-           end if
-           if(nc_eff_r.lt.0._r8) then
-              qc_eff_r = -999._r8
-           end if
-
-           if(qc_eff_r.gt.100._r8) then
-              write(iulog,*) 'qc radius = ', qc_eff_r, proc_rates%qctend_TAU(i,k), proc_rates%qctend_KK2000(i,k), &
-                              proc_rates%nctend_TAU(i,k), proc_rates%nctend_KK2000(i,k)
-           end if
-
-
-           qr_eff_r = qrn(i,k)+qrtend(i,k)*deltatin
-           nr_eff_r = nrn(i,k)+nrtend(i,k)*deltatin
-           if(qr_eff_r.lt.-1._r8*qsmall) then
-              write(iulog,*) 'negative qr! ', qr_eff_r, proc_rates%qrtend_TAU(i,k), proc_rates%qrtend_KK2000(i,k), &
-                              proc_rates%nrtend_TAU(i,k), proc_rates%nrtend_KK2000(i,k)
-           end if
-           if((nr_eff_r.gt.0._r8) .and. (qr_eff_r .gt. 0)) then
-              qr_eff_r = (qr_eff_r/(4._r8/3._r8*4._r8*pi*rhow*nr_eff_r))**(1._r8/3._r8)*1.e6
-           end if
-           if(nr_eff_r.lt.0._r8) then
-              qr_eff_r = -999._r8
-           end if
-
-        end do
-      end do
-   end if
   !$acc end parallel
 
   !$acc end data
