@@ -550,7 +550,7 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
            do j=1,ncd
               ank_c(i,k,j) = ank_c(i,k,j)/scale_nc(i,k)*lcldm(i,k)
               amk_c(i,k,j) = amk_c(i,k,j)/scale_qc(i,k)*lcldm(i,k)
-              if ( amk_c(j) > max_qc ) then
+              if ( amk_c(i,k,j) > max_qc ) then
                  id_max_qc = j
                  max_qc = amk_c(i,k,j)
               end if
