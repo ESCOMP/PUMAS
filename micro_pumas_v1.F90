@@ -1196,10 +1196,7 @@ subroutine micro_pumas_tend ( &
   !$acc               proc_rates%nctend_SB2001,proc_rates%qrtend_SB2001,      &
   !$acc               proc_rates%nrtend_SB2001,proc_rates%qctend_TAU,         &
   !$acc               proc_rates%nctend_TAU,proc_rates%qrtend_TAU,            &
-  !$acc               proc_rates%nrtend_TAU,proc_rates%gmnnn_lmnnn_TAU,       &
-  !$acc               proc_rates%ML_fixer,proc_rates%QC_fixer,                &
-  !$acc               proc_rates%NC_fixer,proc_rates%QR_fixer,                &
-  !$acc               proc_rates%NR_fixer)                                    &
+  !$acc               proc_rates%nrtend_TAU,proc_rates%gmnnn_lmnnn_TAU)       &
   !$acc      create  (qc,qi,nc,ni,qr,qs,nr,ns,qg,ng,rho,dv,mu,sc,rhof,        &
   !$acc               precip_frac,cldm,icldm,lcldm,qsfm,qcic,qiic,qsic,qric,  &
   !$acc               qgic,ncic,niic,nsic,nric,ngic,lami,n0i,lamc,pgam,lams,  &
@@ -2080,17 +2077,32 @@ subroutine micro_pumas_tend ( &
   else if (trim(warm_rain) == 'emulated') then
      ! JS - 08/22/2023: this code block only works on CPU
 
-     do k=1,nlev
-        call tau_emulated_cloud_rain_interactions(qcic(1:mgncol,k), ncic(1:mgncol,k), qric(1:mgncol,k), nric(1:mgncol,k), &
-          rho(1:mgncol,k), lcldm(1:mgncol,k), precip_frac(1:mgncol,k), mgncol, &
-          qsmall, proc_rates%qctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nctend_TAU(1:mgncol,k), &
-          proc_rates%nrtend_TAU(1:mgncol,k))
+     !$acc update self(qcic,ncic,qric,nric,rho,lcldm,precip_frac, &
+     !$acc             proc_rates%qctend_TAU,proc_rates%qrtend_TAU, &
+     !$acc             proc_rates%nctend_TAU,proc_rates%nrtend_TAU, &
+     !$acc             qc,nc,qr,nr,prc,nprc1,nprc,nragg)
 
-        call ML_fixer_calc(mgncol, deltatin, qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), &
-          proc_rates%qctend_TAU(1:mgncol,k),&
-          proc_rates%nctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nrtend_TAU(1:mgncol,k), &
-          proc_rates%ML_fixer(1:mgncol,k), proc_rates%QC_fixer(1:mgncol,k), &
-          proc_rates%NC_fixer(1:mgncol,k), proc_rates%QR_fixer(1:mgncol,k), proc_rates%NR_fixer(1:mgncol,k))
+     do k=1,nlev
+        call tau_emulated_cloud_rain_interactions(qcic(1:mgncol,k), ncic(1:mgncol,k), &
+                                                  qric(1:mgncol,k), nric(1:mgncol,k), &
+                                                  rho(1:mgncol,k), lcldm(1:mgncol,k), &
+                                                  precip_frac(1:mgncol,k), mgncol, qsmall, &
+                                                  proc_rates%qctend_TAU(1:mgncol,k), &
+                                                  proc_rates%qrtend_TAU(1:mgncol,k), &
+                                                  proc_rates%nctend_TAU(1:mgncol,k), &
+                                                  proc_rates%nrtend_TAU(1:mgncol,k))
+
+        call ML_fixer_calc(mgncol, deltatin, qc(1:mgncol,k), nc(1:mgncol,k), &
+                           qr(1:mgncol,k), nr(1:mgncol,k), &
+                           proc_rates%qctend_TAU(1:mgncol,k),&
+                           proc_rates%nctend_TAU(1:mgncol,k), &
+                           proc_rates%qrtend_TAU(1:mgncol,k), &
+                           proc_rates%nrtend_TAU(1:mgncol,k), &
+                           proc_rates%ML_fixer(1:mgncol,k), &
+                           proc_rates%QC_fixer(1:mgncol,k), &
+                           proc_rates%NC_fixer(1:mgncol,k), &
+                           proc_rates%QR_fixer(1:mgncol,k), &
+                           proc_rates%NR_fixer(1:mgncol,k))
 
         ! PUMAS expects prc and nprc1 (cloud rates) are positive
         prc(1:mgncol,k)= -proc_rates%qctend_TAU(1:mgncol,k)
@@ -2107,6 +2119,10 @@ subroutine micro_pumas_tend ( &
         end do
 
      end do
+
+     !$acc update device(proc_rates%qctend_TAU,proc_rates%qrtend_TAU, &
+     !$acc               proc_rates%nctend_TAU,proc_rates%nrtend_TAU, &
+     !$acc               prc,nprc1,nprc,nragg)
 
   end if
 
