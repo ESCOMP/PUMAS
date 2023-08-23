@@ -13,7 +13,7 @@ use shr_spfn_mod, only: gamma => shr_spfn_gamma
 
 use shr_kind_mod,      only: r8=>shr_kind_r8
 use cam_history,       only: addfld
-use micro_pumas_utils, only: pi, rhow, qsmall
+use micro_pumas_utils, only: pi, rhow, qsmall, VLEN
 use cam_logfile,       only: iulog
 
 implicit none
@@ -22,8 +22,6 @@ save
 
 ! Subroutines
 public :: pumas_stochastic_kernel_init, pumas_stochastic_collect_tau_tend
-
-
 
 !In the module top, declare the following so that these can be used throughout the module:
 
@@ -34,7 +32,6 @@ integer, parameter, public  :: ncdpl = ncdl+1
 
 ! for Zach's collision-coalescence code
 
-
 real(r8), private :: knn(ncd,ncd)
 
 real(r8), private :: mmean(ncd), diammean(ncd)       ! kg & m at bin mid-points
@@ -44,197 +41,223 @@ integer, private  :: cutoff_id                       ! cutoff between cloud wate
 ! Assume 6 microns for each...
 real(r8), parameter :: m1 = 4._r8/3._r8*pi*rhow*(6.e-6_r8)**3
 
+!$acc declare create(knn,cutoff_id,mmean,diammean,medge,diamedge)
 
 !===============================================================================
 contains
 !===============================================================================
 
-      
 subroutine calc_bins    
 
-real(r8) :: DIAM(ncdp)
-real(r8) :: X(ncdp)
-real(r8) :: radsl(ncdp)
-real(r8) :: radl(ncd)
-integer  :: L, lcl  
-real(r8) :: kkfac
+  implicit none
+
+  real(r8) :: DIAM(ncdp)
+  real(r8) :: X(ncdp)
+  real(r8) :: radsl(ncdp)
+  real(r8) :: radl(ncd)
+  integer  :: L, lcl  
+  real(r8) :: kkfac
+
 !Then before doing any calculations you'll need to calculate the bin mass grid 
 ! (note this code could be cleaned up, I'm just taking it as it's used in our bin scheme). 
 ! This only needs to be done once, since we'll use the same bin mass grid for all calculations. 
 
 ! use mass doubling bins from Graham Feingold (note cgs units)
 
-      DIAM(1)=1.5625*2.E-04_r8                ! cm
-      X(1)=PI/6._r8*DIAM(1)**3*rhow/1000._r8  ! rhow kg/m3 --> g/cm3 
-      radsl(1) = X(1)                         ! grams 
+  DIAM(1)=1.5625*2.E-04_r8                ! cm
+  X(1)=PI/6._r8*DIAM(1)**3*rhow/1000._r8  ! rhow kg/m3 --> g/cm3 
+  radsl(1) = X(1)                         ! grams 
 
-      DO l=2,ncdp
-         X(l)=2._r8*X(l-1)
-         DIAM(l)=(6._r8/pi*X(l)*1000._r8/rhow)**(1._r8/3._r8)  ! cm
-         radsl(l)=X(l)             
-      ENDDO
+  DO l=2,ncdp
+     X(l)=2._r8*X(l-1)
+     DIAM(l)=(6._r8/pi*X(l)*1000._r8/rhow)**(1._r8/3._r8)  ! cm
+     radsl(l)=X(l)             
+  ENDDO
 
 ! now get bin mid-points
 
-      do l=1,ncd
-         radl(l)=(radsl(l)+radsl(l+1))/2._r8         ! grams   
-         diammean(l) = (6._r8/pi*radl(l)*1000._r8/rhow)**(1._r8/3._r8) ! cm
-      end do
+  do l=1,ncd
+     radl(l)=(radsl(l)+radsl(l+1))/2._r8         ! grams   
+     diammean(l) = (6._r8/pi*radl(l)*1000._r8/rhow)**(1._r8/3._r8) ! cm
+  end do
 
 ! set bin grid for method of moments
 
-        ! for method of moments
+  ! for method of moments
 
-      do lcl = 1,ncd+1
-         medge(lcl) = radsl(lcl)               ! grams
-         diamedge(lcl) = DIAM(lcl)             ! cm
-      enddo
+  do lcl = 1,ncd+1
+     medge(lcl) = radsl(lcl)               ! grams
+     diamedge(lcl) = DIAM(lcl)             ! cm
+  enddo
 
-      do lcl = 1,ncd
-         mmean(lcl) = radl(lcl)  
-         diammean(lcl) = diammean(lcl)
-      enddo
+  do lcl = 1,ncd
+     mmean(lcl) = radl(lcl)  
+     diammean(lcl) = diammean(lcl)
+  enddo
 
-      do lcl = ncdp,1,-1
-         if( diamedge(lcl).ge.40.e-4_r8 ) cutoff_id = lcl
-      end do  
+  do lcl = ncdp,1,-1
+     if( diamedge(lcl).ge.40.e-4_r8 ) cutoff_id = lcl
+  end do  
 
 end subroutine calc_bins
 
 subroutine pumas_stochastic_kernel_init(kernel_filename)
 
-    use cam_history_support, only: add_hist_coord
+  use cam_history_support, only: add_hist_coord
 
-    character(len=*), intent(in) :: kernel_filename  ! Full pathname to kernel file
+  implicit none
 
-    integer :: iunit ! unit number of opened file for collection kernel code from a lookup table.
+  character(len=*), intent(in) :: kernel_filename  ! Full pathname to kernel file
 
-    integer :: idd, jdd
-    real(r8) :: kkfac
+  integer :: iunit ! unit number of opened file for collection kernel code from a lookup table.
 
+  integer :: idd, jdd
+  real(r8) :: kkfac
 
-    call calc_bins
+  call calc_bins
 
 ! Read in the collection kernel code from a lookup table. Again, this only needs to be done once.
 ! use kernel from Zach (who got it from Jerry)
 
-     KNN(:,:)=0._r8 ! initialize values
-     kkfac=1.5_r8   ! from Zach
+  KNN(:,:)=0._r8 ! initialize values
+  kkfac=1.5_r8   ! from Zach
 
-     open(newunit=iunit,file=kernel_filename,status='old')
+  open(newunit=iunit,file=kernel_filename,status='old')
 
-     do idd=1,ncd
-        do jdd=1,idd
-   	  READ(iunit,941) KNN(IDD,JDD)
-941       FORMAT(2X,E12.5)
+  do idd=1,ncd
+     do jdd=1,idd
+        READ(iunit,941) KNN(IDD,JDD)
+941     FORMAT(2X,E12.5)
 
-	  KNN(IDD,JDD)=(mmean(IDD)*kkfac+mmean(JDD)*kkfac)*KNN(IDD,JDD)
-
-      	  if (knn(idd,jdd).lt.0._r8) knn(idd,jdd)=0._r8
-
-     	end do
+        KNN(IDD,JDD)=(mmean(IDD)*kkfac+mmean(JDD)*kkfac)*KNN(IDD,JDD)
+        if (knn(idd,jdd) < 0._r8) knn(idd,jdd)=0._r8
      end do
+  end do
+
+  !$acc update device(knn,cutoff_id,mmean,diammean,medge,diamedge)
 
 end subroutine pumas_stochastic_kernel_init
 
 !main driver routine
 !needs to pull in i,k fields (so might need dimensions here too)
 
-subroutine pumas_stochastic_collect_tau_tend(deltatin, t,rho, qc, qr, qcin,ncin,qrin,nrin, lcldm, precip_frac, &
-                                       mu_c, lambda_c, n0r, lambda_r, &
-                                       qcin_new,ncin_new,qrin_new,nrin_new, &
-                                       qctend,nctend,qrtend,nrtend,qctend_TAU,nctend_TAU,qrtend_TAU,nrtend_TAU, &
-                                       scale_qc,scale_nc,scale_qr,scale_nr, &
-                                       amk_c, ank_c, amk_r, ank_r, amk, ank, amk_out, ank_out, gmnnn_lmnnn_TAU, mgncol)
+subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
+                        ncin,qrin,nrin,lcldm,precip_frac,mu_c,lambda_c,     &
+                        n0r,lambda_r,qcin_new,ncin_new,qrin_new,nrin_new,   &
+                        nrin_new,qctend,nctend,qrtend,nrtend,qctend_TAU,    &
+                        nctend_TAU,qrtend_TAU,nrtend_TAU,scale_qc,scale_nc, &
+                        scale_qr,scale_nr,amk_c,ank_c,amk_r,ank_r,amk,ank,  &
+                        amk_out,ank_out,gmnnn_lmnnn_TAU,mgncol,nlev)
 
-!inputs: mgncol,nlev,t,rho,qcin,ncin,qrin,nrin
-!outputs: qctend,nctend,qrtend,nrtend
-!not sure if we want to output bins (extra dimension). Good for testing?  
+  implicit none
 
-integer, intent(in) :: mgncol
-
-real(r8), intent(in) :: deltatin
-real(r8), intent(in) :: t(mgncol)
-real(r8), intent(in) :: rho(mgncol)
-real(r8), intent(in) :: qc(mgncol)
-real(r8), intent(in) :: qr(mgncol)
-real(r8), intent(in) :: qcin(mgncol)
-real(r8), intent(in) :: ncin(mgncol)
-real(r8), intent(in) :: qrin(mgncol)
-real(r8), intent(in) :: nrin(mgncol)
-real(r8), intent(in) :: lcldm(mgncol)
-real(r8), intent(in) :: precip_frac(mgncol)
-real(r8), intent(inout) :: qctend(mgncol)
-real(r8), intent(inout) :: nctend(mgncol)
-real(r8), intent(inout) :: qrtend(mgncol)
-real(r8), intent(inout) :: nrtend(mgncol)
-real(r8), intent(out) :: qctend_TAU(mgncol)
-real(r8), intent(out) :: nctend_TAU(mgncol)
-real(r8), intent(out) :: qrtend_TAU(mgncol)
-real(r8), intent(out) :: nrtend_TAU(mgncol)
-
-real(r8), intent(out) :: scale_qc(mgncol)
-real(r8), intent(out) :: scale_nc(mgncol)
-real(r8), intent(out) :: scale_qr(mgncol)
-real(r8), intent(out) :: scale_nr(mgncol)
-
-real(r8), intent(out) :: amk_c(mgncol,ncd)
-real(r8), intent(out) :: ank_c(mgncol,ncd)
-real(r8), intent(out) :: amk_r(mgncol,ncd)
-real(r8), intent(out) :: ank_r(mgncol,ncd)
-real(r8), intent(out) :: amk(mgncol,ncd)
-real(r8), intent(out) :: ank(mgncol,ncd)
-real(r8), intent(out) :: amk_out(mgncol,ncd)
-real(r8), intent(out) :: ank_out(mgncol,ncd)
-
-real(r8), intent(out) :: mu_c(mgncol)
-real(r8), intent(out) :: lambda_c(mgncol)
-real(r8), intent(out) :: lambda_r(mgncol)
-real(r8), intent(out) :: n0r(mgncol)
-
-real(r8) :: amk0(mgncol,ncd)
-real(r8) :: ank0(mgncol,ncd)
-real(r8) :: gnnnn(ncd)
-real(r8) :: gmnnn(ncd)
-real(r8) :: lnnnn(ncd)
-real(r8) :: lmnnn(ncd)
-real(r8) :: gnnnn0(ncd)
-real(r8) :: gmnnn0(ncd)
-real(r8) :: lnnnn0(ncd)
-real(r8) :: lmnnn0(ncd)
-
-real(r8), intent(out) :: qcin_new(mgncol)
-real(r8), intent(out) :: ncin_new(mgncol)
-real(r8), intent(out) :: qrin_new(mgncol)
-real(r8), intent(out) :: nrin_new(mgncol)
-real(r8), intent(out) :: gmnnn_lmnnn_TAU(mgncol)
-
-real(r8) :: qcin_old(mgncol)
-real(r8) :: ncin_old(mgncol)
-real(r8) :: qrin_old(mgncol)
-real(r8) :: nrin_old(mgncol)
-
-integer :: i, n, lcl, cutoff_amk, cutoff(mgncol)
-
-real(r8) :: all_gmnnn, all_lmnnn
-real(r8) :: qscl
-
-integer, parameter :: sub_step = 60
-
-cutoff = cutoff_id-1
-
-! First make bins from cam size distribution (bins are diagnostic)
+  !inputs: mgncol,nlev,t,rho,qcin,ncin,qrin,nrin
+  !outputs: qctend,nctend,qrtend,nrtend
+  !not sure if we want to output bins (extra dimension). Good for testing?  
   
-do i=1,mgncol
-   call cam_bin_distribute(qc(i), qr(i), qcin(i),ncin(i),qrin(i),nrin(i), &
-                           mu_c(i),lambda_c(i),lambda_r(i),n0r(i), lcldm(i), precip_frac(i), &
-                           scale_qc(i), scale_nc(i), scale_qr(i), scale_nr(i), &
-                           amk_c(i,1:ncd),ank_c(i,1:ncd), amk_r(i,1:ncd), ank_r(i,1:ncd), amk(i,1:ncd), ank(i,1:ncd), cutoff_amk)
-   if( cutoff_amk.gt.0 ) then
-      cutoff(i) = cutoff_amk
-   end if
-end do
+  integer, intent(in) :: mgncol,vlen
+  real(r8), intent(in) :: deltatin
+  real(r8), intent(in) :: t(mgncol,nlev)
+  real(r8), intent(in) :: rho(mgncol,nlev)
+  real(r8), intent(in) :: qc(mgncol,nlev)
+  real(r8), intent(in) :: qr(mgncol,nlev)
+  real(r8), intent(in) :: qcin(mgncol,nlev)
+  real(r8), intent(in) :: ncin(mgncol,nlev)
+  real(r8), intent(in) :: qrin(mgncol,nlev)
+  real(r8), intent(in) :: nrin(mgncol,nlev)
+  real(r8), intent(in) :: lcldm(mgncol,nlev)
+  real(r8), intent(in) :: precip_frac(mgncol,nlev)
+  real(r8), intent(inout) :: qctend(mgncol,nlev)
+  real(r8), intent(inout) :: nctend(mgncol,nlev)
+  real(r8), intent(inout) :: qrtend(mgncol,nlev)
+  real(r8), intent(inout) :: nrtend(mgncol,nlev)
+  real(r8), intent(out) :: qctend_TAU(mgncol,nlev)
+  real(r8), intent(out) :: nctend_TAU(mgncol,nlev)
+  real(r8), intent(out) :: qrtend_TAU(mgncol,nlev)
+  real(r8), intent(out) :: nrtend_TAU(mgncol,nlev)
   
+  real(r8), intent(out) :: scale_qc(mgncol,nlev)
+  real(r8), intent(out) :: scale_nc(mgncol,nlev)
+  real(r8), intent(out) :: scale_qr(mgncol,nlev)
+  real(r8), intent(out) :: scale_nr(mgncol,nlev)
+  
+  real(r8), intent(out) :: amk_c(mgncol,nlev,ncd)
+  real(r8), intent(out) :: ank_c(mgncol,nlev,ncd)
+  real(r8), intent(out) :: amk_r(mgncol,nlev,ncd)
+  real(r8), intent(out) :: ank_r(mgncol,nlev,ncd)
+  real(r8), intent(out) :: amk(mgncol,nlev,ncd)
+  real(r8), intent(out) :: ank(mgncol,nlev,ncd)
+  real(r8), intent(out) :: amk_out(mgncol,nlev,ncd)
+  real(r8), intent(out) :: ank_out(mgncol,nlev,ncd)
+  
+  real(r8), intent(out) :: mu_c(mgncol,nlev)
+  real(r8), intent(out) :: lambda_c(mgncol,nlev)
+  real(r8), intent(out) :: lambda_r(mgncol,nlev)
+  real(r8), intent(out) :: n0r(mgncol,nlev)
+  
+  real(r8), intent(out) :: qcin_new(mgncol,nlev)
+  real(r8), intent(out) :: ncin_new(mgncol,nlev)
+  real(r8), intent(out) :: qrin_new(mgncol,nlev)
+  real(r8), intent(out) :: nrin_new(mgncol,nlev)
+  real(r8), intent(out) :: gmnnn_lmnnn_TAU(mgncol,nlev)
+
+  ! Local variables
+  
+  integer :: i,k,n,lcl
+  integer :: cutoff_amk(mgncol,nlev),cutoff(mgncol,nlev)
+  
+  real(r8) :: all_gmnnn,all_lmnnn
+  real(r8) :: qscl
+  
+  real(r8) :: qcin_old(mgncol,nlev)
+  real(r8) :: ncin_old(mgncol,nlev)
+  real(r8) :: qrin_old(mgncol,nlev)
+  real(r8) :: nrin_old(mgncol,nlev)
+  
+  real(r8) :: amk0(ncd)
+  real(r8) :: ank0(ncd)
+  real(r8) :: gnnnn(mgncol,nlev,ncd)
+  real(r8) :: gmnnn(mgncol,nlev,ncd)
+  real(r8) :: lnnnn(mgncol,nlev,ncd)
+  real(r8) :: lmnnn(mgncol,nlev,ncd)
+  real(r8) :: gnnnn0(ncd)
+  real(r8) :: gmnnn0(ncd)
+  real(r8) :: lnnnn0(ncd)
+  real(r8) :: lmnnn0(ncd)
+  
+  integer, parameter :: sub_step = 60
+
+  !$acc data create (cutoff_amk,cutoff,qcin_old,ncin_old,qrin_old, &
+  !$acc              nrin_old,amk0,ank0,gnnnn,gmnnn,lnnnn,lmnnn,   &
+  !$acc              gnnnn0,gmnnn0,lnnnn0,lmnnn0)
+
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)  
+  do k=1,nlev
+     do i=1,mgncol
+        cutoff(i,k) = cutoff_id - 1
+     end do
+  end do
+  !$acc end parallel
+
+  ! First make bins from cam size distribution (bins are diagnostic)
+  
+  call cam_bin_distribute(qc,qr,qcin,ncin,qrin,nrin,mu_c,lambda_c, &
+                          lambda_r,n0r,lcldm,precip_frac,scale_qc, &
+                          scale_nc,scale_qr,scale_nr,amk_c,ank_c,  &
+                          amk_r,ank_r,amk,ank,cutoff_amk,mgncol,nlev)
+
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)  
+  do k=1,nlev
+     do i=1,mgncol
+        if ( cutoff_amk(i,k) > 0 ) then
+           cutoff(i,k) = cutoff_amk(i,k)
+        end if
+     end do
+  end do
+  !$acc end parallel
+ 
 !Then call the subroutines that actually do the calculations. The inputs/ouputs are described in comments below. 
 
 !This part of the code needs to be called each time for each process rate calculation 
@@ -259,269 +282,319 @@ end do
 
 ! Call Kernel
 
-qcin_new = 0._r8
-ncin_new = 0._r8
-qrin_new = 0._r8
-nrin_new = 0._r8
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)  
+  do k=1,nlev
+     do i=1,mgncol
+        qcin_new(i,k) = 0._r8
+        ncin_new(i,k) = 0._r8
+        qrin_new(i,k) = 0._r8
+        nrin_new(i,k) = 0._r8
+        
+        qcin_old(i,k) = 0._r8
+        ncin_old(i,k) = 0._r8
+        qrin_old(i,k) = 0._r8
+        nrin_old(i,k) = 0._r8
+        
+        qctend_TAU(i,k) = 0._r8
+        nctend_TAU(i,k) = 0._r8
+        qrtend_TAU(i,k) = 0._r8
+        nrtend_TAU(i,k) = 0._r8
+     end do
+  end do
+  !$acc end parallel
 
-qcin_old = 0._r8
-ncin_old = 0._r8
-qrin_old = 0._r8
-nrin_old = 0._r8
-
-qctend_TAU = 0._r8
-nctend_TAU = 0._r8
-qrtend_TAU = 0._r8
-nrtend_TAU = 0._r8
-
-amk0 = amk
-ank0 = ank
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(3)
+  do lcl=1,ncd
+     do k=1,nlev
+        do i=1,mgncol
+           amk0(i,k,lcl) = amk(i,k,lcl)
+           ank0(i,k,lcl) = ank(i,k,lcl)
+           gnnnn(i,k,lcl) = 0._r8
+           gmnnn(i,k,lcl) = 0._r8
+           lnnnn(i,k,lcl) = 0._r8
+           lmnnn(i,k,lcl) = 0._r8
+        end do
+     end do
+  end do
+  !$acc end parallel
 
 ! update qc, nc, qr, nr
-do i=1,mgncol
 
-gnnnn = 0._r8
-gmnnn = 0._r8
-lnnnn = 0._r8
-lmnnn = 0._r8
+  !$acc parallel vector_length(VLENS) default(present) private(amk0,ank0,gnnnn0,gmnnn0,lnnnn0,lmnnn0)
+  !$acc loop gang vector collapse(2)  
+  do k=1,nlev
+     do i=1,mgncol
+        !$acc loop seq
+        do lcl=1,ncd
+           amk0(lcl) = amk(i,k,lcl)
+           ank0(lcl) = ank(i,k,lcl)
+        end do
+        ! substep bin code
+        do n=1,sub_step
+           call compute_coll_params(rho(i,k),medge,amk0,ank0,gnnnn0,gmnnn0,lnnnn0,lmnnn0)
 
-! substep bin code
-do n=1,sub_step
-   call compute_coll_params(rho(i),medge,amk0(i,1:ncd),ank0(i,1:ncd),gnnnn0,gmnnn0,lnnnn0,lmnnn0)
-
-   all_gmnnn=0._r8
-   all_lmnnn=0._r8
-! scaling gmnnn, lmnnn
-   do lcl=1,ncd
-      all_gmnnn = all_gmnnn+gmnnn0(lcl)
-      all_lmnnn = all_lmnnn+lmnnn0(lcl)
-   end do
+           all_gmnnn=0._r8
+           all_lmnnn=0._r8
+           !scaling gmnnn, lmnnn
+           !$acc loop seq
+           do lcl=1,ncd
+              all_gmnnn = all_gmnnn+gmnnn0(lcl)
+              all_lmnnn = all_lmnnn+lmnnn0(lcl)
+           end do
  
-   if( (all_gmnnn.eq.0._r8).or.(all_lmnnn.eq.0._r8) ) then
-     gmnnn0(:) = 0._r8
-     lmnnn0(:) = 0._r8
-   else
-     lmnnn0 = lmnnn0*(all_gmnnn/all_lmnnn)
-   end if
+           if ( (all_gmnnn == 0._r8) .or. (all_lmnnn == 0._r8) ) then
+              !$acc loop seq
+              do lcl=1,ncd
+                 gmnnn0(i,k,lcl) = 0._r8
+                 lmnnn0(i,k,lcl) = 0._r8
+              end do
+           else
+              !$acc loop seq
+              do lcl=1,ncd
+                 lmnnn0(i,k,lcl) = lmnnn0(i,k,lcl)*(all_gmnnn/all_lmnnn)
+              end do
+           end if
 
-   do lcl=1,ncd
-      amk0(i,lcl) = amk0(i,lcl)+(gmnnn0(lcl)-lmnnn0(lcl))*1.e3_r8/rho(i)*deltatin/dble(sub_step)
-      ank0(i,lcl) = ank0(i,lcl)+(gnnnn0(lcl)-lnnnn0(lcl))*1.e6_r8/rho(i)*deltatin/dble(sub_step)
+           !$acc loop seq
+           do lcl=1,ncd
+              amk0(lcl) = amk0(lcl)+(gmnnn0(lcl)-lmnnn0(lcl))*1.e3_r8/ &
+                          rho(i,k)*deltatin/dble(sub_step)
+              ank0(lcl) = ank0(lcl)+(gnnnn0(lcl)-lnnnn0(lcl))*1.e6_r8/ &
+                          rho(i,k)*deltatin/dble(sub_step)
+              gmnnn(i,k,lcl) = gmnnn(i,k,lcl)+gmnnn0(lcl)/sub_step
+              gnnnn(i,k,lcl) = gnnnn(i,k,lcl)+gnnnn0(lcl)/sub_step
+              lmnnn(i,k,lcl) = lmnnn(i,k,lcl)+lmnnn0(lcl)/sub_step
+              lnnnn(i,k,lcl) = lnnnn(i,k,lcl)+lnnnn0(lcl)/sub_step
+           end do
+        end do ! end of loop "sub_step"
 
-      gmnnn(lcl) = gmnnn(lcl)+gmnnn0(lcl)/sub_step
-      gnnnn(lcl) = gnnnn(lcl)+gnnnn0(lcl)/sub_step
-      lmnnn(lcl) = lmnnn(lcl)+lmnnn0(lcl)/sub_step
-      lnnnn(lcl) = lnnnn(lcl)+lnnnn0(lcl)/sub_step
-   end do
+        ! cloud water
+        !$acc loop seq
+        do lcl=1,cutoff(i,k)
+           qcin_old(i,k) = qcin_old(i,k)+amk(i,k,lcl)
+           ncin_old(i,k) = ncin_old(i,k)+ank(i,k,lcl)
+           qcin_new(i,k) = qcin_new(i,k)+(gmnnn(i,k,lcl)-lmnnn(i,k,lcl))*1.e3_r8/rho(i,k)*deltatin
+           ncin_new(i,k) = ncin_new(i,k)+(gnnnn(i,k,lcl)-lnnnn(i,k,lcl))*1.e6_r8/rho(i,k)*deltatin
+           qctend_TAU(i,k) = qctend_TAU(i,k)+(amk0(lcl)-amk(i,k,lcl))/deltatin
+           nctend_TAU(i,k) = nctend_TAU(i,k)+(ank0(lcl)-ank(i,k,lcl))/deltatin
+           gmnnn_lmnnn_TAU(i,k) = gmnnn_lmnnn_TAU(i,k)+gmnnn(i,k,lcl)-lmnnn(i,k,lcl)
+        end do
 
-end do
+        ! rain
+        !$acc loop seq
+        do lcl=cutoff(i,k)+1,ncd
+           qrin_old(i,k) = qrin_old(i,k)+amk(i,k,lcl)
+           nrin_old(i,k) = nrin_old(i,k)+ank(i,k,lcl)
+           qrin_new(i,k) = qrin_new(i,k)+(gmnnn(i,k,lcl)-lmnnn(i,k,lcl))*1.e3_r8/rho(i,k)*deltatin
+           nrin_new(i,k) = nrin_new(i,k)+(gnnnn(i,k,lcl)-lnnnn(i,k,lcl))*1.e6_r8/rho(i,k)*deltatin
+           qrtend_TAU(i,k) = qrtend_TAU(i,k)+(amk0(lcl)-amk(i,k,lcl))/deltatin
+           nrtend_TAU(i,k) = nrtend_TAU(i,k)+(ank0(lcl)-ank(i,k,lcl))/deltatin
+           gmnnn_lmnnn_TAU(i,k) = gmnnn_lmnnn_TAU(i,k)+gmnnn(i,k,lcl)-lmnnn(i,k,lcl)
+        end do
 
-   ! cloud water
-   do lcl = 1,cutoff(i)
-      qcin_old(i) = qcin_old(i)+amk(i,lcl)
-      ncin_old(i) = ncin_old(i)+ank(i,lcl)
-      qcin_new(i) = qcin_new(i)+(gmnnn(lcl)-lmnnn(lcl))*1.e3_r8/rho(i)*deltatin
-      ncin_new(i) = ncin_new(i)+(gnnnn(lcl)-lnnnn(lcl))*1.e6_r8/rho(i)*deltatin
-
-      qctend_TAU(i) = qctend_TAU(i)+(amk0(i,lcl)-amk(i,lcl))/deltatin
-      nctend_TAU(i) = nctend_TAU(i)+(ank0(i,lcl)-ank(i,lcl))/deltatin
-
-      gmnnn_lmnnn_TAU(i) = gmnnn_lmnnn_TAU(i)+gmnnn(lcl)-lmnnn(lcl)
-   end do
-   ! rain 
-   do lcl = cutoff(i)+1, ncd
-      qrin_old(i) = qrin_old(i)+amk(i,lcl)
-      nrin_old(i) = nrin_old(i)+ank(i,lcl)
-      qrin_new(i) = qrin_new(i)+(gmnnn(lcl)-lmnnn(lcl))*1.e3_r8/rho(i)*deltatin
-      nrin_new(i) = nrin_new(i)+(gnnnn(lcl)-lnnnn(lcl))*1.e6_r8/rho(i)*deltatin
-
-      qrtend_TAU(i) = qrtend_TAU(i)+(amk0(i,lcl)-amk(i,lcl))/deltatin
-      nrtend_TAU(i) = nrtend_TAU(i)+(ank0(i,lcl)-ank(i,lcl))/deltatin
-      gmnnn_lmnnn_TAU(i) = gmnnn_lmnnn_TAU(i)+gmnnn(lcl)-lmnnn(lcl)
-   end do
-
-   do lcl = 1,ncd
-      amk_out(i,lcl) = amk(i,lcl) + (gmnnn(lcl)-lmnnn(lcl))*1.e3_r8/rho(i)*deltatin
-      ank_out(i,lcl) = ank(i,lcl) + (gnnnn(lcl)-lnnnn(lcl))*1.e6_r8/rho(i)*deltatin
-   end do
-
-   qcin_new(i) = qcin_new(i)+qcin_old(i)
-   ncin_new(i) = ncin_new(i)+ncin_old(i)
-   qrin_new(i) = qrin_new(i)+qrin_old(i)
-   nrin_new(i) = nrin_new(i)+nrin_old(i)
-end do
-
+        !$acc loop seq     
+        do lcl=1,ncd
+           amk_out(i,k,lcl) = amk(i,k,lcl) + (gmnnn(i,k,lcl)-lmnnn(i,k,lcl))*1.e3_r8/rho(i,k)*deltatin
+           ank_out(i,k,lcl) = ank(i,k,lcl) + (gnnnn(i,k,lcl)-lnnnn(i,k,lcl))*1.e6_r8/rho(i,k)*deltatin
+        end do
+     
+        qcin_new(i,k) = qcin_new(i,k)+qcin_old(i,k)
+        ncin_new(i,k) = ncin_new(i,k)+ncin_old(i,k)
+        qrin_new(i,k) = qrin_new(i,k)+qrin_old(i,k)
+        nrin_new(i,k) = nrin_new(i,k)+nrin_old(i,k)
+     end do
+  end do
+  !$acc end parallel
 
 ! Conservation checks 
 ! AG: Added May 2023
 
-do i = 1,mgncol
+  !$acc parallel vector_length(VLENS) default(present) private(amk0,ank0,gnnnn0,gmnnn0,lnnnn0,lmnnn0)
+  !$acc loop gang vector collapse(2)  
+  do k=1,nlev
+     do i=1,mgncol
 
-! First make sure all not negative
-
-qcin_new(i)=max(qcin_new(i),0._r8)
-ncin_new(i)=max(ncin_new(i),0._r8)
-qrin_new(i)=max(qrin_new(i),0._r8)
-nrin_new(i)=max(nrin_new(i),0._r8)
+        ! First make sure all not negative
+        qcin_new(i,k)=max(qcin_new(i,k),0._r8)
+        ncin_new(i,k)=max(ncin_new(i,k),0._r8)
+        qrin_new(i,k)=max(qrin_new(i,k),0._r8)
+        nrin_new(i,k)=max(nrin_new(i,k),0._r8)
 
 ! Now adjust so that sign is correct. qc_new,nc_new <= input, qr_new >= input
 ! NOte that due to self collection nr can be larger or smaller than input....
 ! Makes above check redundant I think.
 
-qcin_new(i)=min(qcin_new(i),qcin(i))
-ncin_new(i)=min(ncin_new(i),ncin(i))
-qrin_new(i)=max(qrin_new(i),qrin(i))
+        qcin_new(i,k)=min(qcin_new(i,k),qcin(i,k))
+        ncin_new(i,k)=min(ncin_new(i,k),ncin(i,k))
+        qrin_new(i,k)=max(qrin_new(i,k),qrin(i,k))
 
 ! Next scale mass...so output qc+qr is the same as input
 
-
-if ((qcin_new(i)+qrin_new(i)) .gt. 0._r8) then
-   qscl = (qcin(i)+qrin(i))/(qcin_new(i)+qrin_new(i))
-else
-   qscl = 0._r8
-end if
-
-qcin_new(i) = qcin_new(i) * qscl
-qrin_new(i) = qrin_new(i) * qscl
+        if ( (qcin_new(i,k)+qrin_new(i,k)) > 0._r8 ) then
+           qscl = (qcin(i,k)+qrin(i,k))/(qcin_new(i,k)+qrin_new(i,k))
+        else
+           qscl = 0._r8
+        end if
+        qcin_new(i,k) = qcin_new(i,k) * qscl
+        qrin_new(i,k) = qrin_new(i,k) * qscl
 
 ! Now zero nr,nc if either small or no mass?
 
-if (qcin_new(i) < qsmall) then
-   ncin_new(i) = 0._r8
-end if
-
-if (qrin_new(i) < qsmall) then
-   nrin_new(i) = 0._r8
-end if
+        if ( qcin_new(i,k) < qsmall ) then
+           ncin_new(i,k) = 0._r8
+        end if
+        
+        if ( qrin_new(i,k) < qsmall ) then
+           nrin_new(i,k) = 0._r8
+        end if
 
 !Finally add number if mass but no (or super small) number
 
-if (qcin_new(i) > qsmall .and. ncin_new(i) < qsmall) then
-   ncin_new(i) = qcin_new(i)/m1
-end if
-
-if (qrin_new(i) > qsmall .and. nrin_new(i) < qsmall) then
-   nrin_new(i) = qrin_new(i)/m1
-end if
+        if ( qcin_new(i,k) > qsmall .and. ncin_new(i,k) < qsmall ) then
+           ncin_new(i,k) = qcin_new(i,k)/m1
+        end if
+        
+        if ( qrin_new(i,k) > qsmall .and. nrin_new(i,k) < qsmall) then
+           nrin_new(i,k) = qrin_new(i,k)/m1
+        end if
 
 ! Then recalculate tendencies based on difference
 ! Clip tendencies for cloud (qc,nc) to be <= 0. 
 ! Qrtend is not used in pumas (-qctend is used) but clip that too). 
 ! Nr tend can be muliply signed. 
 
-qctend_TAU(i)= min((qcin_new(i) - qcin(i)) / deltatin,0._r8)
-nctend_TAU(i)= min((ncin_new(i) - ncin(i)) / deltatin,0._r8)
-qrtend_TAU(i)= max((qrin_new(i) - qrin(i)) / deltatin,0._r8)
-nrtend_TAU(i)= (nrin_new(i) - nrin(i)) / deltatin
+        qctend_TAU(i,k)= min((qcin_new(i,k) - qcin(i,k)) / deltatin,0._r8)
+        nctend_TAU(i,k)= min((ncin_new(i,k) - ncin(i,k)) / deltatin,0._r8)
+        qrtend_TAU(i,k)= max((qrin_new(i,k) - qrin(i,k)) / deltatin,0._r8)
+        nrtend_TAU(i,k)= (nrin_new(i,k) - nrin(i,k)) / deltatin
 
-end do 
+     end do
+  end do
+  !$acc end parallel
+
+  !$acc end data
 
 end subroutine pumas_stochastic_collect_tau_tend
 
+subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
+                              lambda_r,n0r,lcldm,precip_frac,scale_qc, &
+                              scale_nc,scale_qr,scale_nr,amk_c,ank_c,  &
+                              amk_r,ank_r,amk,ank,cutoff_amk,mgncol,nlev)
 
+  implicit none
 
+  integer, intent(in) :: mgncol,nlev
+  real(r8), dimension(mgncol,nlev), intent(in) :: qc_all,qr_all,qc,nc,qr,nr,mu_c, &
+                                                  lambda_c,lambda_r,n0r,lcldm,    &
+                                                  precip_frac
+  real(r8), dimension(mgncol,nlev,ncd), intent(out) :: amk_c,ank_c,amk_r,ank_r,amk,ank
+  real(r8), dimension(mgncol,nlev,ncd), intent(out) :: scale_nc,scale_qc,scale_nr,scale_qr 
+  integer, dimension(mgncol,nlev), intent(out) :: cutoff_amk
 
+  ! Local variables
 
-subroutine cam_bin_distribute(qc_all, qr_all, qc,nc,qr,nr,mu_c,lambda_c,lambda_r,n0r, &
-                              lcldm, precip_frac, scale_qc, scale_nc, scale_qr, scale_nr, &
-                              amk_c,ank_c, amk_r, ank_r, amk, ank, cutoff_amk)
+  integer  :: i,j,k
+  real(r8) :: phi
+  integer  :: id_max_qc, id_max_qr
+  real(r8) :: max_qc, max_qr, min_amk 
 
-real(r8) :: qc_all, qr_all, qc, nc, qr, nr, mu_c, lambda_c, lambda_r, n0r, lcldm, precip_frac
-real(r8), dimension(ncd) :: amk_c, ank_c, amk_r, ank_r, amk, ank
-integer  :: i
-real(r8) :: phi
-real(r8) :: scale_nc, scale_qc, scale_nr, scale_qr 
+  id_max_qc = 0
+  id_max_qr = 0
+  max_qc = 0._r8
+  max_qr = 0._r8
 
-integer  :: id_max_qc, id_max_qr, cutoff_amk
-real(r8) :: max_qc, max_qr, min_amk 
+  !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(2)
+  do k=1,nlev
+     do i=1,mgncol
 
-ank_c = 0._r8
-amk_c = 0._r8
-ank_r = 0._r8
-amk_r = 0._r8
-ank = 0._r8
-amk = 0._r8
+        ank_c(i,k) = 0._r8
+        amk_c(i,k) = 0._r8
+        ank_r(i,k) = 0._r8
+        amk_r(i,k) = 0._r8
+        ank(i,k) = 0._r8
+        amk(i,k) = 0._r8
+  
+        scale_nc(i,k) = 0._r8
+        scale_qc(i,k) = 0._r8
+        scale_nr(i,k) = 0._r8
+        scale_qr(i,k) = 0._r8
+        cutoff_amk(i,k) = 0
 
-scale_nc = 0._r8
-scale_qc = 0._r8
-scale_nr = 0._r8
-scale_qr = 0._r8
+        ! cloud water, nc in #/m3 --> #/cm3
+        if ( (qc_all(i,k) > qsmall) .and. (qc(i,k) > qsmall) ) then
+           !$acc loop seq
+           do j=1,ncd
+              phi = nc(i,k)*lambda_c(i,k)**(mu_c(i,k)+1._r8)/ &
+                    gamma(mu_c(i,k)+1._r8)*(diammean(j)*1.e-2_r8)**mu_c(i,k)* &
+                    exp(-lambda_c(i,k)*diammean(j)*1.e-2_r8)  ! D cm --> m
+              ank_c(i,k,j) = phi*(diamedge(j+1)-diamedge(j))*1.e-2_r8   ! D cm --> m
+              amk_c(i,k,j) = phi*(diamedge(j+1)-diamedge(j))*1.e-2_r8*mmean(j)*1.e-3_r8  ! mass in bin g --> kg
+              scale_nc(i,k) = scale_nc(i,k)+ank_c(i,k,j)
+              scale_qc(i,k) = scale_qc(i,k)+amk_c(i,k,j) 
+           end do
+           scale_nc(i,k) = scale_nc(i,k)/nc(i,k)
+           scale_qc(i,k) = scale_qc(i,k)/qc(i,k)
 
-id_max_qc = 0
-id_max_qr = 0
-cutoff_amk = 0
-max_qc = 0._r8
-max_qr = 0._r8
+           !$acc loop seq
+           do j=1,ncd
+              ank_c(i,k,j) = ank_c(i,k,j)/scale_nc(i,k)*lcldm(i,k)
+              amk_c(i,k,j) = amk_c(i,k,j)/scale_qc(i,k)*lcldm(i,k)
+              if ( amk_c(j) > max_qc ) then
+                 id_max_qc = j
+                 max_qc = amk_c(i,k,j)
+              end if
+           end do
+        end if
 
-! cloud water, nc in #/m3 --> #/cm3
-if( (qc_all.gt.qsmall).and.(qc.gt.qsmall) ) then
-do i = 1,ncd
-   phi = nc*lambda_c**(mu_c+1._r8)/gamma(mu_c+1._r8)*(diammean(i)*1.e-2_r8)**mu_c*exp(-lambda_c*diammean(i)*1.e-2_r8) ! D cm --> m
-   ank_c(i) = phi*(diamedge(i+1)-diamedge(i))*1.e-2_r8                     ! D cm --> m
-   amk_c(i) = phi*(diamedge(i+1)-diamedge(i))*1.e-2_r8*mmean(i)*1.e-3_r8   ! mass in bin g --> kg 
+        ! rain drop
+        if ( (qr_all(i,k) > qsmall) .and. (qr(i,k) > qsmall) ) then
+           !$acc loop seq
+           do j=1,ncd
+              phi = n0r(i,k)*exp(-lambda_r(i,k)*diammean(j)*1.e-2_r8)   ! D cm --> m
+              ank_r(i,k,j) = phi*(diamedge(j+1)-diamedge(j))*1.e-2_r8   ! D cm --> m  
+              amk_r(i,k,j) = phi*(diamedge(j+1)-diamedge(j))*1.e-2_r8*mmean(j)*1.e-3_r8
+              scale_nr(i,k) = scale_nr(i,k) + ank_r(i,k,j)
+              scale_qr(i,k) = scale_qr(i,k) + amk_r(i,k,j)
+           end do
+           scale_nr(i,k) = scale_nr(i,k)/nr(i,k)
+           scale_qr(i,k) = scale_qr(i,k)/qr(i,k)
 
-   scale_nc = scale_nc+ank_c(i)
-   scale_qc = scale_qc+amk_c(i) 
-end do
+           !$acc loop seq
+           do j=1,ncd
+              ank_r(i,k,j) = ank_r(i,k,j)/scale_nr(i,k)*precip_frac(i,k)
+              amk_r(i,k,j) = amk_r(i,k,j)/scale_qr(i,k)*precip_frac(i,k)
+              if ( amk_r(i,k,j) > max_qr ) then
+                 id_max_qr = j
+                 max_qr = amk_r(i,k,j)
+              end if
+           end do
+        end if
 
-scale_nc = scale_nc/nc
-scale_qc = scale_qc/qc
+        !$acc loop seq
+        do j=1,ncd
+           amk(i,k,j) = amk_c(i,k,j) + amk_r(i,k,j)
+           ank(i,k,j) = ank_c(i,k,j) + ank_r(i,k,j)
+        end do
 
-ank_c = ank_c/scale_nc*lcldm
-amk_c = amk_c/scale_qc*lcldm
+        if ( (id_max_qc > 0) .and. (id_max_qr > 0) ) then
+           if ( (max_qc/max_qr < 10._r8) .or. (max_qc/max_qr > 0.1_r8) ) then
+              min_amk = amk(i,k,id_max_qc)
+              !$acc loop seq
+              do j=id_max_qc,id_max_qr
+                 if ( amk(i,k,j) <= min_amk ) then
+                    cutoff_amk(i,k) = j
+                    min_amk = amk(i,k,j)
+                 end if
+              end do
+           end if
+        end if
 
-do i=1,ncd
-   if( amk_c(i).gt.max_qc ) then
-      id_max_qc = i
-      max_qc = amk_c(i)
-   end if
-end do
-
-end if
-
-! rain drop
-if( (qr_all.gt.qsmall).and.(qr.gt.qsmall) ) then
-do i = 1,ncd
-   phi = n0r*exp(-lambda_r*diammean(i)*1.e-2_r8)                   ! D cm --> m
-   ank_r(i) = phi*(diamedge(i+1)-diamedge(i))*1.e-2_r8    ! D cm --> m  
-   amk_r(i) = phi*(diamedge(i+1)-diamedge(i))*1.e-2_r8*mmean(i)*1.e-3_r8
-
-   scale_nr = scale_nr + ank_r(i)
-   scale_qr = scale_qr + amk_r(i)
-end do
-
-scale_nr = scale_nr/nr
-scale_qr = scale_qr/qr
-
-ank_r = ank_r/scale_nr*precip_frac
-amk_r = amk_r/scale_qr*precip_frac
-
-do i=1,ncd
-   if( amk_r(i).gt.max_qr ) then
-      id_max_qr = i
-      max_qr = amk_r(i)
-   end if
-end do
-
-end if
-
-amk = amk_c + amk_r
-ank = ank_c + ank_r
-
-
-if( (id_max_qc.gt.0).and.(id_max_qr.gt.0) ) then
-   if( (max_qc/max_qr.lt.10._r8).or.(max_qc/max_qr.gt.0.1_r8) )then
-      min_amk = amk(id_max_qc)
-
-      do i=id_max_qc,id_max_qr
-         if( amk(i).le.min_amk ) then
-           cutoff_amk = i
-           min_amk = amk(i)
-         end if
-      end do
-   end if
-end if
-
+     end do  ! end of loop "mgncol"
+  end do     ! end of loop "nlev"
+  !$acc end parallel
 
 !input: qc,nc,qr,nr, medge (bin edges). May also need # bins?
 !output: amk, ank (mixing ratio and number in each bin)
@@ -529,11 +602,9 @@ end if
 !this part will take a bit of thinking about.
 !use size distribution parameters (mu, lambda) to generate the values at discrete size points
 !need to also ensure mass conservation  
-  
-  
+
 end subroutine cam_bin_distribute
 
-         
 ! here are the subroutines called above that actually do the collision-coalescence calculations:
 
 ! The Kernel is from Jerry from many moons ago (included)
@@ -564,6 +635,9 @@ end subroutine cam_bin_distribute
 !AG: Global arrays need to be passed around I think? Right now at the module level. Is that okay?
 
 SUBROUTINE COMPUTE_COLL_PARAMS(rhon,xk_gr,qc,qn,gnnnn,gmnnn,lnnnn,lmnnn)
+
+  !$acc routine seq
+
   IMPLICIT NONE
 
 ! variable declarations (added by hm, 020118)
@@ -691,9 +765,6 @@ SUBROUTINE COMPUTE_COLL_PARAMS(rhon,xk_gr,qc,qn,gnnnn,gmnnn,lnnnn,lmnnn)
         LMNNN(L)=LMNNN(L)+(SNN0(LL)*SMN0(L))*KNN(LL,L)
      ENDDO
   ENDDO
-
-
-
 
 END SUBROUTINE COMPUTE_COLL_PARAMS
 

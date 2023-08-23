@@ -88,7 +88,7 @@ public :: &
 ! 8 byte real and integer
 integer, parameter, public :: r8 = selected_real_kind(12)
 integer, parameter, public :: i8 = selected_int_kind(18)
-integer, parameter         :: VLENS = 128  ! vector length of a GPU compute kernel
+integer, parameter, public :: VLENS = 128  ! vector length of a GPU compute kernel
 
 public :: MGHydrometeorProps
 
@@ -287,7 +287,9 @@ real(r8) :: gamma_half_br_plus5
 real(r8) :: gamma_half_bs_plus5
 real(r8) :: gamma_2bs_plus2
 
-!$acc declare create (rv,cpp)
+!$acc declare create (rv,cpp,tmelt,xxlv,xxls,gamma_bs_plus3,   &
+!$acc                 gamma_half_br_plus5,gamma_half_bs_plus5, &
+!$acc                 gamma_2bs_plus2)
 
 !=========================================================
 ! Utilities that are cheaper if the compiler knows that
@@ -386,7 +388,9 @@ subroutine micro_pumas_utils_init( kind, rair, rh2o, cpair, tmelt_in, latvap, &
   mg_graupel_props = MGHydrometeorProps(rhog, dsph, lam_bnd_snow)
   mg_hail_props = MGHydrometeorProps(rhoh, dsph, lam_bnd_snow)
 
-  !$acc update device (rv,cpp)
+  !$acc update device (rv,cpp,tmelt,xxlv,xxls,gamma_bs_plus3,   &
+  !$acc                gamma_half_br_plus5,gamma_half_bs_plus5, &
+  !$acc                gamma_2bs_plus2)
 
 end subroutine micro_pumas_utils_init
 

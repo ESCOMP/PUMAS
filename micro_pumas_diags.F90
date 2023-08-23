@@ -119,10 +119,6 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: nctend_TAU(:,:)   !cloud liquid number tendency due to autoconversion & accretion from TAU or Emulator code
   real(r8), allocatable :: qrtend_TAU(:,:)   !rain mass tendency due to autoconversion & accretion from TAU or Emulator code
   real(r8), allocatable :: nrtend_TAU(:,:)   !rain number tendency due to autoconversion & accretion from TAU or Emulatorcode
-!  real(r8), allocatable :: qctend_TAU_diag(:,:)   !cloud liquid mass tendency due to autoconversion & accretion from TAU code only
-!  real(r8), allocatable :: nctend_TAU_diag(:,:)  ! cloud liquid number tendency due to autoconversion & accretion from TAU code only
-!  real(r8), allocatable :: qrtend_TAU_diag(:,:)   !rain mass tendency due to autoconversion & accretion from TAU code only
-!  real(r8), allocatable :: nrtend_TAU_diag(:,:)   !rain number tendency due to autoconversion & accretion from TAU code only
   real(r8), allocatable :: gmnnn_lmnnn_TAU(:,:) ! TAU sum of mass gain and loss from bin code
   real(r8), allocatable :: ML_fixer(:,:)     !Emulated: frequency of ML fixer is activated
   real(r8), allocatable :: QC_fixer(:,:)     !Emulated: change in cloud liquid mass due to ML fixer
@@ -147,6 +143,7 @@ contains
       class(proc_rates_type) :: this
 
       integer,           intent(in) :: psetcols, nlev
+      integer,           intent(in) :: ncd
       character(len=16), intent(in) :: warm_rain            ! 'tau','emulated','sb2001' or 'kk2000'
       character(128),   intent(out) :: errstring
 
