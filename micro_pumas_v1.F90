@@ -4259,59 +4259,12 @@ end if
         if (qr(i,k)+qrtend(i,k)*deltat.lt.qsmall) nrtend(i,k)=-nr(i,k)*rdeltat
         if (qs(i,k)+qstend(i,k)*deltat.lt.qsmall) nstend(i,k)=-ns(i,k)*rdeltat
         if (qg(i,k)+qgtend(i,k)*deltat.lt.qsmall) ngtend(i,k)=-ng(i,k)*rdeltat
-     end do
-  end do
-  !$acc end parallel
-
-  if (trim(warm_rain) == 'never') then
-     !$acc parallel vector_length(VLENS) default(present)
-     !$acc loop gang vector collapse(2)
-     do k=1,nlev
-        do i=1,mgncol
-           if ( qc(i,k)+qctend(i,k)*deltat <= 0._r8 .or. &
-                nc(i,k)+nctend(i,k)*deltat <= 0._r8 ) then
-              qctend(i,k) = -qc(i,k)/deltat
-              nctend(i,k) = -nc(i,k)/deltat
-           end if
-           if ( qr(i,k)+qrtend(i,k)*deltat <= 0._r8 .or. &
-                nr(i,k)+nrtend(i,k)*deltat <= 0._r8 ) then
-              qrtend(i,k) = -qr(i,k)/deltat
-              nrtend(i,k) = -nr(i,k)/deltat
-           end if
-      
-           ! cap effective radius at 100 microns & 1000 microns for qc & qr
-           if ( qc(i,k)+qctend(i,k)*deltat > 0._r8 .or. &
-                nc(i,k)+nctend(i,k)*deltat > 0._r8 ) then
-              qc_eff_r = 100.e-6_r8
-              nc_eff_r = (qc(i,k)+qctend(i,k)*deltat)/ &
-                         (4._r8/3._r8*pi*qc_eff_r**3.*rhow)
-              if ( nc(i,k)+nctend(i,k)*deltat < nc_eff_r ) then
-                 nctend(i,k) = (nc_eff_r-nc(i,k))/deltat
-              end if
-           end if
-           if ( qr(i,k)+qrtend(i,k)*deltat > 0._r8 .or. &
-                nr(i,k)+nrtend(i,k)*deltat > 0._r8 ) then
-              qr_eff_r = 1000.e-6_r8
-              nr_eff_r = (qr(i,k)+qrtend(i,k)*deltat)/ &
-                         (4._r8/3._r8*pi*qr_eff_r**3.*rhow)
-              if ( nr(i,k)+nrtend(i,k)*deltat < nr_eff_r ) then
-                 nrtend(i,k) = (nr_eff_r-nc(i,k))/deltat
-              end if
-           end if
-        end do
-     end do
-     !$acc end parallel
-  end if
 
   ! DO STUFF FOR OUTPUT:
   !==================================================
   ! qc and qi are only used for output calculations past here,
   ! so add qctend and qitend back in one more time
 
-  !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector collapse(2)
-  do k=1,nlev
-     do i=1,mgncol
         qc(i,k) = qc(i,k) + qctend(i,k)*deltat
         qi(i,k) = qi(i,k) + qitend(i,k)*deltat
 
@@ -4571,52 +4524,6 @@ end if
      end do
   end do
   !$acc end parallel
-
-  ! TAU check radius
-  if (trim(warm_rain) == 'never') then
-     !$acc parallel vector_length(VLENS) default(present)
-     !$acc loop gang vector collapse(2)
-     do k=1,nlev
-        do i=1,mgncol
-           qc_eff_r = qcn(i,k)+qctend(i,k)*deltatin
-           nc_eff_r = ncn(i,k)+nctend(i,k)*deltatin
-           if(qc_eff_r.lt.-1._r8*qsmall) then
-              write(iulog,*) 'negative qc! ', qc_eff_r, proc_rates%qctend_TAU(i,k), &
-                              proc_rates%qctend_KK2000(i,k), &
-                              proc_rates%nctend_TAU(i,k), proc_rates%nctend_KK2000(i,k)
-           end if
-
-           if((nc_eff_r.gt.0._r8) .and. (qc_eff_r .gt. 0)) then
-              qc_eff_r = (qc_eff_r/(4._r8/3._r8*4._r8*pi*rhow*nc_eff_r))**(1._r8/3._r8)*1.e6
-           end if
-           if(nc_eff_r.lt.0._r8) then
-              qc_eff_r = -999._r8
-           end if
-
-           if(qc_eff_r.gt.100._r8) then
-              write(iulog,*) 'qc radius = ', qc_eff_r, proc_rates%qctend_TAU(i,k), &
-                              proc_rates%qctend_KK2000(i,k), &
-                              proc_rates%nctend_TAU(i,k), proc_rates%nctend_KK2000(i,k)
-           end if
-
-           qr_eff_r = qrn(i,k)+qrtend(i,k)*deltatin
-           nr_eff_r = nrn(i,k)+nrtend(i,k)*deltatin
-           if(qr_eff_r.lt.-1._r8*qsmall) then
-              write(iulog,*) 'negative qr! ', qr_eff_r, proc_rates%qrtend_TAU(i,k), &
-                              proc_rates%qrtend_KK2000(i,k), &
-                              proc_rates%nrtend_TAU(i,k), proc_rates%nrtend_KK2000(i,k)
-           end if
-           if((nr_eff_r.gt.0._r8) .and. (qr_eff_r .gt. 0)) then
-              qr_eff_r = (qr_eff_r/(4._r8/3._r8*4._r8*pi*rhow*nr_eff_r))**(1._r8/3._r8)*1.e6
-           end if
-           if(nr_eff_r.lt.0._r8) then
-              qr_eff_r = -999._r8
-           end if
-
-        end do
-     end do
-     !$acc end parallel
-  end if
 
   !$acc end data
 
