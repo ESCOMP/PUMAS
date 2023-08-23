@@ -13,7 +13,7 @@ use shr_spfn_mod, only: gamma => shr_spfn_gamma
 
 use shr_kind_mod,      only: r8=>shr_kind_r8
 use cam_history,       only: addfld
-use micro_pumas_utils, only: pi, rhow, qsmall, VLEN
+use micro_pumas_utils, only: pi, rhow, qsmall, VLENS
 use cam_logfile,       only: iulog
 
 implicit none
@@ -144,10 +144,10 @@ end subroutine pumas_stochastic_kernel_init
 subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
                         ncin,qrin,nrin,lcldm,precip_frac,mu_c,lambda_c,     &
                         n0r,lambda_r,qcin_new,ncin_new,qrin_new,nrin_new,   &
-                        nrin_new,qctend,nctend,qrtend,nrtend,qctend_TAU,    &
-                        nctend_TAU,qrtend_TAU,nrtend_TAU,scale_qc,scale_nc, &
-                        scale_qr,scale_nr,amk_c,ank_c,amk_r,ank_r,amk,ank,  &
-                        amk_out,ank_out,gmnnn_lmnnn_TAU,mgncol,nlev)
+                        qctend,nctend,qrtend,nrtend,qctend_TAU,nctend_TAU,  &
+                        qrtend_TAU,nrtend_TAU,scale_qc,scale_nc,scale_qr,   &
+                        scale_nr,amk_c,ank_c,amk_r,ank_r,amk,ank,amk_out,   &
+                        ank_out,gmnnn_lmnnn_TAU,mgncol,nlev)
 
   implicit none
 
@@ -155,7 +155,7 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   !outputs: qctend,nctend,qrtend,nrtend
   !not sure if we want to output bins (extra dimension). Good for testing?  
   
-  integer, intent(in) :: mgncol,vlen
+  integer, intent(in) :: mgncol,nlev
   real(r8), intent(in) :: deltatin
   real(r8), intent(in) :: t(mgncol,nlev)
   real(r8), intent(in) :: rho(mgncol,nlev)
@@ -309,8 +309,8 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   do lcl=1,ncd
      do k=1,nlev
         do i=1,mgncol
-           amk0(i,k,lcl) = amk(i,k,lcl)
-           ank0(i,k,lcl) = ank(i,k,lcl)
+           amk0(lcl) = amk(i,k,lcl)
+           ank0(lcl) = ank(i,k,lcl)
            gnnnn(i,k,lcl) = 0._r8
            gmnnn(i,k,lcl) = 0._r8
            lnnnn(i,k,lcl) = 0._r8
@@ -347,13 +347,13 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
            if ( (all_gmnnn == 0._r8) .or. (all_lmnnn == 0._r8) ) then
               !$acc loop seq
               do lcl=1,ncd
-                 gmnnn0(i,k,lcl) = 0._r8
-                 lmnnn0(i,k,lcl) = 0._r8
+                 gmnnn0(lcl) = 0._r8
+                 lmnnn0(lcl) = 0._r8
               end do
            else
               !$acc loop seq
               do lcl=1,ncd
-                 lmnnn0(i,k,lcl) = lmnnn0(i,k,lcl)*(all_gmnnn/all_lmnnn)
+                 lmnnn0(lcl) = lmnnn0(lcl)*(all_gmnnn/all_lmnnn)
               end do
            end if
 
@@ -490,7 +490,7 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
                                                   lambda_c,lambda_r,n0r,lcldm,    &
                                                   precip_frac
   real(r8), dimension(mgncol,nlev,ncd), intent(out) :: amk_c,ank_c,amk_r,ank_r,amk,ank
-  real(r8), dimension(mgncol,nlev,ncd), intent(out) :: scale_nc,scale_qc,scale_nr,scale_qr 
+  real(r8), dimension(mgncol,nlev), intent(out) :: scale_nc,scale_qc,scale_nr,scale_qr 
   integer, dimension(mgncol,nlev), intent(out) :: cutoff_amk
 
   ! Local variables
@@ -506,17 +506,25 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
   max_qr = 0._r8
 
   !$acc parallel vector_length(VLENS) default(present)
+  !$acc loop gang vector collapse(3)
+  do j=1,ncd
+     do k=1,nlev
+        do i=1,mgncol
+           ank_c(i,k,j) = 0._r8
+           amk_c(i,k,j) = 0._r8
+           ank_r(i,k,j) = 0._r8
+           amk_r(i,k,j) = 0._r8
+           ank(i,k,j) = 0._r8
+           amk(i,k,j) = 0._r8
+        end do
+     end do
+  end do
+  !$acc end parallel
+
+  !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
-
-        ank_c(i,k) = 0._r8
-        amk_c(i,k) = 0._r8
-        ank_r(i,k) = 0._r8
-        amk_r(i,k) = 0._r8
-        ank(i,k) = 0._r8
-        amk(i,k) = 0._r8
-  
         scale_nc(i,k) = 0._r8
         scale_qc(i,k) = 0._r8
         scale_nr(i,k) = 0._r8
@@ -591,7 +599,6 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
               end do
            end if
         end if
-
      end do  ! end of loop "mgncol"
   end do     ! end of loop "nlev"
   !$acc end parallel
