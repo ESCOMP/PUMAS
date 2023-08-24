@@ -309,8 +309,6 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   do lcl=1,ncd
      do k=1,nlev
         do i=1,mgncol
-           amk0(lcl) = amk(i,k,lcl)
-           ank0(lcl) = ank(i,k,lcl)
            gnnnn(i,k,lcl) = 0._r8
            gmnnn(i,k,lcl) = 0._r8
            lnnnn(i,k,lcl) = 0._r8
@@ -500,11 +498,6 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
   integer  :: id_max_qc, id_max_qr
   real(r8) :: max_qc, max_qr, min_amk 
 
-  id_max_qc = 0
-  id_max_qr = 0
-  max_qc = 0._r8
-  max_qr = 0._r8
-
   !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector collapse(3)
   do j=1,ncd
@@ -530,6 +523,11 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
         scale_nr(i,k) = 0._r8
         scale_qr(i,k) = 0._r8
         cutoff_amk(i,k) = 0
+
+        id_max_qc = 0
+        id_max_qr = 0
+        max_qc = 0._r8
+        max_qr = 0._r8
 
         ! cloud water, nc in #/m3 --> #/cm3
         if ( (qc_all(i,k) > qsmall) .and. (qc(i,k) > qsmall) ) then

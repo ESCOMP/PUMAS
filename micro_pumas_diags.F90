@@ -140,6 +140,8 @@ contains
 
    use cam_abortutils, only: endrun
 
+      implicit none
+
       class(proc_rates_type) :: this
 
       integer,           intent(in) :: psetcols, nlev
