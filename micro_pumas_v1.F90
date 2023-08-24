@@ -817,11 +817,6 @@ subroutine micro_pumas_tend ( &
   real(r8) :: ng(mgncol,nlev)      ! graupel number concentration (1/kg)
   real(r8) :: rhogtmp              ! hail or graupel density (kg m-3)
 
-  real(r8) :: qc_eff_r
-  real(r8) :: qr_eff_r
-  real(r8) :: nc_eff_r
-  real(r8) :: nr_eff_r
-
   ! general purpose variables
   real(r8) :: deltat            ! sub-time step (s)
   real(r8) :: rdeltat           ! reciprocal of sub-time step (1/s)
@@ -1626,21 +1621,14 @@ subroutine micro_pumas_tend ( &
         tlat_l(i,k)             = 0._r8
         qvlat_l(i,k)            = 0._r8
 
-        nnudep(i,k) = 0._r8
-        mnudep(i,k) = 0._r8
-        
-        nragg(i,k) = 0._r8
+        nnudep(i,k)             = 0._r8
+        mnudep(i,k)             = 0._r8
+        nragg(i,k)              = 0._r8
 
         proc_rates%qctend_KK2000(i,k) = 0._r8
         proc_rates%nctend_KK2000(i,k) = 0._r8
         proc_rates%qrtend_KK2000(i,k) = 0._r8
         proc_rates%nrtend_KK2000(i,k) = 0._r8
-
-        proc_rates%qctend_KK2000(i,k) = 0._r8
-        proc_rates%nctend_KK2000(i,k) = 0._r8
-        proc_rates%qrtend_KK2000(i,k) = 0._r8
-        proc_rates%nrtend_KK2000(i,k) = 0._r8
-
      end do
   end do
   !$acc end parallel
@@ -1672,35 +1660,6 @@ subroutine micro_pumas_tend ( &
            proc_rates%nc_out(i,k) = 0._r8
            proc_rates%qr_out(i,k) = 0._r8
            proc_rates%nr_out(i,k) = 0._r8
-           proc_rates%gmnnn_lmnnn_TAU(i,k) = 0._r8
-        end do
-     end do
-     !$acc end parallel
-  end if
-
-  if (trim(warm_rain) == 'sb2001') then
-     !$acc parallel vector_length(VLENS) default(present)
-     !$acc loop gang vector collapse(2)
-     do k=1,nlev
-        do i=1,mgncol
-           proc_rates%qctend_SB2001(i,k) = 0._r8
-           proc_rates%nctend_SB2001(i,k) = 0._r8
-           proc_rates%qrtend_SB2001(i,k) = 0._r8
-           proc_rates%nrtend_SB2001(i,k) = 0._r8
-        end do
-     end do
-     !$acc end parallel
-  end if
-
-  if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
-     !$acc parallel vector_length(VLENS) default(present)
-     !$acc loop gang vector collapse(2)
-     do k=1,nlev
-        do i=1,mgncol
-           proc_rates%qctend_TAU(i,k) = 0._r8
-           proc_rates%nctend_TAU(i,k) = 0._r8
-           proc_rates%qrtend_TAU(i,k) = 0._r8
-           proc_rates%nrtend_TAU(i,k) = 0._r8
            proc_rates%gmnnn_lmnnn_TAU(i,k) = 0._r8
         end do
      end do
