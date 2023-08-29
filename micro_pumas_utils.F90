@@ -440,7 +440,7 @@ subroutine rising_factorial_r8_vec(x, n, res,vlen)
   real(r8) :: tmp
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector private(tmp)
+  !$acc loop gang vector
   do i=1,vlen
      tmp = x(i)+n
      res(i) = gamma(tmp)
@@ -1126,7 +1126,7 @@ subroutine ice_deposition_sublimation(t, qv, qi, ni, &
   call size_dist_param_basic_vect(mg_ice_props, qiic, niic, lami, vlen, n0i)
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector private(epsi)
+  !$acc loop gang vector
   do i=1,vlen
      if (qi(i)>=qsmall) then
         !Get depletion timescale=1/eps
@@ -1221,7 +1221,7 @@ subroutine ice_deposition_sublimation_mg4(t, qv, qi, niic, &
   !$acc end parallel
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector private(epsi)
+  !$acc loop gang vector
   do i=1,vlen
      if (qi(i)>=qsmall) then
         if ( t(i) .lt. tmelt ) then
@@ -1510,7 +1510,7 @@ subroutine sb2001v2_accre_cld_water_rain(qc,nc,qr,rho,relvar,pra,npra,vlen)
   ! accretion
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector private(dum,dum1)
+  !$acc loop gang vector
   do i = 1,vlen
     if (qc(i) > qsmall) then
       dum     = 1._r8-qc(i)/(qc(i)+qr(i))
@@ -1993,7 +1993,7 @@ subroutine accrete_rain_snow(t, rho, umr, ums, unr, uns, qric, qsic, &
   integer  :: i
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector private(common_factor,d_rat)
+  !$acc loop gang vector
   do i=1,vlen
      if (qric(i) >= icsmall .and. qsic(i) >= icsmall .and. t(i) <= tmelt) then
         common_factor = pi*ecr*rho(i)*n0r(i)*n0s(i)/(lamr(i)**3 * lams(i))
