@@ -49,8 +49,6 @@ contains
 
 subroutine calc_bins    
 
-  implicit none
-
   real(r8) :: DIAM(ncdp)
   real(r8) :: X(ncdp)
   real(r8) :: radsl(ncdp)
@@ -105,8 +103,6 @@ subroutine pumas_stochastic_kernel_init(kernel_filename)
 
   use cam_history_support, only: add_hist_coord
 
-  implicit none
-
   character(len=*), intent(in) :: kernel_filename  ! Full pathname to kernel file
 
   integer :: iunit ! unit number of opened file for collection kernel code from a lookup table.
@@ -148,8 +144,6 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
                         qrtend_TAU,nrtend_TAU,scale_qc,scale_nc,scale_qr,   &
                         scale_nr,amk_c,ank_c,amk_r,ank_r,amk,ank,amk_out,   &
                         ank_out,gmnnn_lmnnn_TAU,mgncol,nlev)
-
-  implicit none
 
   !inputs: mgncol,nlev,t,rho,qcin,ncin,qrin,nrin
   !outputs: qctend,nctend,qrtend,nrtend
