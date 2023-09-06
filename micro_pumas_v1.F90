@@ -10,9 +10,9 @@ module micro_pumas_v1
 !
 !           Importance of Ice Nucleation and Precipitation on Climate with the
 !
-!           Parameterization of Unified Microphysics Across Scales version 1 
+!           Parameterization of Unified Microphysics Across Scales version 1
 !
-!           (PUMASv1). Geosci. Model Dev., 16, 1735-1754. 
+!           (PUMASv1). Geosci. Model Dev., 16, 1735-1754.
 !
 !           https://doi.org/10.5194/gmd-16-1735-2023
 !
@@ -419,7 +419,7 @@ subroutine micro_pumas_init( &
   real(r8), intent(in)  :: nsnst_in
 
   character(len=*), intent(in) :: stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
-                                  stochastic_emulated_filename_output_scale   ! Files for emulated machine learning 
+                                  stochastic_emulated_filename_output_scale   ! Files for emulated machine learning
 
   integer, intent(in) :: iulog
   character(128), intent(out) :: errstring    ! Output status (non-blank for error return)
@@ -1969,7 +1969,7 @@ subroutine micro_pumas_tend ( &
 
   ! get size distribution parameters for rain
   !......................................................................
-  
+
   call size_dist_param_basic(mg_rain_props, qric, nric, lamr, mgncol, nlev, n0=n0r)
 
   !========================================================================
@@ -4218,6 +4218,7 @@ end if
         if (qr(i,k)+qrtend(i,k)*deltat.lt.qsmall) nrtend(i,k)=-nr(i,k)*rdeltat
         if (qs(i,k)+qstend(i,k)*deltat.lt.qsmall) nstend(i,k)=-ns(i,k)*rdeltat
         if (qg(i,k)+qgtend(i,k)*deltat.lt.qsmall) ngtend(i,k)=-ng(i,k)*rdeltat
+
 
   ! DO STUFF FOR OUTPUT:
   !==================================================
