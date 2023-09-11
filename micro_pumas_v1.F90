@@ -10,9 +10,9 @@ module micro_pumas_v1
 !
 !           Importance of Ice Nucleation and Precipitation on Climate with the
 !
-!           Parameterization of Unified Microphysics Across Scales version 1 
+!           Parameterization of Unified Microphysics Across Scales version 1
 !
-!           (PUMASv1). Geosci. Model Dev., 16, 1735-1754. 
+!           (PUMASv1). Geosci. Model Dev., 16, 1735-1754.
 !
 !           https://doi.org/10.5194/gmd-16-1735-2023
 !
@@ -418,8 +418,9 @@ subroutine micro_pumas_init( &
   logical, intent(in)   :: nscons_in
   real(r8), intent(in)  :: nsnst_in
 
-  character(len=*), intent(in) :: stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
-                                  stochastic_emulated_filename_output_scale   ! Files for emulated machine learning 
+  character(len=*), intent(in) :: stochastic_emulated_filename_quantile, &
+                                  stochastic_emulated_filename_input_scale, &
+                                  stochastic_emulated_filename_output_scale ! Files for emulated machine learning
 
   integer, intent(in) :: iulog
   character(128), intent(out) :: errstring    ! Output status (non-blank for error return)
@@ -1631,10 +1632,10 @@ subroutine micro_pumas_tend ( &
         proc_rates%nctend_KK2000(i,k) = 0._r8
         proc_rates%qrtend_KK2000(i,k) = 0._r8
         proc_rates%nrtend_KK2000(i,k) = 0._r8
-        proc_rates%lamc_out(i,k) = 0._r8
-        proc_rates%lamr_out(i,k) = 0._r8
-        proc_rates%pgam_out(i,k) = 0._r8
-        proc_rates%n0r_out(i,k) = 0._r8
+        proc_rates%lamc_out(i,k)      = 0._r8
+        proc_rates%lamr_out(i,k)      = 0._r8
+        proc_rates%pgam_out(i,k)      = 0._r8
+        proc_rates%n0r_out(i,k)       = 0._r8
      end do
   end do
   !$acc end parallel
@@ -1975,21 +1976,21 @@ subroutine micro_pumas_tend ( &
 
   ! get size distribution parameters for rain
   !......................................................................
-  
+
   call size_dist_param_basic(mg_rain_props, qric, nric, lamr, mgncol, nlev, n0=n0r)
 
   ! Save off size distribution parameters for output
   !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector collapse(2)
   do k=1,nlev
-   do i=1,mgncol
-      proc_rates%pgam_out(i,k)=pgam(i,k)
-      proc_rates%n0r_out(i,k)=n0r(i,k)
-      proc_rates%lamc_out(i,k)=lamc(i,k)
-      proc_rates%lamr_out(i,k)=lamr(i,k)
-   end do
- end do
- !$acc end parallel
+     do i=1,mgncol
+        proc_rates%pgam_out(i,k)=pgam(i,k)
+        proc_rates%n0r_out(i,k)=n0r(i,k)
+        proc_rates%lamc_out(i,k)=lamc(i,k)
+        proc_rates%lamr_out(i,k)=lamr(i,k)
+     end do
+  end do
+  !$acc end parallel
 
   !========================================================================
   ! autoconversion of cloud liquid water to rain
