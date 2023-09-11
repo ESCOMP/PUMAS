@@ -91,6 +91,11 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   ! TAU diagnostic variables
   real(r8), allocatable :: nraggtot(:,:)          ! change nr  due to self collection of rain
 
+
+  real(r8), allocatable :: pgam_out(:,:)      ! Liquid Size distribution parameter Mu for output
+  real(r8), allocatable :: lamc_out(:,:)      ! Liquid Size distribution parameter Lambda for output
+  real(r8), allocatable :: lamr_out(:,:)      ! Rain Size distribution parameter Lambda for output
+  real(r8), allocatable :: n0r_out(:,:)       ! Size distribution parameter n0 for output
   real(r8), allocatable :: scale_qc(:,:)      ! TAU scaling factor for liquid mass to ensure conservation
   real(r8), allocatable :: scale_nc(:,:)       ! TAU scaling factor for liquid number to ensure conservation
   real(r8), allocatable :: scale_qr(:,:)      ! TAU scaling factor for rain mass to ensure conservation
@@ -513,6 +518,22 @@ contains
          if (ierr /= 0) then
            errstring='Error allocating this%ank_out'
          end if
+         allocate(this%lamc_out(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%lamc_out'
+         end if
+         allocate(this%lamr_out(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%lamr_out'
+         end if
+         allocate(this%pgam_out(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%pgam_out'
+         end if
+         allocate(this%n0r_out(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%n0r_out'
+         end if
          allocate(this%qc_out(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
            errstring='Error allocating this%qc_out'
@@ -699,6 +720,11 @@ contains
       deallocate(this%nctend_KK2000)
       deallocate(this%qrtend_KK2000)
       deallocate(this%nrtend_KK2000)
+
+      deallocate(this%lamc_out) 
+      deallocate(this%lamr_out)
+      deallocate(this%pgam_out)
+      deallocate(this%n0r_out)
 
       if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
          deallocate(this%scale_qc)
