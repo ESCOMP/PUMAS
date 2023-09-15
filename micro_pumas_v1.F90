@@ -1632,10 +1632,6 @@ subroutine micro_pumas_tend ( &
         proc_rates%nctend_KK2000(i,k) = 0._r8
         proc_rates%qrtend_KK2000(i,k) = 0._r8
         proc_rates%nrtend_KK2000(i,k) = 0._r8
-        proc_rates%lamc_out(i,k)      = 0._r8
-        proc_rates%lamr_out(i,k)      = 0._r8
-        proc_rates%pgam_out(i,k)      = 0._r8
-        proc_rates%n0r_out(i,k)       = 0._r8
      end do
   end do
   !$acc end parallel
@@ -1668,6 +1664,10 @@ subroutine micro_pumas_tend ( &
            proc_rates%qr_out(i,k) = 0._r8
            proc_rates%nr_out(i,k) = 0._r8
            proc_rates%gmnnn_lmnnn_TAU(i,k) = 0._r8
+           proc_rates%lamc_out(i,k)      = 0._r8
+           proc_rates%lamr_out(i,k)      = 0._r8
+           proc_rates%pgam_out(i,k)      = 0._r8
+           proc_rates%n0r_out(i,k)       = 0._r8
         end do
      end do
      !$acc end parallel
@@ -1979,18 +1979,21 @@ subroutine micro_pumas_tend ( &
 
   call size_dist_param_basic(mg_rain_props, qric, nric, lamr, mgncol, nlev, n0=n0r)
 
-  ! Save off size distribution parameters for output
-  !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector collapse(2)
-  do k=1,nlev
-     do i=1,mgncol
-        proc_rates%pgam_out(i,k)=pgam(i,k)
-        proc_rates%n0r_out(i,k)=n0r(i,k)
-        proc_rates%lamc_out(i,k)=lamc(i,k)
-        proc_rates%lamr_out(i,k)=lamr(i,k)
+  ! Save off size distribution parameters for output when mach learning is on
+  if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
+     !$acc parallel vector_length(VLENS) default(present)
+     !$acc loop gang vector collapse(2)
+     do k=1,nlev
+        do i=1,mgncol
+           proc_rates%pgam_out(i,k)=pgam(i,k)
+           proc_rates%n0r_out(i,k)=n0r(i,k)
+           proc_rates%lamc_out(i,k)=lamc(i,k)
+           proc_rates%lamr_out(i,k)=lamr(i,k)
+        end do
      end do
-  end do
   !$acc end parallel
+  endif
+
 
   !========================================================================
   ! autoconversion of cloud liquid water to rain

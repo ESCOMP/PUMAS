@@ -721,11 +721,6 @@ contains
       deallocate(this%qrtend_KK2000)
       deallocate(this%nrtend_KK2000)
 
-      deallocate(this%lamc_out) 
-      deallocate(this%lamr_out)
-      deallocate(this%pgam_out)
-      deallocate(this%n0r_out)
-
       if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
          deallocate(this%scale_qc)
          deallocate(this%scale_nc)
@@ -753,6 +748,11 @@ contains
          deallocate(this%NC_fixer)
          deallocate(this%QR_fixer)
          deallocate(this%NR_fixer)
+         deallocate(this%lamc_out) 
+         deallocate(this%lamr_out)
+         deallocate(this%pgam_out)
+         deallocate(this%n0r_out)
+
       else if (trim(warm_rain) == 'sb2001') then
          deallocate(this%qctend_SB2001)
          deallocate(this%nctend_SB2001)
