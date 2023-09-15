@@ -1991,9 +1991,8 @@ subroutine micro_pumas_tend ( &
            proc_rates%lamr_out(i,k)=lamr(i,k)
         end do
      end do
-  !$acc end parallel
+     !$acc end parallel
   endif
-
 
   !========================================================================
   ! autoconversion of cloud liquid water to rain
