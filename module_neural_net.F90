@@ -340,7 +340,7 @@ contains
         ! neural_net_model (input): Array of type(Dense) objects
         ! prediction (output): The prediction of the neural network as a 2D array of dimension (examples, outputs)
         real(kind=r8), intent(in) :: input(:, :)
-        type(Dense), intent(inout) :: neural_net_model(:)
+        type(Dense), intent(in) :: neural_net_model(:)
         real(kind=r8), intent(out) :: prediction(size(input, 1), neural_net_model(size(neural_net_model))%output_size)
         integer :: bi, i, j, num_layers
         integer :: batch_size
