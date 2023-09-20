@@ -466,6 +466,22 @@ contains
       if (ierr /= 0) then
         errstring='Error allocating this%nmeltgtot'
       end if
+      allocate(this%lamc_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+         errstring='Error allocating this%lamc_out'
+      end if
+      allocate(this%lamr_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+         errstring='Error allocating this%lamr_out'
+      end if
+      allocate(this%pgam_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+         errstring='Error allocating this%pgam_out'
+      end if
+      allocate(this%n0r_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+         errstring='Error allocating this%n0r_out'
+      end if
 
       ! Only allocate these variables if machine learning turned on
 
@@ -517,22 +533,6 @@ contains
          allocate(this%ank_out(psetcols,nlev,ncd), stat=ierr)
          if (ierr /= 0) then
            errstring='Error allocating this%ank_out'
-         end if
-         allocate(this%lamc_out(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%lamc_out'
-         end if
-         allocate(this%lamr_out(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%lamr_out'
-         end if
-         allocate(this%pgam_out(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%pgam_out'
-         end if
-         allocate(this%n0r_out(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%n0r_out'
          end if
          allocate(this%qc_out(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
@@ -721,6 +721,11 @@ contains
       deallocate(this%qrtend_KK2000)
       deallocate(this%nrtend_KK2000)
 
+      deallocate(this%lamc_out) 
+      deallocate(this%lamr_out)
+      deallocate(this%pgam_out)
+      deallocate(this%n0r_out)
+
       if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
          deallocate(this%scale_qc)
          deallocate(this%scale_nc)
@@ -748,10 +753,6 @@ contains
          deallocate(this%NC_fixer)
          deallocate(this%QR_fixer)
          deallocate(this%NR_fixer)
-         deallocate(this%lamc_out) 
-         deallocate(this%lamr_out)
-         deallocate(this%pgam_out)
-         deallocate(this%n0r_out)
 
       else if (trim(warm_rain) == 'sb2001') then
          deallocate(this%qctend_SB2001)

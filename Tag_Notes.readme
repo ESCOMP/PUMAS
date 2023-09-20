@@ -1,6 +1,9 @@
 ====================================
+.. pumas_cam-release_v1.32
+September 20, 2023 - Moved new history output fields from ML only to always available. CAM support in PR phase, to run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR (#858) is done.
+====================================
 .. pumas_cam-release_v1.31
-July 17, 2023 - More support for machine learning including GPU code clean up, extra output for emulators and final cleanup from Cheryl. CAM support in PR phase, to run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR (#858) is done.
+September 19, 2023 - More support for machine learning including GPU code clean up, extra output for emulators and final cleanup from Cheryl. CAM support in PR phase, to run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR (#858) is done.
 ====================================
 .. pumas_cam-release_v1.30
 July 17, 2023 - Adding in support for the machine learning emulators. CAM support in PR phase, to run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR is done.
