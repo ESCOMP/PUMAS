@@ -112,6 +112,10 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: nc_out(:,:)     !TAU: output total cloud liquid number
   real(r8), allocatable :: qr_out(:,:)     !TAU: output total rain mass
   real(r8), allocatable :: nr_out(:,:)     !TAU: output total cloud rain number
+  real(r8), allocatable :: qc_in(:,:)      !TAU: input total cloud liquid mass
+  real(r8), allocatable :: nc_in(:,:)     !TAU: input total cloud liquid number
+  real(r8), allocatable :: qr_in(:,:)     !TAU: input total rain mass
+  real(r8), allocatable :: nr_in(:,:)     !TAU: input total cloud rain number
   real(r8), allocatable :: qctend_KK2000(:,:)   !cloud liquid mass tendency due to autoconversion  & accretion from KK2000
   real(r8), allocatable :: nctend_KK2000(:,:)   !cloud liquid number tendency due to autoconversion  & accretion from KK2000
   real(r8), allocatable :: qrtend_KK2000(:,:)   !rain mass tendency due to autoconversion  & accretion from KK2000
@@ -550,6 +554,22 @@ contains
          if (ierr /= 0) then
            errstring='Error allocating this%nr_out'
          end if
+         allocate(this%qc_in(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qc_in'
+         end if
+         allocate(this%nc_in(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nc_in'
+         end if
+         allocate(this%qr_in(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qr_in'
+         end if
+         allocate(this%nr_in(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nr_in'
+         end if
          allocate(this%qctend_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
            errstring='Error allocating this%qctend_TAU'
@@ -743,6 +763,10 @@ contains
          deallocate(this%nc_out)
          deallocate(this%qr_out)
          deallocate(this%nr_out)
+         deallocate(this%qc_in)
+         deallocate(this%nc_in)
+         deallocate(this%qr_in)
+         deallocate(this%nr_in)              
          deallocate(this%qctend_TAU)
          deallocate(this%nctend_TAU)
          deallocate(this%qrtend_TAU)
@@ -753,7 +777,6 @@ contains
          deallocate(this%NC_fixer)
          deallocate(this%QR_fixer)
          deallocate(this%NR_fixer)
-
       else if (trim(warm_rain) == 'sb2001') then
          deallocate(this%qctend_SB2001)
          deallocate(this%nctend_SB2001)

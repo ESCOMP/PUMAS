@@ -1186,6 +1186,8 @@ subroutine micro_pumas_tend ( &
   !$acc               proc_rates%amk_r,proc_rates%ank_r,proc_rates%amk,       &
   !$acc               proc_rates%ank,proc_rates%amk_out,proc_rates%ank_out,   &
   !$acc               proc_rates%qc_out,proc_rates%nc_out,proc_rates%qr_out,  &
+  !$acc               proc_rates%qc_in,proc_rates%nc_in,proc_rates%qr_in,     &
+  !$acc               proc_rates%nr_in,                                       &
   !$acc               proc_rates%lamc_out,proc_rates%lamr_out,                &
   !$acc               proc_rates%pgam_out,proc_rates%n0r_out,                 &
   !$acc               proc_rates%nr_out,proc_rates%qctend_KK2000,             &
@@ -1667,6 +1669,10 @@ subroutine micro_pumas_tend ( &
            proc_rates%nc_out(i,k) = 0._r8
            proc_rates%qr_out(i,k) = 0._r8
            proc_rates%nr_out(i,k) = 0._r8
+           proc_rates%qc_in(i,k) = 0._r8
+           proc_rates%nc_in(i,k) = 0._r8
+           proc_rates%qr_in(i,k) = 0._r8
+           proc_rates%nr_in(i,k) = 0._r8
            proc_rates%gmnnn_lmnnn_TAU(i,k) = 0._r8
         end do
      end do
@@ -2039,6 +2045,10 @@ subroutine micro_pumas_tend ( &
      !$acc loop gang vector collapse(2)
      do k=1,nlev
         do i=1,mgncol
+           proc_rates%qc_in(i,k)=qcic(i,k)
+           proc_rates%nc_in(i,k)=ncic(i,k)
+           proc_rates%qr_in(i,k)=qric(i,k)
+           proc_rates%nr_in(i,k)=nric(i,k)
            ! PUMAS expects prc and nprc1 (cloud rates) are positive
            prc(i,k)= -proc_rates%qctend_TAU(i,k)
            nprc1(i,k)= -proc_rates%nctend_TAU(i,k)
