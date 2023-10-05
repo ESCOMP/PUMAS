@@ -1,4 +1,7 @@
 ====================================
+.. pumas_cam-release_v1.33
+October 5, 2023 - Added support for four more new ML output fields and updated field names. CAM support in PR phase, to run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR (#858) is done.
+====================================
 .. pumas_cam-release_v1.32
 September 20, 2023 - Moved new history output fields from ML only to always available. CAM support in PR phase, to run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR (#858) is done.
 ====================================
