@@ -277,6 +277,7 @@ real(r8)           :: micro_mg_autocon_nd_exp     ! autoconversion Nd exponent f
 real(r8)           :: micro_mg_autocon_lwp_exp  !autoconversion LWP exponent
 real(r8)           :: micro_mg_homog_size ! size of freezing homogeneous ice
 real(r8)           :: micro_mg_vtrmi_factor
+real(r8)           :: micro_mg_vtrms_factor
 real(r8)           :: micro_mg_effi_factor
 real(r8)           :: micro_mg_iaccr_factor
 real(r8)           :: micro_mg_max_nicons
@@ -307,6 +308,7 @@ logical           :: accre_sees_auto  != .true.
 !$acc                 micro_mg_accre_enhan_fact,micro_mg_autocon_fact,         &
 !$acc                 micro_mg_autocon_nd_exp,micro_mg_autocon_lwp_exp,        &
 !$acc                 micro_mg_homog_size,micro_mg_vtrmi_factor,               &
+!$acc                 micro_mg_vtrms_factor,                                   &
 !$acc                 micro_mg_effi_factor,micro_mg_iaccr_factor,              &
 !$acc                 micro_mg_max_nicons,remove_supersat,do_implicit_fall,    &
 !$acc                 accre_sees_auto)
@@ -324,8 +326,8 @@ subroutine micro_pumas_init( &
      micro_mg_precip_frac_method_in, micro_mg_berg_eff_factor_in, &
      micro_mg_accre_enhan_fact_in, micro_mg_autocon_fact_in, &
      micro_mg_autocon_nd_exp_in, micro_mg_autocon_lwp_exp_in, micro_mg_homog_size_in, &
-     micro_mg_vtrmi_factor_in, micro_mg_effi_factor_in,  micro_mg_iaccr_factor_in,&
-     micro_mg_max_nicons_in, &
+     micro_mg_vtrmi_factor_in, micro_mg_vtrms_factor_in, micro_mg_effi_factor_in, &
+     micro_mg_iaccr_factor_in, micro_mg_max_nicons_in, &
      remove_supersat_in, warm_rain_in, &
      micro_mg_evap_sed_off_in, micro_mg_icenuc_rh_off_in, micro_mg_icenuc_use_meyers_in, &
      micro_mg_evap_scl_ifs_in, micro_mg_evap_rhthrsh_ifs_in, &
@@ -381,6 +383,7 @@ subroutine micro_pumas_init( &
   real(r8),         intent(in) ::  micro_mg_autocon_lwp_exp_in    !autconversion exponent factor
   real(r8),         intent(in) ::  micro_mg_homog_size_in  ! size of homoegenous freezing ice
   real(r8),         intent(in)  :: micro_mg_vtrmi_factor_in    !factor for ice fall velocity
+  real(r8),         intent(in)  :: micro_mg_vtrms_factor_in    !factor for snow fall velocity
   real(r8),         intent(in)  :: micro_mg_effi_factor_in    !factor for ice effective radius
   real(r8),         intent(in)  :: micro_mg_iaccr_factor_in  ! ice accretion factor
   real(r8),         intent(in)  :: micro_mg_max_nicons_in ! maximum number ice crystal allowed
@@ -451,6 +454,7 @@ subroutine micro_pumas_init( &
   micro_mg_autocon_lwp_exp = micro_mg_autocon_lwp_exp_in
   micro_mg_homog_size   = micro_mg_homog_size_in
   micro_mg_vtrmi_factor = micro_mg_vtrmi_factor_in
+  micro_mg_vtrms_factor = micro_mg_vtrms_factor_in
   micro_mg_effi_factor = micro_mg_effi_factor_in
   micro_mg_iaccr_factor = micro_mg_iaccr_factor_in
   micro_mg_max_nicons = micro_mg_max_nicons_in
@@ -544,6 +548,7 @@ subroutine micro_pumas_init( &
   !$acc                micro_mg_accre_enhan_fact,micro_mg_autocon_fact,        &
   !$acc                micro_mg_autocon_nd_exp,micro_mg_autocon_lwp_exp,       &
   !$acc                micro_mg_homog_size,micro_mg_vtrmi_factor,              &
+  !$acc                micro_mg_vtrms_factor,                                  &
   !$acc                micro_mg_effi_factor,micro_mg_iaccr_factor,             &
   !$acc                micro_mg_max_nicons,remove_supersat,do_implicit_fall,   &
   !$acc                accre_sees_auto)
@@ -2242,7 +2247,7 @@ subroutine micro_pumas_tend ( &
               dum_2D(i,k) = lams(i,k)**bs
               ! provisional snow number and mass weighted mean fallspeed (m/s)
               proc_rates%ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*dum_2D(i,k)),1.2_r8*rhof(i,k))
-              proc_rates%ums(i,k) = proc_rates%ums(i,k)*micro_mg_vtrmi_factor
+              proc_rates%ums(i,k) = proc_rates%ums(i,k)*micro_mg_vtrms_factor
               uns(i,k) = min(asn(i,k)*gamma_bs_plus1/dum_2D(i,k),1.2_r8*rhof(i,k))
            else
               proc_rates%ums(i,k) = 0._r8
@@ -3413,7 +3418,7 @@ subroutine micro_pumas_tend ( &
            qtmp = lams(i,k)**bs
            ! 'final' values of number and mass weighted mean fallspeed for snow (m/s)
            proc_rates%ums(i,k) = min(asn(i,k)*gamma_bs_plus4/(6._r8*qtmp),1.2_r8*rhof(i,k))
-           proc_rates%ums(i,k) = proc_rates%ums(i,k)*micro_mg_vtrmi_factor
+           proc_rates%ums(i,k) = proc_rates%ums(i,k)*micro_mg_vtrms_factor
 
            fs(i,k)  = g*rho(i,k)*proc_rates%ums(i,k)
            uns(i,k) = min(asn(i,k)*gamma_bs_plus1/qtmp,1.2_r8*rhof(i,k))
