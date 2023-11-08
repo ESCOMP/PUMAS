@@ -947,10 +947,6 @@ subroutine micro_pumas_tend ( &
   real(r8) :: qmultg(mgncol,nlev)  ! change q due to ice mult droplets/graupel  (lcldm)
   real(r8) :: qmultrg(mgncol,nlev) ! change q due to ice mult rain/graupel (precipf)
 
-  ! for testing cacraigucar hash 998213ae3 division by 0 error. 
-  real(r8) :: numerator ! placeholder 
-  real(r8) :: denominator ! placeholder
-
   ! fallspeeds
   ! number-weighted
   real(r8) :: uns(mgncol,nlev)    ! snow
@@ -2168,13 +2164,13 @@ subroutine micro_pumas_tend ( &
                                       proc_rates%gmnnn_lmnnn_TAU(1:mgncol,k), mgncol)
      end do
   else if (trim(warm_rain) == 'emulated') then
-
      do k=1,nlev
-        call tau_emulate_cloud_rain_interactions(qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), rho(1:mgncol,k), &
+        call tau_emulate_cloud_rain_interactions(qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), &
+          pgam(1:mgncol,k), lamc(1:mgncol,k), n0r(1:mgncol,k), lamr(1:mgncol,k), &
+          rho(1:mgncol,k), &
           lcldm(1:mgncol,k), precip_frac(1:mgncol,k), mgncol, &
           qsmall, proc_rates%qctend_TAU(1:mgncol,k), proc_rates%qrtend_TAU(1:mgncol,k), proc_rates%nctend_TAU(1:mgncol,k), &
-          proc_rates%nrtend_TAU(1:mgncol,k), &
-          pgam, lamc, n0r, lamr)
+          proc_rates%nrtend_TAU(1:mgncol,k))
 
         call ML_fixer_calc(mgncol, deltatin, qc(1:mgncol,k), nc(1:mgncol,k), qr(1:mgncol,k), nr(1:mgncol,k), &
           proc_rates%qctend_TAU(1:mgncol,k),&
@@ -2521,8 +2517,6 @@ subroutine micro_pumas_tend ( &
         dum = ((-nsubr(i,k)+npracs(i,k)+nnuccr(i,k)+nnuccri(i,k)-nragg(i,k)+npracg(i,k)+ngracs(i,k)) &
              *precip_frac(i,k)- nprc(i,k)*lcldm(i,k))*deltat
         if (dum.gt.nr(i,k)) then
-           numerator = (nr(i,k)*rdeltat+nprc(i,k)*lcldm(i,k))/precip_frac(i,k)
-           denominator = (-nsubr(i,k)+npracs(i,k)+nnuccr(i,k)+nnuccri(i,k)-nragg(i,k)+npracg(i,k)+ngracs(i,k))*omsm
            ratio = (nr(i,k)*rdeltat+nprc(i,k)*lcldm(i,k))/precip_frac(i,k)/ &
                 (-nsubr(i,k)+npracs(i,k)+nnuccr(i,k)+nnuccri(i,k)-nragg(i,k)+npracg(i,k)+ngracs(i,k))*omsm
            npracg(i,k)=npracg(i,k)*ratio
