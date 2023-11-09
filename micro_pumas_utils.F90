@@ -88,7 +88,7 @@ public :: &
 ! 8 byte real and integer
 integer, parameter, public :: r8 = selected_real_kind(12)
 integer, parameter, public :: i8 = selected_int_kind(18)
-integer, parameter         :: VLENS = 128  ! vector length of a GPU compute kernel
+integer, parameter, public :: VLENS = 128  ! vector length of a GPU compute kernel
 
 public :: MGHydrometeorProps
 
@@ -287,7 +287,9 @@ real(r8) :: gamma_half_br_plus5
 real(r8) :: gamma_half_bs_plus5
 real(r8) :: gamma_2bs_plus2
 
-!$acc declare create (rv,cpp)
+!$acc declare create (rv,cpp,tmelt,xxlv,xxls,gamma_bs_plus3,   &
+!$acc                 gamma_half_br_plus5,gamma_half_bs_plus5, &
+!$acc                 gamma_2bs_plus2)
 
 !=========================================================
 ! Utilities that are cheaper if the compiler knows that
@@ -386,7 +388,9 @@ subroutine micro_pumas_utils_init( kind, rair, rh2o, cpair, tmelt_in, latvap, &
   mg_graupel_props = MGHydrometeorProps(rhog, dsph, lam_bnd_snow)
   mg_hail_props = MGHydrometeorProps(rhoh, dsph, lam_bnd_snow)
 
-  !$acc update device (rv,cpp)
+  !$acc update device (rv,cpp,tmelt,xxlv,xxls,gamma_bs_plus3,   &
+  !$acc                gamma_half_br_plus5,gamma_half_bs_plus5, &
+  !$acc                gamma_2bs_plus2)
 
 end subroutine micro_pumas_utils_init
 
@@ -436,7 +440,7 @@ subroutine rising_factorial_r8_vec(x, n, res,vlen)
   real(r8) :: tmp
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector private(tmp)
+  !$acc loop gang vector
   do i=1,vlen
      tmp = x(i)+n
      res(i) = gamma(tmp)
@@ -1122,7 +1126,7 @@ subroutine ice_deposition_sublimation(t, qv, qi, ni, &
   call size_dist_param_basic_vect(mg_ice_props, qiic, niic, lami, vlen, n0i)
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector private(epsi)
+  !$acc loop gang vector
   do i=1,vlen
      if (qi(i)>=qsmall) then
         !Get depletion timescale=1/eps
@@ -1217,7 +1221,7 @@ subroutine ice_deposition_sublimation_mg4(t, qv, qi, niic, &
   !$acc end parallel
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector private(epsi)
+  !$acc loop gang vector
   do i=1,vlen
      if (qi(i)>=qsmall) then
         if ( t(i) .lt. tmelt ) then
@@ -1506,7 +1510,7 @@ subroutine sb2001v2_accre_cld_water_rain(qc,nc,qr,rho,relvar,pra,npra,vlen)
   ! accretion
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector private(dum,dum1)
+  !$acc loop gang vector
   do i = 1,vlen
     if (qc(i) > qsmall) then
       dum     = 1._r8-qc(i)/(qc(i)+qr(i))
@@ -1989,7 +1993,7 @@ subroutine accrete_rain_snow(t, rho, umr, ums, unr, uns, qric, qsic, &
   integer  :: i
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector private(common_factor,d_rat)
+  !$acc loop gang vector
   do i=1,vlen
      if (qric(i) >= icsmall .and. qsic(i) >= icsmall .and. t(i) <= tmelt) then
         common_factor = pi*ecr*rho(i)*n0r(i)*n0s(i)/(lamr(i)**3 * lams(i))
@@ -3241,18 +3245,17 @@ SUBROUTINE init_lookup_table(lkuptable_filename)
     !character(100) :: lkuptable_filename = "/glade/p/work/katec/mg3work/lookup_table.dat"
     !character(100) :: lkuptable_filename = "./lookup_table.dat"
     character(len=256), intent(in) :: lkuptable_filename 
-    integer :: i,j,k,ii,jj,kk, tt
+    integer :: i,j,k,ii,jj,kk, tt, unitn
     real(r8)    :: dum
 
-    ! ++ trude
-    open(unit=10,file=lkuptable_filename,status='old')
+    open(newunit=unitn,file=lkuptable_filename,status='old')
 
     !------------------------------------------------------------------------------------------!
     ! read in ice microphysics table
      do tt = 1, tsize
        do i = 1,isize
           do k = 1,jsize
-             read(10,*) dum,dum,itab(tt,i,k,1),itab(tt,i,k,2),             &
+             read(unitn,*) dum,dum,itab(tt,i,k,1),itab(tt,i,k,2),             &
                   itab(tt,i,k,3),itab(tt,i,k,4),itab(tt,i,k,5),            &
                   itab(tt,i,k,6),itab(tt,i,k,7),itab(tt,i,k,8),            &
                   itab(tt,i,k,13),itab(tt,i,k,9),itab(tt,i,k,10),          &
@@ -3263,7 +3266,7 @@ SUBROUTINE init_lookup_table(lkuptable_filename)
        do i = 1,isize
           do k = 1,jsize
              do j = 1,rcollsize
-                read(10,*) dum,dum,dum,itabcoll(tt,i,k,j,1),                  &
+                read(unitn,*) dum,dum,dum,itabcoll(tt,i,k,j,1),                  &
                      itabcoll(tt,i,k,j,2),dum
                 itabcoll(tt,i,k,j,1) = dlog10(itabcoll(tt,i,k,j,1))
                 itabcoll(tt,i,k,j,2) = dlog10(itabcoll(tt,i,k,j,2))
@@ -3272,7 +3275,7 @@ SUBROUTINE init_lookup_table(lkuptable_filename)
        end do
     end do
 
-    close(unit=10)
+    close(unitn)
 
 END SUBROUTINE init_lookup_table
 

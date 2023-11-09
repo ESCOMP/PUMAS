@@ -1,8 +1,13 @@
 module tau_neural_net_quantile
-!CACNOTE - Need to add the things being used
-    use module_neural_net
+
+    use shr_kind_mod,   only: r8=>shr_kind_r8
+
+    use module_neural_net, only : Dense, init_neural_net, load_quantile_scale_values
+    use module_neural_net, only : quantile_transform, quantile_inv_transform, neural_net_predict
+
     implicit none
     integer, parameter, public :: i8 = selected_int_kind(18)
+    
 !CACNOTE - Need to make this a namelist which is passed in
     character(len = *), parameter :: neural_net_path = "/glade/work/wchuang/mlmicrophysics/tau_run_8/optimized/" 
     integer, parameter :: num_inputs = 8
@@ -17,22 +22,27 @@ module tau_neural_net_quantile
 contains
 
 
-    subroutine initialize_tau_emulators
-        ! Load neural network netCDF files and scaling values. Values are placed in to emulators,
-        ! input_scale_values, and output_scale_values.
-        ! Args:
-        !   neural_net_path: Path to neural networks
-        !
-        !character(len=*), intent(in) :: neural_net_path
-        ! Load each neural network from the neural net directory
-!CACNOTE - Need to remove print statements
-        print*, "Begin loading neural nets"
-        call init_neural_net(neural_net_path // "quantile_neural_net_fortran.nc", batch_size, q_all)
-        print*, "End loading neural nets"
+    subroutine initialize_tau_emulators( stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
+                                         stochastic_emulated_filename_output_scale, iulog, errstring)
+
+    ! Load neural network netCDF files and scaling values. Values are placed in to emulators,
+    ! input_scale_values, and output_scale_values.
+    character(len=*), intent(in) ::  stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
+                                     stochastic_emulated_filename_output_scale
+    integer,          intent(in)  :: iulog
+    character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
+
+        errstring = ''
+
+        write(iulog,*) "Begin loading neural nets"
+        call init_neural_net(trim(stochastic_emulated_filename_quantile), batch_size, q_all, iulog, errstring)
+        if (trim(errstring) /= '') return
+        write(iulog,*) "End loading neural nets"
         ! Load the scale values from a csv file.
-        call load_quantile_scale_values(neural_net_path // "input_quantile_scaler.nc", input_scale_values)
-        call load_quantile_scale_values(neural_net_path // "output_quantile_scaler.nc", output_scale_values)
-        print*, "Loaded neural nets scaling values"
+        call load_quantile_scale_values(trim(stochastic_emulated_filename_input_scale), input_scale_values, iulog, errstring)
+        call load_quantile_scale_values(trim(stochastic_emulated_filename_output_scale), output_scale_values, iulog, errstring)
+        write(iulog,*) "Loaded neural nets scaling values"
+
     end subroutine initialize_tau_emulators
 
 
@@ -90,5 +100,5 @@ contains
                 nr_tend(i) = 0._r8
             end if
         end do
-    end subroutine tau_emulate_cloud_rain_interactions
+    end subroutine tau_emulated_cloud_rain_interactions
 end module tau_neural_net_quantile
