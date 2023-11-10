@@ -77,7 +77,7 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: npsacwstot(:,:)       ! change n  due to Accretion of cloud water by snow
   real(r8), allocatable :: npraitot(:,:)         ! change n  due to Accretion of cloud ice to snow
   real(r8), allocatable :: npracstot(:,:)        ! change n  due to Accretion of rain by snow
-  real(r8), allocatable :: nprctot(:,:)          ! change n  due to Autoconversion of cloud water [to rain]
+  real(r8), allocatable :: nprctot(:,:)          ! change nr  due to Autoconversion of cloud water [to rain]
   real(r8), allocatable :: nprcitot(:,:)         ! change n  due to Autoconversion of cloud ice to snow
   real(r8), allocatable :: ncsedten(:,:)         ! change n  due to cloud liquid sedimentation
   real(r8), allocatable :: nisedten(:,:)         ! change n  due to cloud ice sedimentation
@@ -89,26 +89,33 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: nmeltgtot(:,:)        ! change n  due to Melting of graupel
 
   ! TAU diagnostic variables
-  real(r8), allocatable :: scale_qc(:,:)      ! TAU scaling factor for liquid mass to ensure conservation
-  real(r8), allocatable :: scale_nc(:,:)       ! TAU scaling factor for liquid number to ensure conservation
-  real(r8), allocatable :: scale_qr(:,:)      ! TAU scaling factor for rain mass to ensure conservation
-  real(r8), allocatable :: scale_nr(:,:)       ! TAU scaling factor for rain_number to ensure conservation
-  real(r8), allocatable :: amk_c(:,:,:)       !TAU cloud liquid mass from bins
-  real(r8), allocatable :: ank_c(:,:,:)      !TAU cloud liquid number from bins
-  real(r8), allocatable :: amk_r(:,:,:)           !TAU cloud rain mass from bins
-  real(r8), allocatable :: ank_r(:,:,:)      !TAU cloud rain number from bins
-  real(r8), allocatable :: amk(:,:,:)        !TAU all liquid mass from bins
-  real(r8), allocatable :: ank(:,:,:)       !TAU all liquid number from bins
-  real(r8), allocatable :: amk_out(:,:,:) !TAU all liquid number from bins output
-  real(r8), allocatable :: ank_out(:,:,:) !TAU all liquid mass from bins output
-  real(r8), allocatable :: qc_out(:,:)      !TAU: output total cloud liquid mass
-  real(r8), allocatable :: nc_out(:,:)     !TAU: output total cloud liquid number
-  real(r8), allocatable :: qr_out(:,:)     !TAU: output total rain mass
-  real(r8), allocatable :: nr_out(:,:)     !TAU: output total cloud rain number
-  real(r8), allocatable :: qc_in(:,:)      !TAU: input total cloud liquid mass
-  real(r8), allocatable :: nc_in(:,:)     !TAU: input total cloud liquid number
-  real(r8), allocatable :: qr_in(:,:)     !TAU: input total rain mass
-  real(r8), allocatable :: nr_in(:,:)     !TAU: input total cloud rain number
+  real(r8), allocatable :: nraggtot(:,:)          ! change nr  due to self collection of rain
+
+
+  real(r8), allocatable :: pgam_out(:,:)      ! Liquid Size distribution parameter Mu for output
+  real(r8), allocatable :: lamc_out(:,:)      ! Liquid Size distribution parameter Lambda for output
+  real(r8), allocatable :: lamr_out(:,:)      ! Rain Size distribution parameter Lambda for output
+  real(r8), allocatable :: n0r_out(:,:)       ! Size distribution parameter n0 for output
+  real(r8), allocatable :: scale_qc(:,:)        !TAU scaling factor for liquid mass to ensure conservation
+  real(r8), allocatable :: scale_nc(:,:)        !TAU scaling factor for liquid number to ensure conservation
+  real(r8), allocatable :: scale_qr(:,:)        !TAU scaling factor for rain mass to ensure conservation
+  real(r8), allocatable :: scale_nr(:,:)        !TAU scaling factor for rain_number to ensure conservation
+  real(r8), allocatable :: amk_c(:,:,:)         !TAU cloud liquid mass from bins
+  real(r8), allocatable :: ank_c(:,:,:)         !TAU cloud liquid number from bins
+  real(r8), allocatable :: amk_r(:,:,:)         !TAU cloud rain mass from bins
+  real(r8), allocatable :: ank_r(:,:,:)         !TAU cloud rain number from bins
+  real(r8), allocatable :: amk(:,:,:)           !TAU all liquid mass from bins
+  real(r8), allocatable :: ank(:,:,:)           !TAU all liquid number from bins
+  real(r8), allocatable :: amk_out(:,:,:)       !TAU all liquid number from bins output
+  real(r8), allocatable :: ank_out(:,:,:)       !TAU all liquid mass from bins output
+  real(r8), allocatable :: qc_out_TAU(:,:)      !TAU: output total cloud liquid mass
+  real(r8), allocatable :: nc_out_TAU(:,:)      !TAU: output total cloud liquid number
+  real(r8), allocatable :: qr_out_TAU(:,:)      !TAU: output total rain mass
+  real(r8), allocatable :: nr_out_TAU(:,:)      !TAU: output total cloud rain number
+  real(r8), allocatable :: qc_in_TAU(:,:)       !TAU: input total cloud liquid mass
+  real(r8), allocatable :: nc_in_TAU(:,:)       !TAU: input total cloud liquid number
+  real(r8), allocatable :: qr_in_TAU(:,:)       !TAU: input total rain mass
+  real(r8), allocatable :: nr_in_TAU(:,:)       !TAU: input total cloud rain number
   real(r8), allocatable :: qctend_KK2000(:,:)   !cloud liquid mass tendency due to autoconversion  & accretion from KK2000
   real(r8), allocatable :: nctend_KK2000(:,:)   !cloud liquid number tendency due to autoconversion  & accretion from KK2000
   real(r8), allocatable :: qrtend_KK2000(:,:)   !rain mass tendency due to autoconversion  & accretion from KK2000
@@ -117,14 +124,10 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: nctend_SB2001(:,:)   !cloud liquid number tendency due to autoconversion  & accretion from SB2001 
   real(r8), allocatable :: qrtend_SB2001(:,:)   !rain mass tendency due to autoconversion  & accretion from SB2001 
   real(r8), allocatable :: nrtend_SB2001(:,:)   !rain number tendency due to autoconversion  & accretion from SB2001 
-  real(r8), allocatable :: qctend_TAU(:,:)   !cloud liquid mass tendency due to autoconversion & accretion from TAU or Emulator code
-  real(r8), allocatable :: nctend_TAU(:,:)   !cloud liquid number tendency due to autoconversion & accretion from TAU or Emulator code
-  real(r8), allocatable :: qrtend_TAU(:,:)   !rain mass tendency due to autoconversion & accretion from TAU or Emulator code
-  real(r8), allocatable :: nrtend_TAU(:,:)   !rain number tendency due to autoconversion & accretion from TAU or Emulatorcode
-!  real(r8), allocatable :: qctend_TAU_diag(:,:)   !cloud liquid mass tendency due to autoconversion & accretion from TAU code only
-!  real(r8), allocatable :: nctend_TAU_diag(:,:)  ! cloud liquid number tendency due to autoconversion & accretion from TAU code only
-!  real(r8), allocatable :: qrtend_TAU_diag(:,:)   !rain mass tendency due to autoconversion & accretion from TAU code only
-!  real(r8), allocatable :: nrtend_TAU_diag(:,:)   !rain number tendency due to autoconversion & accretion from TAU code only
+  real(r8), allocatable :: qctend_TAU(:,:)      !cloud liquid mass tendency due to autoconversion & accretion from TAU or Emulator code
+  real(r8), allocatable :: nctend_TAU(:,:)      !cloud liquid number tendency due to autoconversion & accretion from TAU or Emulator code
+  real(r8), allocatable :: qrtend_TAU(:,:)      !rain mass tendency due to autoconversion & accretion from TAU or Emulator code
+  real(r8), allocatable :: nrtend_TAU(:,:)      !rain number tendency due to autoconversion & accretion from TAU or Emulatorcode
   real(r8), allocatable :: gmnnn_lmnnn_TAU(:,:) ! TAU sum of mass gain and loss from bin code
   real(r8), allocatable :: ML_fixer(:,:)     !Emulated: frequency of ML fixer is activated
   real(r8), allocatable :: QC_fixer(:,:)     !Emulated: change in cloud liquid mass due to ML fixer
@@ -146,9 +149,12 @@ contains
 
    use cam_abortutils, only: endrun
 
+      implicit none
+
       class(proc_rates_type) :: this
 
       integer,           intent(in) :: psetcols, nlev
+      integer,           intent(in) :: ncd
       character(len=16), intent(in) :: warm_rain            ! 'tau','emulated','sb2001' or 'kk2000'
       character(128),   intent(out) :: errstring
 
@@ -424,6 +430,10 @@ contains
       if (ierr /= 0) then
         errstring='Error allocating this%nprctot'
       end if
+      allocate(this%nraggtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nraggtot'
+      end if
       allocate(this%nprcitot(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%nprcitot'
@@ -459,6 +469,22 @@ contains
       allocate(this%nmeltgtot(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%nmeltgtot'
+      end if
+      allocate(this%lamc_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+         errstring='Error allocating this%lamc_out'
+      end if
+      allocate(this%lamr_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+         errstring='Error allocating this%lamr_out'
+      end if
+      allocate(this%pgam_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+         errstring='Error allocating this%pgam_out'
+      end if
+      allocate(this%n0r_out(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+         errstring='Error allocating this%n0r_out'
       end if
 
       ! Only allocate these variables if machine learning turned on
@@ -512,69 +538,37 @@ contains
          if (ierr /= 0) then
            errstring='Error allocating this%ank_out'
          end if
-         allocate(this%qc_out(psetcols,nlev), stat=ierr)
+         allocate(this%qc_out_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
-           errstring='Error allocating this%qc_out'
+           errstring='Error allocating this%qc_out_TAU'
          end if
-         allocate(this%nc_out(psetcols,nlev), stat=ierr)
+         allocate(this%nc_out_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
-           errstring='Error allocating this%nc_out'
+           errstring='Error allocating this%nc_out_TAU'
          end if
-         allocate(this%qr_out(psetcols,nlev), stat=ierr)
+         allocate(this%qr_out_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
-           errstring='Error allocating this%qr_out'
+           errstring='Error allocating this%qr_out_TAU'
          end if
-         allocate(this%nr_out(psetcols,nlev), stat=ierr)
+         allocate(this%nr_out_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
-           errstring='Error allocating this%nr_out'
+           errstring='Error allocating this%nr_out_TAU'
          end if
-         allocate(this%qc_in(psetcols,nlev), stat=ierr)
+         allocate(this%qc_in_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
-           errstring='Error allocating this%qc_in'
+           errstring='Error allocating this%qc_in_TAU'
          end if
-         allocate(this%nc_in(psetcols,nlev), stat=ierr)
+         allocate(this%nc_in_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
-           errstring='Error allocating this%nc_in'
+           errstring='Error allocating this%nc_in_TAU'
          end if
-         allocate(this%qr_in(psetcols,nlev), stat=ierr)
+         allocate(this%qr_in_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
-           errstring='Error allocating this%qr_in'
+           errstring='Error allocating this%qr_in_TAU'
          end if
-         allocate(this%nr_in(psetcols,nlev), stat=ierr)
+         allocate(this%nr_in_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
-           errstring='Error allocating this%nr_in'
-         end if
-         allocate(this%qctend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%qctend_KK2000'
-         end if
-         allocate(this%nctend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nctend_KK2000'
-         end if
-         allocate(this%qrtend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%artend_KK2000'
-         end if
-         allocate(this%nrtend_KK2000(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nrtend_KK2000'
-         end if
-         allocate(this%qctend_SB2001(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%qctend_SB2001'
-         end if
-         allocate(this%nctend_SB2001(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nctend_SB2001'
-         end if
-         allocate(this%qrtend_SB2001(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%artend_SB2001'
-         end if
-         allocate(this%nrtend_SB2001(psetcols,nlev), stat=ierr)
-         if (ierr /= 0) then
-           errstring='Error allocating this%nrtend_SB2001'
+           errstring='Error allocating this%nr_in_TAU'
          end if
          allocate(this%qctend_TAU(psetcols,nlev), stat=ierr)
          if (ierr /= 0) then
@@ -616,7 +610,44 @@ contains
          if (ierr /= 0) then
            errstring='Error allocating this%NR_fixer'
          end if
+      else if (warm_rain == 'sb2001') then
+         ! Classic default (non-ML) microphysics
+         allocate(this%qctend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%qctend_SB2001'
+         end if
+         allocate(this%nctend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nctend_SB2001'
+         end if
+         allocate(this%qrtend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%artend_SB2001'
+         end if
+         allocate(this%nrtend_SB2001(psetcols,nlev), stat=ierr)
+         if (ierr /= 0) then
+           errstring='Error allocating this%nrtend_SB2001'
+         end if
       end if
+
+      ! Variables which are needed by all code (Machine Learning and non-ML)
+      allocate(this%qctend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%qctend_KK2000'
+      end if
+      allocate(this%nctend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nctend_KK2000'
+      end if
+      allocate(this%qrtend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%artend_KK2000'
+      end if
+      allocate(this%nrtend_KK2000(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+        errstring='Error allocating this%nrtend_KK2000'
+      end if
+
    end subroutine proc_rates_allocate
 
    subroutine proc_rates_deallocate(this, warm_rain)
@@ -694,6 +725,7 @@ contains
       deallocate(this%npraitot)
       deallocate(this%npracstot)
       deallocate(this%nprctot)
+      deallocate(this%nraggtot)
       deallocate(this%nprcitot)
       deallocate(this%ncsedten)
       deallocate(this%nisedten)
@@ -703,6 +735,16 @@ contains
       deallocate(this%nmelttot)
       deallocate(this%nmeltstot)
       deallocate(this%nmeltgtot)
+
+      deallocate(this%qctend_KK2000)
+      deallocate(this%nctend_KK2000)
+      deallocate(this%qrtend_KK2000)
+      deallocate(this%nrtend_KK2000)
+
+      deallocate(this%lamc_out) 
+      deallocate(this%lamr_out)
+      deallocate(this%pgam_out)
+      deallocate(this%n0r_out)
 
       if (trim(warm_rain) == 'tau' .or. trim(warm_rain) == 'emulated') then
          deallocate(this%scale_qc)
@@ -717,22 +759,14 @@ contains
          deallocate(this%ank)
          deallocate(this%amk_out)
          deallocate(this%ank_out)
-         deallocate(this%qc_out)
-         deallocate(this%nc_out)
-         deallocate(this%qr_out)
-         deallocate(this%nr_out)
-         deallocate(this%qc_in)
-         deallocate(this%nc_in)
-         deallocate(this%qr_in)
-         deallocate(this%nr_in)
-         deallocate(this%qctend_KK2000)
-         deallocate(this%nctend_KK2000)
-         deallocate(this%qrtend_KK2000)
-         deallocate(this%nrtend_KK2000)
-         deallocate(this%qctend_SB2001)
-         deallocate(this%nctend_SB2001)
-         deallocate(this%qrtend_SB2001)
-         deallocate(this%nrtend_SB2001)
+         deallocate(this%qc_out_TAU)
+         deallocate(this%nc_out_TAU)
+         deallocate(this%qr_out_TAU)
+         deallocate(this%nr_out_TAU)
+         deallocate(this%qc_in_TAU)
+         deallocate(this%nc_in_TAU)
+         deallocate(this%qr_in_TAU)
+         deallocate(this%nr_in_TAU)              
          deallocate(this%qctend_TAU)
          deallocate(this%nctend_TAU)
          deallocate(this%qrtend_TAU)
@@ -743,6 +777,11 @@ contains
          deallocate(this%NC_fixer)
          deallocate(this%QR_fixer)
          deallocate(this%NR_fixer)
+      else if (trim(warm_rain) == 'sb2001') then
+         deallocate(this%qctend_SB2001)
+         deallocate(this%nctend_SB2001)
+         deallocate(this%qrtend_SB2001)
+         deallocate(this%nrtend_SB2001)
       end if
 
    end subroutine proc_rates_deallocate
