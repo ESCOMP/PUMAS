@@ -1,4 +1,7 @@
 ====================================
+.. pumas_cam-release_v1.35
+December 5, 2023 - Single line adjustment to vapor deposition onto snow. To run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR for ML (#858) is done.
+====================================
 .. pumas_cam-release_v1.34
 October 11, 2023 - Added support for new namelist field micro_mg_vtrms_factor to be used in new PPE. CAM support in PR phase, to run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR (#858) is done.
 ====================================

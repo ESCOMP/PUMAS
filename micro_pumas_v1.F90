@@ -2612,6 +2612,7 @@ subroutine micro_pumas_tend ( &
         !deposition for the remaining frac of the timestep.
         if (qc(i,k) >= qsmall) then
            vap_dep(i,k) = vap_dep(i,k)*(1._r8-qcrat(i,k))
+           vap_deps(i,k) = vap_deps(i,k)*(1._r8-qcrat(i,k))
         end if
 
         !=================================================================
