@@ -146,6 +146,9 @@ real(r8), parameter, public :: omsm   = 1._r8 - 1.e-5_r8
 ! Smallest mixing ratio considered in microphysics.
 real(r8), parameter, public :: qsmall = 1.e-18_r8
 
+! Smallest cloud water mixing ratio in tau emulator
+real(r8), parameter, public :: qsmall_emulator = 1.e-8_r8
+
 ! minimum allowed cloud fraction
 real(r8), parameter, public :: mincld = 0.0001_r8
 
