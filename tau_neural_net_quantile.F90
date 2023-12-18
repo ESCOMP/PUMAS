@@ -47,7 +47,7 @@ contains
     end subroutine initialize_tau_emulators
 
 
-    subroutine tau_emulated_cloud_rain_interactions(qc, nc, qr, nr, pgam, lamc, n0r, lamr, rho, lcldm, &
+    subroutine tau_emulated_cloud_rain_interactions(qc, nc, qr, nr, pgam, lamc, lamr, n0r, rho, lcldm, &
             precip_frac, mgncol, q_small, qc_tend, qr_tend, nc_tend, nr_tend)
         ! Calculates emulated tau microphysics tendencies from neural networks.
         !
@@ -85,8 +85,8 @@ contains
                 nn_inputs(1, 4) = nr(i)
                 nn_inputs(1, 5) = pgam(i)
                 nn_inputs(1, 6) = lamc(i)
-                nn_inputs(1, 7) = n0r(i)
-                nn_inputs(1, 8) = lamr(i)
+                nn_inputs(1, 7) = lamr(i)
+                nn_inputs(1, 8) = n0r(i)
                 ! nn_inputs(1, 5) = rho(i)
                 ! nn_inputs(1, 6) = precip_frac(i)
                 ! nn_inputs(1, 7) = lcldm(i)
