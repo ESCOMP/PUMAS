@@ -2082,7 +2082,7 @@ subroutine micro_pumas_tend ( &
         call tau_emulated_cloud_rain_interactions(qcic(1:mgncol,k), ncic(1:mgncol,k), &
                                                   qric(1:mgncol,k), nric(1:mgncol,k), &
                                                   pgam(1:mgncol,k), lamc(1:mgncol,k), &
-                                                  n0r(1:mgncol,k), rho(1:mgncol,k), &
+                                                  n0r(1:mgncol,k), lamr(1:mgncol,k), &
                                                   rho(1:mgncol,k), lcldm(1:mgncol,k), &
                                                   precip_frac(1:mgncol,k), mgncol, qsmall_emulator, &
                                                   proc_rates%qctend_TAU(1:mgncol,k), &
