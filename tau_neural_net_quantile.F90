@@ -93,8 +93,8 @@ contains
                 call quantile_transform(nn_inputs, input_scale_values, nn_quantile_inputs)
                 call neural_net_predict(nn_quantile_inputs, q_all, nn_quantile_outputs)
                 call quantile_inv_transform(nn_quantile_outputs, output_scale_values, nn_outputs)
-                qr_tend(i) = nn_outputs(1, 1)
-                qc_tend(i) = -qr_tend(i)
+                qc_tend(i) = nn_outputs(1, 1)
+                qr_tend(i) = -qc_tend(i)
                 nc_tend(i) = nn_outputs(1, 3)
                 nr_tend(i) = nn_outputs(1, 4)
             else
