@@ -8,7 +8,7 @@ module tau_neural_net_quantile
     implicit none
     integer, parameter, public :: i8 = selected_int_kind(18)
     integer, parameter :: num_inputs = 8
-    integer, parameter :: num_outputs = 3
+    integer, parameter :: num_outputs = 4
     integer, parameter :: batch_size = 1
 
     ! Neural networks and scale values saved within the scope of the module.
@@ -95,8 +95,8 @@ contains
                 call quantile_inv_transform(nn_quantile_outputs, output_scale_values, nn_outputs)
                 qr_tend(i) = nn_outputs(1, 1)
                 qc_tend(i) = -qr_tend(i)
-                nc_tend(i) = nn_outputs(1, 2)
-                nr_tend(i) = nn_outputs(1, 3)
+                nc_tend(i) = nn_outputs(1, 3)
+                nr_tend(i) = nn_outputs(1, 4)
             else
                 qc_tend(i) = 0._r8
                 qr_tend(i) = 0._r8
