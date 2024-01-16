@@ -138,7 +138,7 @@ end subroutine pumas_stochastic_kernel_init
 !needs to pull in i,k fields (so might need dimensions here too)
 
 subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
-                        ncin,qrin,nrin,lcldm,precip_frac,mu_c,lambda_c,     &
+                        ncin,qrin,nrin,mu_c,lambda_c,     &
                         n0r,lambda_r,qcin_new,ncin_new,qrin_new,nrin_new,   &
                         qctend,nctend,qrtend,nrtend,qctend_TAU,nctend_TAU,  &
                         qrtend_TAU,nrtend_TAU,scale_qc,scale_nc,scale_qr,   &
@@ -159,8 +159,6 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   real(r8), intent(in) :: ncin(mgncol,nlev)
   real(r8), intent(in) :: qrin(mgncol,nlev)
   real(r8), intent(in) :: nrin(mgncol,nlev)
-  real(r8), intent(in) :: lcldm(mgncol,nlev)
-  real(r8), intent(in) :: precip_frac(mgncol,nlev)
   real(r8), intent(inout) :: qctend(mgncol,nlev)
   real(r8), intent(inout) :: nctend(mgncol,nlev)
   real(r8), intent(inout) :: qrtend(mgncol,nlev)
@@ -237,7 +235,7 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   ! First make bins from cam size distribution (bins are diagnostic)
   
   call cam_bin_distribute(qc,qr,qcin,ncin,qrin,nrin,mu_c,lambda_c, &
-                          lambda_r,n0r,lcldm,precip_frac,scale_qc, &
+                          lambda_r,n0r,scale_qc, &
                           scale_nc,scale_qr,scale_nr,amk_c,ank_c,  &
                           amk_r,ank_r,amk,ank,cutoff_amk,mgncol,nlev)
 
@@ -471,7 +469,7 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
 end subroutine pumas_stochastic_collect_tau_tend
 
 subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
-                              lambda_r,n0r,lcldm,precip_frac,scale_qc, &
+                              lambda_r,n0r,scale_qc, &
                               scale_nc,scale_qr,scale_nr,amk_c,ank_c,  &
                               amk_r,ank_r,amk,ank,cutoff_amk,mgncol,nlev)
 
@@ -479,8 +477,7 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
 
   integer, intent(in) :: mgncol,nlev
   real(r8), dimension(mgncol,nlev), intent(in) :: qc_all,qr_all,qc,nc,qr,nr,mu_c, &
-                                                  lambda_c,lambda_r,n0r,lcldm,    &
-                                                  precip_frac
+                                                  lambda_c,lambda_r,n0r
   real(r8), dimension(mgncol,nlev,ncd), intent(out) :: amk_c,ank_c,amk_r,ank_r,amk,ank
   real(r8), dimension(mgncol,nlev), intent(out) :: scale_nc,scale_qc,scale_nr,scale_qr 
   integer, dimension(mgncol,nlev), intent(out) :: cutoff_amk
@@ -540,8 +537,8 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
 
            !$acc loop seq
            do j=1,ncd
-              ank_c(i,k,j) = ank_c(i,k,j)/scale_nc(i,k)*lcldm(i,k)
-              amk_c(i,k,j) = amk_c(i,k,j)/scale_qc(i,k)*lcldm(i,k)
+              ank_c(i,k,j) = ank_c(i,k,j)/scale_nc(i,k)
+              amk_c(i,k,j) = amk_c(i,k,j)/scale_qc(i,k)
               if ( amk_c(i,k,j) > max_qc ) then
                  id_max_qc = j
                  max_qc = amk_c(i,k,j)
@@ -564,8 +561,8 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
 
            !$acc loop seq
            do j=1,ncd
-              ank_r(i,k,j) = ank_r(i,k,j)/scale_nr(i,k)*precip_frac(i,k)
-              amk_r(i,k,j) = amk_r(i,k,j)/scale_qr(i,k)*precip_frac(i,k)
+              ank_r(i,k,j) = ank_r(i,k,j)/scale_nr(i,k)
+              amk_r(i,k,j) = amk_r(i,k,j)/scale_qr(i,k)
               if ( amk_r(i,k,j) > max_qr ) then
                  id_max_qr = j
                  max_qr = amk_r(i,k,j)

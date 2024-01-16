@@ -109,6 +109,7 @@ use micro_pumas_utils, only: &
      pi, &
      omsm, &
      qsmall, &
+     qsmall_emulator, &
      mincld, &
      rhosn, &
      rhoi, &
@@ -2033,7 +2034,7 @@ subroutine micro_pumas_tend ( &
 
   if ( trim(warm_rain) == 'tau' ) then
      call pumas_stochastic_collect_tau_tend(deltatin,t,rho,qcn,qrn,qcic,ncic,qric, &
-                                      nric,lcldm,precip_frac,pgam,lamc,n0r,lamr,   &
+                                      nric,pgam,lamc,n0r,lamr,   &
                                       proc_rates%qc_out_TAU,proc_rates%nc_out_TAU, &
                                       proc_rates%qr_out_TAU,proc_rates%nr_out_TAU, &
                                       qctend,nctend,qrtend,nrtend, &
@@ -2055,15 +2056,16 @@ subroutine micro_pumas_tend ( &
            proc_rates%nc_in_TAU(i,k)=ncic(i,k)
            proc_rates%qr_in_TAU(i,k)=qric(i,k)
            proc_rates%nr_in_TAU(i,k)=nric(i,k)
-           ! PUMAS expects prc and nprc1 (cloud rates) are positive
-           prc(i,k)= -proc_rates%qctend_TAU(i,k)
-           nprc1(i,k)= -proc_rates%nctend_TAU(i,k)
+           ! PUMAS expects prc and nprc1 (cloud rates) are positive and grid-box averaged
+           prc(i,k)= -proc_rates%qctend_TAU(i,k)*lcldm(i,k)
+           nprc1(i,k)= -proc_rates%nctend_TAU(i,k)*lcldm(i,k)
 
            ! PUMAS expects nprc to be positive. Negative nrtend_TAU is from self collection, so put it into nragg
+           ! Also make it all precip-averaged
            if ( proc_rates%nrtend_TAU(i,k) > 0._r8 ) then
-              nprc(i,k)= proc_rates%nrtend_TAU(i,k)
+              nprc(i,k)= proc_rates%nrtend_TAU(i,k)*precip_frac(i,k)
            else
-              nragg(i,k) = proc_rates%nrtend_TAU(i,k)
+              nragg(i,k) = proc_rates%nrtend_TAU(i,k)*precip_frac(i,k)
            end if
         end do
      end do
@@ -2080,15 +2082,17 @@ subroutine micro_pumas_tend ( &
      do k=1,nlev
         call tau_emulated_cloud_rain_interactions(qcic(1:mgncol,k), ncic(1:mgncol,k), &
                                                   qric(1:mgncol,k), nric(1:mgncol,k), &
+                                                  pgam(1:mgncol,k), lamc(1:mgncol,k), &
+                                                  lamr(1:mgncol,k), n0r(1:mgncol,k), &
                                                   rho(1:mgncol,k), lcldm(1:mgncol,k), &
-                                                  precip_frac(1:mgncol,k), mgncol, qsmall, &
+                                                  precip_frac(1:mgncol,k), mgncol, qsmall_emulator, &
                                                   proc_rates%qctend_TAU(1:mgncol,k), &
                                                   proc_rates%qrtend_TAU(1:mgncol,k), &
                                                   proc_rates%nctend_TAU(1:mgncol,k), &
                                                   proc_rates%nrtend_TAU(1:mgncol,k))
 
-        call ML_fixer_calc(mgncol, deltatin, qc(1:mgncol,k), nc(1:mgncol,k), &
-                           qr(1:mgncol,k), nr(1:mgncol,k), &
+        call ML_fixer_calc(mgncol, deltatin, qcic(1:mgncol,k), ncic(1:mgncol,k), &
+                           qric(1:mgncol,k), nric(1:mgncol,k), &
                            proc_rates%qctend_TAU(1:mgncol,k),&
                            proc_rates%nctend_TAU(1:mgncol,k), &
                            proc_rates%qrtend_TAU(1:mgncol,k), &
@@ -2099,17 +2103,20 @@ subroutine micro_pumas_tend ( &
                            proc_rates%QR_fixer(1:mgncol,k), &
                            proc_rates%NR_fixer(1:mgncol,k))
 
-        ! PUMAS expects prc and nprc1 (cloud rates) are positive
-        prc(1:mgncol,k)= -proc_rates%qctend_TAU(1:mgncol,k)
-        nprc1(1:mgncol,k)= -proc_rates%nctend_TAU(1:mgncol,k)
-
-        ! PUMAS expects nprc to be positive. Negative nrtend_TAU is from self
-        ! collection, so put it into nragg
         do i=1,mgncol
+
+            ! PUMAS expects prc and nprc1 (cloud rates) are positive and grid box averaged
+        
+            prc(i,k)= -proc_rates%qctend_TAU(i,k)*lcldm(i,k)
+            nprc1(i,k)= -proc_rates%nctend_TAU(i,k)*lcldm(i,k)
+
+            ! PUMAS expects nprc to be positive. Negative nrtend_TAU is from self collection, so put it into nragg
+           ! Also make it all precip-averaged
+
            if (proc_rates%nrtend_TAU(i,k).gt.0._r8) then
-              nprc(i,k)= proc_rates%nrtend_TAU(i,k)
+              nprc(i,k)= proc_rates%nrtend_TAU(i,k)*precip_frac(i,k)
            else
-              nragg(i,k)= proc_rates%nrtend_TAU(i,k)
+              nragg(i,k)= proc_rates%nrtend_TAU(i,k)*precip_frac(i,k)
            end if
         end do
 
