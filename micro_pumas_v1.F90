@@ -283,7 +283,7 @@ real(r8)           :: micro_mg_iaccr_factor
 real(r8)           :: micro_mg_max_nicons
 
 logical            :: remove_supersat      ! If true, remove supersaturation after sedimentation loop
-character(len=16)  :: warm_rain            ! 'tau','emulated','sb2001' or 'kk2000'
+character(len=16)  :: warm_rain            ! 'tau','emulated','sb2001' or 'kk2000' or 'BOSS'
 
 !Parameters for Implicit Sedimentation Calculation
 real(r8), parameter :: vfactor = 1.0        ! Rain/Snow/Graupel Factor
@@ -293,6 +293,35 @@ real(r8), parameter :: vfac_ice  = 1.0      ! Cloud Ice Factor
 logical           :: do_implicit_fall !   = .true.
 
 logical           :: accre_sees_auto  != .true.
+
+! BOSS parameters
+real(r8), allocatable, dimension(:) :: pautoq
+! parameters for autoconversion (N)
+real(r8), dimension(2) :: pautoN
+! parameters for accretion (q)
+real(r8), dimension(5) :: paccq
+! parameters for cloud self collection (N)
+real(r8), dimension(3) :: psccN
+! parameters for rain self collection (N)
+real(r8), dimension(3) :: pscrN
+
+integer :: iautoq   !will change to namelist parameter later
+
+real(r8) ::   log_a_auto_t1
+real(r8) ::   b_auto_t1
+real(r8) ::   log_mc_auto_inv
+real(r8) ::   log_mr_auto_inv
+real(r8) ::   log_a_acc
+real(r8) ::   b_acc_mc
+real(r8) ::   b_acc_mr
+real(r8) ::   log_a_sc_c
+real(r8) ::   b_sc_c
+real(r8) ::   log_a_sc_r
+real(r8) ::   b_sc_r
+real(r8) ::   b_auto_t2_mc
+real(r8) ::   b_auto_t2_mr
+real(r8) ::   b_auto_t2_n
+real(r8) ::   log_a_auto_t2
 
 !$acc declare create (nccons,nicons,ngcons,nrcons,nscons,ncnst,ninst,ngnst,    &
 !$acc                 nrnst,nsnst,evap_sed_off,icenuc_rh_off,evap_scl_ifs,     &
@@ -337,12 +366,15 @@ subroutine micro_pumas_init( &
      nrcons_in, nrnst_in, nscons_in, nsnst_in, &
      stochastic_emulated_filename_quantile, stochastic_emulated_filename_input_scale, &
      stochastic_emulated_filename_output_scale, &
+     iautoq_in,log_a_auto_t1_in, b_auto_t1_in, log_mc_auto_inv_in, log_mr_auto_inv_in, & !BOSS
+     log_a_acc_in, b_acc_mc_in, b_acc_mr_in, log_a_sc_c_in, b_sc_c_in, log_a_sc_r_in, b_sc_r_in, & !BOSS
+     b_auto_t2_mc_in, b_auto_t2_mr_in, b_auto_t2_n_in,log_a_auto_t2_in, & ! BOSS
      iulog, errstring)
 
   use micro_pumas_utils, only: micro_pumas_utils_init
   use pumas_stochastic_collect_tau, only: pumas_stochastic_kernel_init
   use tau_neural_net_quantile, only:  initialize_tau_emulators
-
+  use BOSS_utils, only: BOSS_init
   !-----------------------------------------------------------------------
   !
   ! Purpose:
@@ -428,6 +460,23 @@ subroutine micro_pumas_init( &
   integer, intent(in) :: iulog
   character(128), intent(out) :: errstring    ! Output status (non-blank for error return)
 
+  real(r8), intent(in) ::   log_a_auto_t1_in
+  real(r8), intent(in) ::   b_auto_t1_in
+  real(r8), intent(in) ::   log_mc_auto_inv_in
+  real(r8), intent(in) ::   log_mr_auto_inv_in
+  real(r8), intent(in) ::   log_a_acc_in
+  real(r8), intent(in) ::   b_acc_mc_in
+  real(r8), intent(in) ::   b_acc_mr_in
+  real(r8), intent(in) ::   log_a_sc_c_in
+  real(r8), intent(in) ::   b_sc_c_in
+  real(r8), intent(in) ::   log_a_sc_r_in
+  real(r8), intent(in) ::   b_sc_r_in
+  real(r8), intent(in) ::   b_auto_t2_mc_in
+  real(r8), intent(in) ::   b_auto_t2_mr_in
+  real(r8), intent(in) ::   b_auto_t2_n_in
+  real(r8), intent(in) ::   log_a_auto_t2_in
+
+  integer, intent(in)  ::   iautoq_in
   !-----------------------------------------------------------------------
 
   dcs = micro_mg_dcs
@@ -558,6 +607,39 @@ subroutine micro_pumas_init( &
                                     stochastic_emulated_filename_output_scale, iulog, errstring)
   end if
 
+  ! Initialize BOSS constants
+  log_a_auto_t1 = log_a_auto_t1_in
+  b_auto_t1 = b_auto_t1_in
+  log_mc_auto_inv = log_mc_auto_inv_in
+  log_mr_auto_inv = log_mr_auto_inv_in
+  log_a_acc = log_a_acc_in
+  b_acc_mc = b_acc_mc_in
+  b_acc_mr = b_acc_mr_in
+  log_a_sc_c =  log_a_sc_c_in
+  b_sc_c = b_sc_c_in
+  log_a_sc_r = log_a_sc_r_in
+  b_sc_r = b_sc_r_in
+  b_auto_t2_mc  = b_auto_t2_mc_in
+  b_auto_t2_mr  = b_auto_t2_mr_in
+  b_auto_t2_n   = b_auto_t2_n_in
+  log_a_auto_t2 = log_a_auto_t2_in
+  iautoq = iautoq_in
+
+  if (iautoq.eq.1) then
+     allocate(pautoq(3))
+  elseif (iautoq.eq.2) then
+     allocate(pautoq(6))
+  elseif (iautoq.eq.3) then
+     allocate(pautoq(8))
+  endif
+
+  call BOSS_init(iautoq,pautoq,pautoN,paccq,psccN,pscrN,&
+       log_a_auto_t1, b_auto_t1, log_mc_auto_inv, log_mr_auto_inv, &
+       log_a_acc, b_acc_mc, b_acc_mr, log_a_sc_c, b_sc_c, log_a_sc_r, b_sc_r, &
+       b_auto_t2_mc, b_auto_t2_mr, b_auto_t2_n, log_a_auto_t2, &
+       pi,iulog)
+
+
 end subroutine micro_pumas_init
 
 !===============================================================================
@@ -571,7 +653,7 @@ subroutine micro_pumas_tend ( &
      qrn,                          qsn,                          &
      nrn,                          nsn,                          &
      qgr,                          ngr,                          &
-     relvar,                       accre_enhan,                  &
+     irelvar,                      accre_enhan,                  &
      p,                            pdel, pint,                   &
      cldn,    liqcldf,        icecldf,       qsatfac,            &
      qcsinksum_rate1ord,                                         &
@@ -617,6 +699,7 @@ subroutine micro_pumas_tend ( &
   use tau_neural_net_quantile, only: tau_emulated_cloud_rain_interactions
   use cam_logfile,    only: iulog
   use ML_fixer_check, only: ML_fixer_calc
+  use BOSS_utils
 
   ! Constituent properties.
   use micro_pumas_utils, only: &
@@ -687,7 +770,7 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(in) :: qgr(mgncol,nlev)       ! graupel/hail mixing ratio (kg/kg)
   real(r8), intent(in) :: ngr(mgncol,nlev)       ! graupel/hail number conc (1/kg)
 
-  real(r8), intent(in) :: relvar(mgncol,nlev)      ! cloud water relative variance (-)
+  real(r8), intent(in) :: irelvar(mgncol,nlev)      ! cloud water relative variance (-)
   real(r8), intent(in) :: accre_enhan(mgncol,nlev) ! optional accretion
                                              ! enhancement factor (-)
 
@@ -916,6 +999,8 @@ subroutine micro_pumas_tend ( &
   real(r8) :: nsagg(mgncol,nlev)  ! number concentration
   ! self-collection of rain
   real(r8) :: nragg(mgncol,nlev)  ! number concentration
+  ! self-collection of droplet (BOSS)
+  real(r8) :: ncagg(mgncol,nlev)  ! number concentration
   ! collection of droplets by snow
   real(r8) :: psacws(mgncol,nlev)     ! mass mixing ratio
   real(r8) :: npsacws(mgncol,nlev)    ! number concentration
@@ -1094,6 +1179,9 @@ subroutine micro_pumas_tend ( &
   integer nstep_g(mgncol)
   real(r8) :: rnstep_g(mgncol)
 
+  ! Subgrid variance change due to limits if using BOSS
+  real(r8) :: relvar(mgncol,nlev)      ! cloud water relative variance (-)
+  real(r8) :: min_relvar
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
   ! Initialize scale height (H) for interface height calculation
@@ -1202,7 +1290,8 @@ subroutine micro_pumas_tend ( &
   !$acc               proc_rates%nctend_SB2001,proc_rates%qrtend_SB2001,      &
   !$acc               proc_rates%nrtend_SB2001,proc_rates%qctend_TAU,         &
   !$acc               proc_rates%nctend_TAU,proc_rates%qrtend_TAU,            &
-  !$acc               proc_rates%nrtend_TAU,proc_rates%gmnnn_lmnnn_TAU)       &
+  !$acc               proc_rates%nrtend_TAU,proc_rates%gmnnn_lmnnn_TAU,       &
+  !$acc               proc_rates%ncaggtot)                                    &
   !$acc      create  (qc,qi,nc,ni,qr,qs,nr,ns,qg,ng,rho,dv,mu,sc,rhof,        &
   !$acc               precip_frac,cldm,icldm,lcldm,qsfm,qcic,qiic,qsic,qric,  &
   !$acc               qgic,ncic,niic,nsic,nric,ngic,lami,n0i,lamc,pgam,lams,  &
@@ -1210,6 +1299,7 @@ subroutine micro_pumas_tend ( &
   !$acc               minstrf,ninstrf,vap_dep,ice_sublim,vap_deps,nnuccd,     &
   !$acc               mnuccd,mnuccc,nnuccc,mnucct,nnucct,mnudep,nnudep,       &
   !$acc               msacwi,nsacwi,prc,nprc,nprc1,nsagg,nragg,psacws,        &
+  !$acc               ncagg,                                                  &    ! trude
   !$acc               npsacws,pracs,npracs,mnuccr,nnuccr,mnuccri,nnuccri,pra, &
   !$acc               npra,prci,nprci,prai,nprai,pre,prds,nsubi,nsubc,nsubs,  &
   !$acc               nsubr,berg,bergs,npracg,nscng,ngracs,nmultg,nmultrg,    &
@@ -1240,6 +1330,7 @@ subroutine micro_pumas_tend ( &
         ns(i,k) = nsn(i,k)
         qg(i,k) = qgr(i,k)
         ng(i,k) = ngr(i,k)
+        relvar(i,k) = irelvar(i,k)
      end do
   end do
   !$acc end parallel
@@ -1441,6 +1532,10 @@ subroutine micro_pumas_tend ( &
         proc_rates%nmelttot(i,k)           = 0._r8
         proc_rates%nmeltstot(i,k)          = 0._r8
         proc_rates%nmeltgtot(i,k)          = 0._r8
+!BOSS
+        proc_rates%ncaggtot(i,k)           = 0._r8
+!        relvar(i,k)                        = 0._r8
+        min_relvar                         = 2.0
 
 !need to zero these out to be totally switchable (for conservation)
         psacr(i,k)              = 0._r8
@@ -1635,6 +1730,8 @@ subroutine micro_pumas_tend ( &
         nnudep(i,k)             = 0._r8
         mnudep(i,k)             = 0._r8
         nragg(i,k)              = 0._r8
+! BOSS
+        ncagg(i,k)              = 0._r8
 
         proc_rates%qctend_KK2000(i,k) = 0._r8
         proc_rates%nctend_KK2000(i,k) = 0._r8
@@ -1657,6 +1754,22 @@ subroutine micro_pumas_tend ( &
            proc_rates%nctend_SB2001(i,k) = 0._r8
            proc_rates%qrtend_SB2001(i,k) = 0._r8
            proc_rates%nrtend_SB2001(i,k) = 0._r8
+        end do
+     end do
+     !$acc end parallel
+  end if
+
+  if (trim(warm_rain) == 'BOSS') then
+     !$acc parallel vector_length(VLENS) default(present)
+     !$acc loop gang vector collapse(2)
+     do k=1,nlev
+        do i=1,mgncol
+           proc_rates%qctend_BOSS(i,k) = 0._r8
+           proc_rates%nctend_BOSS(i,k) = 0._r8
+           proc_rates%qrtend_BOSS(i,k) = 0._r8
+           proc_rates%nrtend_BOSS(i,k) = 0._r8
+
+           relvar(i,k)=max(min_relvar,relvar(i,k))
         end do
      end do
      !$acc end parallel
@@ -2142,6 +2255,23 @@ subroutine micro_pumas_tend ( &
      !$acc end parallel
   end if
 
+  !Add test for trim(warm_rain) == 'BOSS'
+  if (trim(warm_rain) == 'BOSS') then
+     call BOSS_liq_autoconversion(microp_uniform,iautoq,relvar,qcic,ncic,qric,nric,pautoq,pautoN,&
+          proc_rates%qctend_BOSS, proc_rates%nrtend_BOSS, &
+          proc_rates%nctend_BOSS, mgncol*nlev)
+
+     do k=1,nlev
+        do i=1,mgncol
+           prc(i,k)=proc_rates%qctend_BOSS(i,k)
+           nprc(i,k)=proc_rates%nrtend_BOSS(i,k)
+           nprc1(i,k)=proc_rates%nctend_BOSS(i,k)
+           proc_rates%qrtend_BOSS(i,k)= -proc_rates%qctend_BOSS(i,k)
+        end do
+     end do
+     !$acc end parallel
+  end if
+
   ! Get size distribution parameters for cloud ice
   call size_dist_param_basic(mg_ice_props, qiic, niic, lami, mgncol, nlev, n0=n0i)
 
@@ -2405,6 +2535,21 @@ subroutine micro_pumas_tend ( &
      !$acc end parallel
   end if
 
+  if (trim(warm_rain) == 'BOSS') then
+     call BOSS_accrete_cloud_water_rain(microp_uniform,relvar,qcic, ncic, qric, nric, paccq, pra, npra, mgncol*nlev)
+     !$acc parallel vector_length(VLENS) default(present)
+     !$acc loop gang vector collapse(2)
+     do k=1,nlev
+        do i=1,mgncol
+           proc_rates%nctend_BOSS(i,k)=proc_rates%nctend_BOSS(i,k)+npra(i,k)
+           proc_rates%qctend_BOSS(i,k)=proc_rates%qctend_BOSS(i,k)+pra(i,k)
+           proc_rates%nrtend_BOSS(i,k)=proc_rates%nrtend_BOSS(i,k)+npra(i,k)  !Sign should be same as prc?
+           proc_rates%qrtend_BOSS(i,k)=proc_rates%qrtend_BOSS(i,k)-pra(i,k)
+        end do
+     end do
+     !$acc end parallel
+  end if
+
   if (trim(warm_rain) == 'kk2000') then
      !$acc parallel vector_length(VLENS) default(present)
      !$acc loop gang vector collapse(2)
@@ -2453,6 +2598,15 @@ subroutine micro_pumas_tend ( &
   if (trim(warm_rain) == 'kk2000' .or. trim(warm_rain) == 'sb2001') then
      call self_collection_rain(rho, qric, nric, nragg, mgncol*nlev)
   end if
+
+  if (trim(warm_rain) == 'BOSS') then
+     call BOSS_self_collection_rain(qric, nric, pscrN, nragg, mgncol*nlev)
+     call BOSS_self_collection_cloud(microp_uniform,relvar,qcic, ncic, psccN, ncagg, mgncol*nlev)
+
+     ! note nragg is negative and ncagg is positive. It is the same in P3.
+     ! Could both be made negative for consistensy?
+
+  endif
 
   if (do_cldice) then
      call accrete_cloud_ice_snow(t, rho, asn, qiic, niic, qsic, lams, n0s, prai, nprai, mgncol*nlev)
@@ -2654,12 +2808,22 @@ subroutine micro_pumas_tend ( &
         !===================================================================
         ! conservation of nc
         !-------------------------------------------------------------------
-        dum = (nprc1(i,k)+npra(i,k)+nnuccc(i,k)+nnucct(i,k)+ &
-               npsacws(i,k)-nsubc(i,k)+npsacwg(i,k))*lcldm(i,k)*deltat
+        if (trim(warm_rain) == 'BOSS') then
+           dum = (nprc1(i,k)+npra(i,k)+nnuccc(i,k)+nnucct(i,k)+ncagg(i,k)+ &
+                npsacws(i,k)-nsubc(i,k)+npsacwg(i,k))*lcldm(i,k)*deltat
+        else
+           dum = (nprc1(i,k)+npra(i,k)+nnuccc(i,k)+nnucct(i,k)+ &
+                npsacws(i,k)-nsubc(i,k)+npsacwg(i,k))*lcldm(i,k)*deltat
+        end if
 
         if (dum.gt.nc(i,k)) then
-           ratio = nc(i,k)*rdeltat/((nprc1(i,k)+npra(i,k)+nnuccc(i,k)+nnucct(i,k)+&
+           if (trim(warm_rain) == 'BOSS') then
+              ratio = nc(i,k)*rdeltat/((nprc1(i,k)+npra(i,k)+nnuccc(i,k)+nnucct(i,k)+&
+                   npsacws(i,k)-nsubc(i,k)+npsacwg(i,k)+ncagg(i,k))*lcldm(i,k))*omsm
+           else
+              ratio = nc(i,k)*rdeltat/((nprc1(i,k)+npra(i,k)+nnuccc(i,k)+nnucct(i,k)+&
                    npsacws(i,k)-nsubc(i,k)+npsacwg(i,k))*lcldm(i,k))*omsm
+           end if
            npsacwg(i,k) = npsacwg(i,k)*ratio
            nprc1(i,k)   = nprc1(i,k)*ratio
            npra(i,k)    = npra(i,k)*ratio
@@ -2667,6 +2831,9 @@ subroutine micro_pumas_tend ( &
            nnucct(i,k)  = nnucct(i,k)*ratio
            npsacws(i,k) = npsacws(i,k)*ratio
            nsubc(i,k)   = nsubc(i,k)*ratio
+           if (trim(warm_rain) == 'BOSS') then
+              ncagg(i,k)  = ncagg(i,k)*ratio
+           endif
         end if
         mnuccri(i,k)=0._r8
         nnuccri(i,k)=0._r8
@@ -3086,6 +3253,9 @@ subroutine micro_pumas_tend ( &
         proc_rates%npracstot(i,k) = npracs(i,k)*precip_frac(i,k)
         proc_rates%nprctot(i,k) = nprc(i,k)*lcldm(i,k)
         proc_rates%nraggtot(i,k) = nragg(i,k)*precip_frac(i,k)
+        if (trim(warm_rain) == 'BOSS') then
+           proc_rates%ncaggtot(i,k) = ncagg(i,k)*lcldm(i,k)
+        end if
         proc_rates%nprcitot(i,k) = nprci(i,k)*icldm(i,k)
         proc_rates%nmeltstot(i,k) = ninstsm(i,k)/deltat
         proc_rates%nmeltgtot(i,k) = ninstgm(i,k)/deltat
@@ -3097,10 +3267,15 @@ subroutine micro_pumas_tend ( &
   !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
-        nctend(i,k) = nctend(i,k)+&
-           (-nnuccc(i,k)-nnucct(i,k)-npsacws(i,k)+nsubc(i,k) &
-           -npra(i,k)-nprc1(i,k)-npsacwg(i,k))*lcldm(i,k)
-
+        if (trim(warm_rain) == 'BOSS') then
+           nctend(i,k) = nctend(i,k)+&
+                (-nnuccc(i,k)-nnucct(i,k)-npsacws(i,k)+nsubc(i,k) &
+                -npra(i,k)-nprc1(i,k)-npsacwg(i,k)-ncagg(i,k))*lcldm(i,k)
+        else
+           nctend(i,k) = nctend(i,k)+&
+                (-nnuccc(i,k)-nnucct(i,k)-npsacws(i,k)+nsubc(i,k) &
+                -npra(i,k)-nprc1(i,k)-npsacwg(i,k))*lcldm(i,k)
+        endif
         if (do_cldice) then
            if (use_hetfrz_classnuc) then
               tmpfrz = nnuccc(i,k)

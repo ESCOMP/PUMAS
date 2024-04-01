@@ -83,7 +83,8 @@ public :: &
      access_lookup_table, & !! mg4
      access_lookup_table_coll, & !! mg4
      init_lookup_table, &      !! mg4
-     avg_diameter_vec
+     avg_diameter_vec, &
+     var_coef_r8_vect      !! added for boss
 
 ! 8 byte real and integer
 integer, parameter, public :: r8 = selected_real_kind(12)

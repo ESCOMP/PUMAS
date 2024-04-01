@@ -91,7 +91,9 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   ! TAU diagnostic variables
   real(r8), allocatable :: nraggtot(:,:)          ! change nr  due to self collection of rain
 
-
+  ! BOSS diagnostiv variable                               
+  real(r8), allocatable :: ncaggtot(:,:)          ! change nc  due to self collection of cloud
+  
   real(r8), allocatable :: pgam_out(:,:)      ! Liquid Size distribution parameter Mu for output
   real(r8), allocatable :: lamc_out(:,:)      ! Liquid Size distribution parameter Lambda for output
   real(r8), allocatable :: lamr_out(:,:)      ! Rain Size distribution parameter Lambda for output
@@ -134,6 +136,10 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: NC_fixer(:,:)     !Emulated: change in cloud number number due to ML fixer
   real(r8), allocatable :: QR_fixer(:,:)     !Emulated: change in rain mass due to ML fixer
   real(r8), allocatable :: NR_fixer(:,:)     !Emulated: change in rain number due to ML fixer
+  real(r8), allocatable :: qctend_BOSS(:,:)   !cloud liquid mass tendency due to autoconversion & accretion from BOSS code
+  real(r8), allocatable :: nctend_BOSS(:,:)   !cloud liquid number tendency due to autoconversion & accretion from BOSS code
+  real(r8), allocatable :: qrtend_BOSS(:,:)   !rain mass tendency due to autoconversion & accretion from BOSS code
+  real(r8), allocatable :: nrtend_BOSS(:,:)   !rain number tendency due to autoconversion & accretion from BOSS code
 
     contains
       procedure :: allocate => proc_rates_allocate
@@ -155,7 +161,7 @@ contains
 
       integer,           intent(in) :: psetcols, nlev
       integer,           intent(in) :: ncd
-      character(len=16), intent(in) :: warm_rain            ! 'tau','emulated','sb2001' or 'kk2000'
+      character(len=16), intent(in) :: warm_rain            ! 'tau','emulated','sb2001', 'kk2000' or 'BOSS'
       character(128),   intent(out) :: errstring
 
       integer :: ierr
@@ -434,6 +440,10 @@ contains
       if (ierr /= 0) then
         errstring='Error allocating this%nraggtot'
       end if
+      allocate(this%ncaggtot(psetcols,nlev), stat=ierr)
+      if (ierr /= 0) then
+         errstring='Error allocating this%ncaggtot'
+      endif
       allocate(this%nprcitot(psetcols,nlev), stat=ierr)
       if (ierr /= 0) then
         errstring='Error allocating this%nprcitot'
@@ -610,6 +620,24 @@ contains
          if (ierr /= 0) then
            errstring='Error allocating this%NR_fixer'
          end if
+      else if (warm_rain == 'BOSS') then                      
+         ! Classic default (non-ML) microphysics              
+         allocate(this%qctend_BOSS(psetcols,nlev), stat=ierr) 
+         if (ierr /= 0) then                                  
+           errstring='Error allocating this%qctend_BOSS'      
+         end if                                               
+         allocate(this%nctend_BOSS(psetcols,nlev), stat=ierr) 
+         if (ierr /= 0) then                                  
+           errstring='Error allocating this%nctend_BOSS'      
+         end if                                               
+         allocate(this%qrtend_BOSS(psetcols,nlev), stat=ierr) 
+         if (ierr /= 0) then                                  
+           errstring='Error allocating this%artend_BOSS'      
+         end if                                               
+         allocate(this%nrtend_BOSS(psetcols,nlev), stat=ierr) 
+         if (ierr /= 0) then                                  
+           errstring='Error allocating this%nrtend_BOSS'      
+         end if
       else if (warm_rain == 'sb2001') then
          ! Classic default (non-ML) microphysics
          allocate(this%qctend_SB2001(psetcols,nlev), stat=ierr)
@@ -656,7 +684,7 @@ contains
    !--------------------------------------------------------------
 
       class(proc_rates_type) :: this
-      character(len=16), intent(in) :: warm_rain            ! 'tau','emulated','sb2001' or 'kk2000'
+      character(len=16), intent(in) :: warm_rain            ! 'tau','emulated','sb2001', 'kk2000' or 'BOSS'
 
       deallocate(this%prodsnow)
       deallocate(this%evapsnow)
@@ -726,6 +754,7 @@ contains
       deallocate(this%npracstot)
       deallocate(this%nprctot)
       deallocate(this%nraggtot)
+      deallocate(this%ncaggtot)  ! BOSS
       deallocate(this%nprcitot)
       deallocate(this%ncsedten)
       deallocate(this%nisedten)
@@ -782,7 +811,12 @@ contains
          deallocate(this%nctend_SB2001)
          deallocate(this%qrtend_SB2001)
          deallocate(this%nrtend_SB2001)
-      end if
+      else if (trim(warm_rain) == 'BOSS') then 
+         deallocate(this%qctend_BOSS)          
+         deallocate(this%nctend_BOSS)          
+         deallocate(this%qrtend_BOSS)          
+         deallocate(this%nrtend_BOSS)          
+      end if  
 
    end subroutine proc_rates_deallocate
 
