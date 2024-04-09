@@ -322,7 +322,7 @@ real(r8) ::   b_auto_t2_mc
 real(r8) ::   b_auto_t2_mr
 real(r8) ::   b_auto_t2_n
 real(r8) ::   log_a_auto_t2
-
+real(r8) ::   min_relvar
 !$acc declare create (nccons,nicons,ngcons,nrcons,nscons,ncnst,ninst,ngnst,    &
 !$acc                 nrnst,nsnst,evap_sed_off,icenuc_rh_off,evap_scl_ifs,     &
 !$acc                 icenuc_use_meyers,evap_rhthrsh_ifs,rainfreeze_ifs,       &
@@ -368,7 +368,7 @@ subroutine micro_pumas_init( &
      stochastic_emulated_filename_output_scale, &
      iautoq_in,log_a_auto_t1_in, b_auto_t1_in, log_mc_auto_inv_in, log_mr_auto_inv_in, & !BOSS
      log_a_acc_in, b_acc_mc_in, b_acc_mr_in, log_a_sc_c_in, b_sc_c_in, log_a_sc_r_in, b_sc_r_in, & !BOSS
-     b_auto_t2_mc_in, b_auto_t2_mr_in, b_auto_t2_n_in,log_a_auto_t2_in, & ! BOSS
+     b_auto_t2_mc_in, b_auto_t2_mr_in, b_auto_t2_n_in,log_a_auto_t2_in, min_relvar_in, & ! BOSS
      iulog, errstring)
 
   use micro_pumas_utils, only: micro_pumas_utils_init
@@ -475,7 +475,7 @@ subroutine micro_pumas_init( &
   real(r8), intent(in) ::   b_auto_t2_mr_in
   real(r8), intent(in) ::   b_auto_t2_n_in
   real(r8), intent(in) ::   log_a_auto_t2_in
-
+  real(r8), intent(in) ::   min_relvar_in
   integer, intent(in)  ::   iautoq_in
   !-----------------------------------------------------------------------
 
@@ -624,7 +624,7 @@ subroutine micro_pumas_init( &
   b_auto_t2_n   = b_auto_t2_n_in
   log_a_auto_t2 = log_a_auto_t2_in
   iautoq = iautoq_in
-
+  min_relvar = min_relvar_in
   if (iautoq.eq.1) then
      allocate(pautoq(3))
   elseif (iautoq.eq.2) then
@@ -1181,7 +1181,7 @@ subroutine micro_pumas_tend ( &
 
   ! Subgrid variance change due to limits if using BOSS
   real(r8) :: relvar(mgncol,nlev)      ! cloud water relative variance (-)
-  real(r8) :: min_relvar
+!  real(r8) :: min_relvar
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
   ! Initialize scale height (H) for interface height calculation
@@ -1535,7 +1535,7 @@ subroutine micro_pumas_tend ( &
 !BOSS
         proc_rates%ncaggtot(i,k)           = 0._r8
 !        relvar(i,k)                        = 0._r8
-        min_relvar                         = 2.0
+!        min_relvar                         = 2.0
 
 !need to zero these out to be totally switchable (for conservation)
         psacr(i,k)              = 0._r8
