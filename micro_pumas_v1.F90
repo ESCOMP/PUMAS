@@ -1284,14 +1284,13 @@ subroutine micro_pumas_tend ( &
   !$acc               proc_rates%qr_in_TAU,proc_rates%nr_in_TAU,              &
   !$acc               proc_rates%lamc_out,proc_rates%lamr_out,                &
   !$acc               proc_rates%pgam_out,proc_rates%n0r_out,                 &
-  !$acc               proc_rates%nr_out,proc_rates%qctend_KK2000,             &
-  !$acc               proc_rates%nctend_KK2000,proc_rates%qrtend_KK2000,      &
-  !$acc               proc_rates%nrtend_KK2000,proc_rates%qctend_SB2001,      &
-  !$acc               proc_rates%nctend_SB2001,proc_rates%qrtend_SB2001,      &
-  !$acc               proc_rates%nrtend_SB2001,proc_rates%qctend_TAU,         &
-  !$acc               proc_rates%nctend_TAU,proc_rates%qrtend_TAU,            &
-  !$acc               proc_rates%nrtend_TAU,proc_rates%gmnnn_lmnnn_TAU,       &
-  !$acc               proc_rates%ncaggtot)                                    &
+  !$acc               proc_rates%qctend_KK2000,proc_rates%nctend_KK2000,      &
+  !$acc               proc_rates%qrtend_KK2000,proc_rates%nrtend_KK2000,      &
+  !$acc               proc_rates%qctend_SB2001,proc_rates%nctend_SB2001,      &
+  !$acc               proc_rates%qrtend_SB2001,proc_rates%nrtend_SB2001,      &
+  !$acc               proc_rates%qctend_TAU,proc_rates%nctend_TAU,            &
+  !$acc               proc_rates%qrtend_TAU,proc_rates%nrtend_TAU,            &
+  !$acc               proc_rates%gmnnn_lmnnn_TAU,proc_rates%ncaggtot)         &
   !$acc      create  (qc,qi,nc,ni,qr,qs,nr,ns,qg,ng,rho,dv,mu,sc,rhof,        &
   !$acc               precip_frac,cldm,icldm,lcldm,qsfm,qcic,qiic,qsic,qric,  &
   !$acc               qgic,ncic,niic,nsic,nric,ngic,lami,n0i,lamc,pgam,lams,  &

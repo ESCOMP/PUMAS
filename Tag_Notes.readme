@@ -1,4 +1,7 @@
 ====================================
+.. pumas_cam-release_v1.36
+April 17, 2024 - Updates to OpenACC directives by @sjsprecious to get CAM GPU regression testing working. All PUMAS ML mods have been integrated with cam_development since cam6_3_144. This PUMAS tag and others that require the "machlrn" branch below should work with all cam tags aver cam6_3_144.
+====================================
 .. pumas_cam-release_v1.35
 December 5, 2023 - Single line adjustment to vapor deposition onto snow. To run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR for ML (#858) is done.
 ====================================

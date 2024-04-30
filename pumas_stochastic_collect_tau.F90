@@ -208,16 +208,16 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   real(r8) :: qrin_old(mgncol,nlev)
   real(r8) :: nrin_old(mgncol,nlev)
   
-  real(r8) :: amk0(ncd)
-  real(r8) :: ank0(ncd)
+  real(r8) :: amk0(mgncol,nlev,ncd)
+  real(r8) :: ank0(mgncol,nlev,ncd)
   real(r8) :: gnnnn(mgncol,nlev,ncd)
   real(r8) :: gmnnn(mgncol,nlev,ncd)
   real(r8) :: lnnnn(mgncol,nlev,ncd)
   real(r8) :: lmnnn(mgncol,nlev,ncd)
-  real(r8) :: gnnnn0(ncd)
-  real(r8) :: gmnnn0(ncd)
-  real(r8) :: lnnnn0(ncd)
-  real(r8) :: lmnnn0(ncd)
+  real(r8) :: gnnnn0(mgncol,nlev,ncd)
+  real(r8) :: gmnnn0(mgncol,nlev,ncd)
+  real(r8) :: lnnnn0(mgncol,nlev,ncd)
+  real(r8) :: lmnnn0(mgncol,nlev,ncd)
   
   integer, parameter :: sub_step = 60
 
@@ -314,51 +314,52 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
 
 ! update qc, nc, qr, nr
 
-  !$acc parallel vector_length(VLENS) default(present) private(amk0,ank0,gnnnn0,gmnnn0,lnnnn0,lmnnn0)
+  !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector collapse(2)  
   do k=1,nlev
      do i=1,mgncol
         !$acc loop seq
         do lcl=1,ncd
-           amk0(lcl) = amk(i,k,lcl)
-           ank0(lcl) = ank(i,k,lcl)
+           amk0(i,k,lcl) = amk(i,k,lcl)
+           ank0(i,k,lcl) = ank(i,k,lcl)
         end do
         ! substep bin code
+        !$acc loop seq
         do n=1,sub_step
-           call compute_coll_params(rho(i,k),medge,amk0,ank0,gnnnn0,gmnnn0,lnnnn0,lmnnn0)
+           call compute_coll_params(rho(i,k),medge,amk0(i,k,1:ncd),ank0(i,k,1:ncd),gnnnn0(i,k,1:ncd),gmnnn0(i,k,1:ncd),lnnnn0(i,k,1:ncd),lmnnn0(i,k,1:ncd))
 
            all_gmnnn=0._r8
            all_lmnnn=0._r8
            !scaling gmnnn, lmnnn
            !$acc loop seq
            do lcl=1,ncd
-              all_gmnnn = all_gmnnn+gmnnn0(lcl)
-              all_lmnnn = all_lmnnn+lmnnn0(lcl)
+              all_gmnnn = all_gmnnn+gmnnn0(i,k,lcl)
+              all_lmnnn = all_lmnnn+lmnnn0(i,k,lcl)
            end do
  
            if ( (all_gmnnn == 0._r8) .or. (all_lmnnn == 0._r8) ) then
               !$acc loop seq
               do lcl=1,ncd
-                 gmnnn0(lcl) = 0._r8
-                 lmnnn0(lcl) = 0._r8
+                 gmnnn0(i,k,lcl) = 0._r8
+                 lmnnn0(i,k,lcl) = 0._r8
               end do
            else
               !$acc loop seq
               do lcl=1,ncd
-                 lmnnn0(lcl) = lmnnn0(lcl)*(all_gmnnn/all_lmnnn)
+                 lmnnn0(i,k,lcl) = lmnnn0(i,k,lcl)*(all_gmnnn/all_lmnnn)
               end do
            end if
 
            !$acc loop seq
            do lcl=1,ncd
-              amk0(lcl) = amk0(lcl)+(gmnnn0(lcl)-lmnnn0(lcl))*1.e3_r8/ &
+              amk0(i,k,lcl) = amk0(i,k,lcl)+(gmnnn0(i,k,lcl)-lmnnn0(i,k,lcl))*1.e3_r8/ &
                           rho(i,k)*deltatin/dble(sub_step)
-              ank0(lcl) = ank0(lcl)+(gnnnn0(lcl)-lnnnn0(lcl))*1.e6_r8/ &
+              ank0(i,k,lcl) = ank0(i,k,lcl)+(gnnnn0(i,k,lcl)-lnnnn0(i,k,lcl))*1.e6_r8/ &
                           rho(i,k)*deltatin/dble(sub_step)
-              gmnnn(i,k,lcl) = gmnnn(i,k,lcl)+gmnnn0(lcl)/sub_step
-              gnnnn(i,k,lcl) = gnnnn(i,k,lcl)+gnnnn0(lcl)/sub_step
-              lmnnn(i,k,lcl) = lmnnn(i,k,lcl)+lmnnn0(lcl)/sub_step
-              lnnnn(i,k,lcl) = lnnnn(i,k,lcl)+lnnnn0(lcl)/sub_step
+              gmnnn(i,k,lcl) = gmnnn(i,k,lcl)+gmnnn0(i,k,lcl)/sub_step
+              gnnnn(i,k,lcl) = gnnnn(i,k,lcl)+gnnnn0(i,k,lcl)/sub_step
+              lmnnn(i,k,lcl) = lmnnn(i,k,lcl)+lmnnn0(i,k,lcl)/sub_step
+              lnnnn(i,k,lcl) = lnnnn(i,k,lcl)+lnnnn0(i,k,lcl)/sub_step
            end do
         end do ! end of loop "sub_step"
 
@@ -369,8 +370,8 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
            ncin_old(i,k) = ncin_old(i,k)+ank(i,k,lcl)
            qcin_new(i,k) = qcin_new(i,k)+(gmnnn(i,k,lcl)-lmnnn(i,k,lcl))*1.e3_r8/rho(i,k)*deltatin
            ncin_new(i,k) = ncin_new(i,k)+(gnnnn(i,k,lcl)-lnnnn(i,k,lcl))*1.e6_r8/rho(i,k)*deltatin
-           qctend_TAU(i,k) = qctend_TAU(i,k)+(amk0(lcl)-amk(i,k,lcl))/deltatin
-           nctend_TAU(i,k) = nctend_TAU(i,k)+(ank0(lcl)-ank(i,k,lcl))/deltatin
+           qctend_TAU(i,k) = qctend_TAU(i,k)+(amk0(i,k,lcl)-amk(i,k,lcl))/deltatin
+           nctend_TAU(i,k) = nctend_TAU(i,k)+(ank0(i,k,lcl)-ank(i,k,lcl))/deltatin
            gmnnn_lmnnn_TAU(i,k) = gmnnn_lmnnn_TAU(i,k)+gmnnn(i,k,lcl)-lmnnn(i,k,lcl)
         end do
 
@@ -381,8 +382,8 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
            nrin_old(i,k) = nrin_old(i,k)+ank(i,k,lcl)
            qrin_new(i,k) = qrin_new(i,k)+(gmnnn(i,k,lcl)-lmnnn(i,k,lcl))*1.e3_r8/rho(i,k)*deltatin
            nrin_new(i,k) = nrin_new(i,k)+(gnnnn(i,k,lcl)-lnnnn(i,k,lcl))*1.e6_r8/rho(i,k)*deltatin
-           qrtend_TAU(i,k) = qrtend_TAU(i,k)+(amk0(lcl)-amk(i,k,lcl))/deltatin
-           nrtend_TAU(i,k) = nrtend_TAU(i,k)+(ank0(lcl)-ank(i,k,lcl))/deltatin
+           qrtend_TAU(i,k) = qrtend_TAU(i,k)+(amk0(i,k,lcl)-amk(i,k,lcl))/deltatin
+           nrtend_TAU(i,k) = nrtend_TAU(i,k)+(ank0(i,k,lcl)-ank(i,k,lcl))/deltatin
            gmnnn_lmnnn_TAU(i,k) = gmnnn_lmnnn_TAU(i,k)+gmnnn(i,k,lcl)-lmnnn(i,k,lcl)
         end do
 
@@ -403,7 +404,7 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
 ! Conservation checks 
 ! AG: Added May 2023
 
-  !$acc parallel vector_length(VLENS) default(present) private(amk0,ank0,gnnnn0,gmnnn0,lnnnn0,lmnnn0)
+  !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector collapse(2)  
   do k=1,nlev
      do i=1,mgncol
