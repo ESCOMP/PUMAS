@@ -289,13 +289,19 @@ contains
         real(kind = r8), dimension(:), intent(in) :: ys
         real(kind = r8), dimension(size(x_in, 1)), intent(out) :: y_in
         integer :: i, j, jl, jr, x_in_size, xs_size, x_pos
-        x_in_size = size(x_in, 1)
-        xs_size = size(xs, 1)
+        real(kind = r8) :: slope
+        x_in_size = size(x_in)
+        xs_size = size(xs)
         do i = 1, x_in_size
             call binary_search_left(xs, x_in(i), jl)
             call binary_search_right(xs, x_in(i), jr)
             j = (jl + jr) / 2
-            y_in(i) = (ys(j - 1) * (xs(j) - x_in(i)) + ys(j) * (x_in(i) - xs(j - 1))) / (xs(j) - xs(j - 1))
+            if ((j == 1) .or. (j == xs_size) .or. (xs(j + 1) - xs(j) == 0)) then
+                y_in(i) = ys(j)
+            else
+                slope = (ys(j + 1) - ys(j)) / (xs(j + 1) - xs(j))
+                y_in(j) = slope * (x_in(i) - xs(j)) + ys(j) 
+            end if
         end do
     end subroutine linear_interp_forward
 
@@ -305,60 +311,69 @@ contains
         real(kind = r8), dimension(:), intent(in) :: ys
         real(kind = r8), dimension(size(x_in, 1)), intent(out) :: y_in
         integer :: i, j, x_in_size, xs_size, x_pos
-        x_in_size = size(x_in, 1)
-        xs_size = size(xs, 1)
+        real(kind = r8) :: slope
+        x_in_size = size(x_in)
+        xs_size = size(xs)
         do i = 1, x_in_size
             call binary_search_left(xs, x_in(i), j)
-            y_in(i) = (ys(j - 1) * (xs(j) - x_in(i)) + ys(j) * (x_in(i) - xs(j - 1))) / (xs(j) - xs(j - 1))
+            if ((j == 1) .or. (j == xs_size) .or. (xs(j + 1) - xs(j) == 0)) then
+                y_in(i) = ys(j)
+            else
+                slope = (ys(j + 1) - ys(j)) / (xs(j + 1) - xs(j))
+                y_in(j) = slope * (x_in(i) - xs(j)) + ys(j) 
+            end if
         end do
     end subroutine linear_interp_inverse
 
-    subroutine binary_search_left(x, target, val_index)
-        ! binary_search left finds the leftmost index to insert
+    subroutine binary_search_left(x, target_val, val_index)
+        ! binary_search_left finds the leftmost index to insert
         ! the target value in a sorted array x and returns
         ! that index in val_index.
         real(kind = r8), dimension(:), intent(in) :: x
-        real(kind = r8), intent(in) :: target
+        real(kind = r8), intent(in) :: target_val
         integer, intent(out) :: val_index
         integer :: min_idx, max_idx, mid_idx
         real(kind = r8) :: mid_val
         min_idx = 1
-        max_idx = size(x, 1)
-        if (target <= x(min_idx)) then
+        max_idx = size(x)
+        mid_val = 1
+        mid_idx = 1
+        if (target_val <= x(min_idx)) then
             max_idx = min_idx
         end if
         do while (min_idx < max_idx)
-            mid_idx = (max_idx - min_idx) / 2
+            mid_idx = min_idx + (max_idx - min_idx) / 2
             mid_val = x(mid_idx)
-            if (mid_val < target) then
+            if (mid_val < target_val) then
                 min_idx = mid_idx + 1
-            else if (mid_val >= target) then
+            else if (mid_val >= target_val) then
                 max_idx = mid_idx - 1
             end if
         end do
         val_index = min_idx
     end subroutine binary_search_left
 
-    subroutine binary_search_right(x, target, val_index)
-        ! binary_search left finds the rightmost index to insert
+    subroutine binary_search_right(x, target_val, val_index)
+        ! binary_search_right finds the rightmost index to insert
         ! the target value in a sorted array x and returns
         ! that index in val_index.
         real(kind = r8), dimension(:), intent(in) :: x
-        real(kind = r8), intent(in) :: target
+        real(kind = r8), intent(in) :: target_val
         integer, intent(out) :: val_index
         integer :: min_idx, max_idx, mid_idx
         real(kind = r8) :: mid_val
         min_idx = 1
-        max_idx = size(x, 1)
-        if (target >= x(max_idx)) then
+        max_idx = size(x)
+        mid_idx = 1
+        if (target_val >= x(max_idx)) then
             min_idx = max_idx
         end if
         do while (min_idx < max_idx)
-            mid_idx = (max_idx - min_idx) / 2
+            mid_idx = min_idx + (max_idx - min_idx) / 2
             mid_val = x(mid_idx)
-            if (mid_val <= target) then
+            if (mid_val <= target_val) then
                 min_idx = mid_idx + 1
-            else if (mid_val > target) then
+            else if (mid_val > target_val) then
                 max_idx = mid_idx - 1
             end if
         end do
