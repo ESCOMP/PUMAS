@@ -300,7 +300,7 @@ contains
                 y_in(i) = ys(j)
             else
                 slope = (ys(j + 1) - ys(j)) / (xs(j + 1) - xs(j))
-                y_in(j) = slope * (x_in(i) - xs(j)) + ys(j) 
+                y_in(i) = slope * (x_in(i) - xs(j)) + ys(j) 
             end if
         end do
     end subroutine linear_interp_forward
@@ -320,7 +320,7 @@ contains
                 y_in(i) = ys(j)
             else
                 slope = (ys(j + 1) - ys(j)) / (xs(j + 1) - xs(j))
-                y_in(j) = slope * (x_in(i) - xs(j)) + ys(j) 
+                y_in(i) = slope * (x_in(i) - xs(j)) + ys(j) 
             end if
         end do
     end subroutine linear_interp_inverse
