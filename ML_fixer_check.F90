@@ -4,7 +4,7 @@ module ML_fixer_check
 contains
 subroutine ML_fixer_calc(mgncol,dt,qc,nc,qr,nr,qctend,nctend,qrtend,nrtend,fixer,qc_fixer, nc_fixer, qr_fixer, nr_fixer)
 
-use shr_kind_mod,   only: r8=>shr_kind_r8
+use pumas_kinds,       only: r8=>kind_r8
 use micro_pumas_utils, only: pi, rhow
 
 integer, intent(in) :: mgncol
@@ -45,13 +45,13 @@ do i = 1,mgncol
       fixer(i) = 1._r8
       qctend(i) = -qc(i)/dt
       qrtend(i) = qc(i)/dt
-      nctend(i) = -nc(i)/dt   
+      nctend(i) = -nc(i)/dt
    end if
    if( qr_tmp.lt.0._r8 ) then
       fixer(i) = 1._r8
       qrtend(i) = -qr(i)/dt
       qctend(i) = qr(i)/dt
-      nrtend(i) = -nr(i)/dt   
+      nrtend(i) = -nr(i)/dt
    end if
    if( nc_tmp.lt.0._r8 ) then
       fixer(i) = 1._r8

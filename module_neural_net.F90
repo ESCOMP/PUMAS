@@ -1,6 +1,6 @@
 module module_neural_net
     use netcdf
-    use shr_kind_mod,   only: r8=>shr_kind_r8
+    use pumas_kinds, only: r8=>kind_r8
 
     implicit none
     type Dense
@@ -251,7 +251,7 @@ contains
         character(len=9) :: ref_var_name = "reference"
         character(len=9) :: quant_var_name = "quantiles"
         integer :: ncid, quantile_id, column_id, quantile_dim, column_dim, ref_var_id, quant_var_id
-        
+
         errstring = ''
 
         call check(nf90_open(filename, nf90_nowrite, ncid),errstring)
@@ -469,7 +469,7 @@ contains
         real(r8), intent(out) :: transformed_data(size(input_data, 1), size(input_data, 2))
         character(128),   intent(out) :: errstring  ! output status (non-blank for error return)
         integer :: i
- 
+
         errstring = ''
         if (size(input_data, 2) /= size(scale_values, 1)) then
             write(errstring,*) "Size mismatch between input data and scale values", size(input_data, 2), size(scale_values, 1)

@@ -1,4 +1,7 @@
 ====================================
+.. pumas_cam-release_v1.38
+January 15, 2025 - Removed all CAM dependencies from core PUMAS routines except wv_sat_methods.  Also added a Common Community Physics Package (CCPP) wrapper (micro_pumas_ccpp.F90) for micro_pumas_v1.F90, including two new CCPP metadata files (micro_pumas_ccpp.meta and micro_pumas_diags.meta).  For CAM-SIMA this wrapper will be called inbetween a "pre" and "post" CCPP scheme which will handle host->PUMAS->host data conversions, diagnostics, etc.  A new CAM tag will also be made which calls the wrapper instead of PUMAS directly, although this isn't technically required.
+====================================
 .. pumas_cam-release_v1.37
 May 21, 2024 - Renaming and moving the default branch from Master to main_cam (previously release/cam). Added a README.md file to the release code with instructions for contributing to the PUMAS project on the main Github page. This external will work with all cam tags after cam6_3_144.
 ====================================
@@ -24,7 +27,7 @@ September 19, 2023 - More support for machine learning including GPU code clean 
 July 17, 2023 - Adding in support for the machine learning emulators. CAM support in PR phase, to run this code use branch https://github.com/PUMASDevelopment/CAM/tree/katetc/machlrn_camdev_pr2_cac until the CAM PR is done.
 ====================================
 .. pumas_cam-release_v1.29
-March 1, 2023 - Mainly updates to the heterogenious ice nucleation methods for cam_dev tuning. These tags are currently supported on the cam_development branch. 
+March 1, 2023 - Mainly updates to the heterogenious ice nucleation methods for cam_dev tuning. These tags are currently supported on the cam_development branch.
 ====================================
 .. pumas_cam-release_v1.28
 October 11, 2022 - Creation and implimentation of a derived data type (DDT) for process rates. Not supported by cam_development yet. The CAM changes are currently in https://github.com/ESCOMP/CAM/pull/632
@@ -33,7 +36,7 @@ October 11, 2022 - Creation and implimentation of a derived data type (DDT) for 
 August 24, 2022 - New tag for cam_development. Initialized nnudep and mnudep.
 ====================================
 .. pumas_cam-release_v1.26
-June 7, 2022 - Cam Tag cam6_3_063 now supports PUMAS interface changes in the  F2000dev compset 
+June 7, 2022 - Cam Tag cam6_3_063 now supports PUMAS interface changes in the  F2000dev compset
 (cam_dev version of micro_pumas_cam.F90). This applies to the previous two tags as well.
 ====================================
 .. pumas_cam-release_v1.25
@@ -43,12 +46,12 @@ June 2, 2022 - Notes from v1.23 still apply. The CAM PR does not have a tag yet.
 May 27, 2022 - Notes from v1.23 still apply. The CAM PR does not have a tag yet.
 ====================================
 .. pumas_cam-release_v1.23
-May 23, 2022 - Adding new output arguments for number tendencies. This changes the PUMAS_tend 
+May 23, 2022 - Adding new output arguments for number tendencies. This changes the PUMAS_tend
 interface, so the correct CAM tag will need to run with this. The CAM changes are currently in
-https://github.com/ESCOMP/CAM/pull/597 
+https://github.com/ESCOMP/CAM/pull/597
 ====================================
 .. pumas_cam-release_v1.22
-Jan 19, 2022 - Renames for pumas_v1 and use in cam_dev from here on. All changes required to run 
+Jan 19, 2022 - Renames for pumas_v1 and use in cam_dev from here on. All changes required to run
 the head of pumas/cam/release will be integrated into cam_dev physics in cam6_3_046, most likely.
 ====================================
 .. pumas_cam-release_v1.21
@@ -58,7 +61,7 @@ Nov 29, 2021 - Rain reflectivity bug fix. Notes from v1.19 still apply.
 Nov 15, 2021 - Small bug fix. Notes from v1.19 still apply.
 ====================================
 .. pumas_cam-release_v1.19
-Oct 26, 2021 - This tag depends on changes to cam_development that have not been brought to a PR 
+Oct 26, 2021 - This tag depends on changes to cam_development that have not been brought to a PR
 (or merged) yet. To use this code, you must include the changes from the gettelman_pumas_update0821
 branch of https://github.com/PUMASDevelopment/CAM at commit 2f2346bb92.
 ====================================

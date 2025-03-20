@@ -4,11 +4,13 @@ module micro_pumas_diags
 ! PUMAS diagnostics support package
 !----------------------------------------
 
-use shr_kind_mod,   only: r8=>shr_kind_r8
+use pumas_kinds,   only: r8=>kind_r8
 
+!> \section arg_table_proc_rates_type  Argument Table
+!! \htmlinclude proc_rates_type.html
   type, public :: proc_rates_type
 
-    real(r8), allocatable :: prodsnow(:,:)     ! production of snow (1/s)
+    real(r8), allocatable :: prodsnow(:,:)     ! production of snow (kg/kg/s)
     real(r8), allocatable :: evapsnow(:,:)     ! sublimation rate of snow (1/s)
     real(r8), allocatable :: qcsevap(:,:)      ! cloud water evaporation due to sedimentation (1/s)
     real(r8), allocatable :: qisevap(:,:)      ! cloud ice sublimation due to sublimation (1/s)
@@ -121,9 +123,9 @@ use shr_kind_mod,   only: r8=>shr_kind_r8
   real(r8), allocatable :: qrtend_KK2000(:,:)   !rain mass tendency due to autoconversion  & accretion from KK2000
   real(r8), allocatable :: nrtend_KK2000(:,:)   !rain number tendency due to autoconversion   & accretion from KK2000
   real(r8), allocatable :: qctend_SB2001(:,:)   !cloud liquid mass tendency due to autoconversion  & accretion from SB2001
-  real(r8), allocatable :: nctend_SB2001(:,:)   !cloud liquid number tendency due to autoconversion  & accretion from SB2001 
-  real(r8), allocatable :: qrtend_SB2001(:,:)   !rain mass tendency due to autoconversion  & accretion from SB2001 
-  real(r8), allocatable :: nrtend_SB2001(:,:)   !rain number tendency due to autoconversion  & accretion from SB2001 
+  real(r8), allocatable :: nctend_SB2001(:,:)   !cloud liquid number tendency due to autoconversion  & accretion from SB2001
+  real(r8), allocatable :: qrtend_SB2001(:,:)   !rain mass tendency due to autoconversion  & accretion from SB2001
+  real(r8), allocatable :: nrtend_SB2001(:,:)   !rain number tendency due to autoconversion  & accretion from SB2001
   real(r8), allocatable :: qctend_TAU(:,:)      !cloud liquid mass tendency due to autoconversion & accretion from TAU or Emulator code
   real(r8), allocatable :: nctend_TAU(:,:)      !cloud liquid number tendency due to autoconversion & accretion from TAU or Emulator code
   real(r8), allocatable :: qrtend_TAU(:,:)      !rain mass tendency due to autoconversion & accretion from TAU or Emulator code
@@ -146,8 +148,6 @@ contains
    !--------------------------------------------------------------
    ! Routine to allocate the elements of the proc_rates DDT
    !--------------------------------------------------------------
-
-   use cam_abortutils, only: endrun
 
       implicit none
 
@@ -741,7 +741,7 @@ contains
       deallocate(this%qrtend_KK2000)
       deallocate(this%nrtend_KK2000)
 
-      deallocate(this%lamc_out) 
+      deallocate(this%lamc_out)
       deallocate(this%lamr_out)
       deallocate(this%pgam_out)
       deallocate(this%n0r_out)
@@ -766,7 +766,7 @@ contains
          deallocate(this%qc_in_TAU)
          deallocate(this%nc_in_TAU)
          deallocate(this%qr_in_TAU)
-         deallocate(this%nr_in_TAU)              
+         deallocate(this%nr_in_TAU)
          deallocate(this%qctend_TAU)
          deallocate(this%nctend_TAU)
          deallocate(this%qrtend_TAU)

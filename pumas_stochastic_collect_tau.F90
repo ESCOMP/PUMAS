@@ -1,20 +1,18 @@
 module pumas_stochastic_collect_tau
 ! From Morrison (Lebo, originally TAU bin code)
 ! Gettelman and Chen 2018
-!the subroutines take in air density, air temperature, and the bin mass boundaries, and 
+!the subroutines take in air density, air temperature, and the bin mass boundaries, and
 !output the mass and number mixing ratio tendencies in each bin directly.
-!this is then wrapped for CAM. 
+!this is then wrapped for CAM.
 
 ! note, this is now coded locally. Want the CAM interface to be over i,k I think.
 
 #ifndef HAVE_GAMMA_INTRINSICS
-use shr_spfn_mod, only: gamma => shr_spfn_gamma
+use pumas_gamma_function, only: gamma=>pumas_gamma
 #endif
 
-use shr_kind_mod,      only: r8=>shr_kind_r8
-use cam_history,       only: addfld
+use pumas_kinds,       only: r8=>kind_r8
 use micro_pumas_utils, only: pi, rhow, qsmall, VLENS
-use cam_logfile,       only: iulog
 
 implicit none
 private
@@ -35,7 +33,7 @@ integer, parameter, public  :: ncdpl = ncdl+1
 real(r8), private :: knn(ncd,ncd)
 
 real(r8), private :: mmean(ncd), diammean(ncd)       ! kg & m at bin mid-points
-real(r8), private :: medge(ncdp), diamedge(ncdp)     ! kg & m at bin edges 
+real(r8), private :: medge(ncdp), diamedge(ncdp)     ! kg & m at bin edges
 integer, private  :: cutoff_id                       ! cutoff between cloud water and rain drop, D = 40 microns
 
 ! Assume 6 microns for each...
@@ -47,35 +45,35 @@ real(r8), parameter :: m1 = 4._r8/3._r8*pi*rhow*(6.e-6_r8)**3
 contains
 !===============================================================================
 
-subroutine calc_bins    
+subroutine calc_bins
 
   real(r8) :: DIAM(ncdp)
   real(r8) :: X(ncdp)
   real(r8) :: radsl(ncdp)
   real(r8) :: radl(ncd)
-  integer  :: L, lcl  
+  integer  :: L, lcl
   real(r8) :: kkfac
 
-!Then before doing any calculations you'll need to calculate the bin mass grid 
-! (note this code could be cleaned up, I'm just taking it as it's used in our bin scheme). 
-! This only needs to be done once, since we'll use the same bin mass grid for all calculations. 
+!Then before doing any calculations you'll need to calculate the bin mass grid
+! (note this code could be cleaned up, I'm just taking it as it's used in our bin scheme).
+! This only needs to be done once, since we'll use the same bin mass grid for all calculations.
 
 ! use mass doubling bins from Graham Feingold (note cgs units)
 
   DIAM(1)=1.5625*2.E-04_r8                ! cm
-  X(1)=PI/6._r8*DIAM(1)**3*rhow/1000._r8  ! rhow kg/m3 --> g/cm3 
-  radsl(1) = X(1)                         ! grams 
+  X(1)=PI/6._r8*DIAM(1)**3*rhow/1000._r8  ! rhow kg/m3 --> g/cm3
+  radsl(1) = X(1)                         ! grams
 
   DO l=2,ncdp
      X(l)=2._r8*X(l-1)
      DIAM(l)=(6._r8/pi*X(l)*1000._r8/rhow)**(1._r8/3._r8)  ! cm
-     radsl(l)=X(l)             
+     radsl(l)=X(l)
   ENDDO
 
 ! now get bin mid-points
 
   do l=1,ncd
-     radl(l)=(radsl(l)+radsl(l+1))/2._r8         ! grams   
+     radl(l)=(radsl(l)+radsl(l+1))/2._r8         ! grams
      diammean(l) = (6._r8/pi*radl(l)*1000._r8/rhow)**(1._r8/3._r8) ! cm
   end do
 
@@ -89,19 +87,17 @@ subroutine calc_bins
   enddo
 
   do lcl = 1,ncd
-     mmean(lcl) = radl(lcl)  
+     mmean(lcl) = radl(lcl)
      diammean(lcl) = diammean(lcl)
   enddo
 
   do lcl = ncdp,1,-1
      if( diamedge(lcl).ge.40.e-4_r8 ) cutoff_id = lcl
-  end do  
+  end do
 
 end subroutine calc_bins
 
 subroutine pumas_stochastic_kernel_init(kernel_filename)
-
-  use cam_history_support, only: add_hist_coord
 
   character(len=*), intent(in) :: kernel_filename  ! Full pathname to kernel file
 
@@ -147,8 +143,8 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
 
   !inputs: mgncol,nlev,t,rho,qcin,ncin,qrin,nrin
   !outputs: qctend,nctend,qrtend,nrtend
-  !not sure if we want to output bins (extra dimension). Good for testing?  
-  
+  !not sure if we want to output bins (extra dimension). Good for testing?
+
   integer, intent(in) :: mgncol,nlev
   real(r8), intent(in) :: deltatin
   real(r8), intent(in) :: t(mgncol,nlev)
@@ -167,12 +163,12 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   real(r8), intent(out) :: nctend_TAU(mgncol,nlev)
   real(r8), intent(out) :: qrtend_TAU(mgncol,nlev)
   real(r8), intent(out) :: nrtend_TAU(mgncol,nlev)
-  
+
   real(r8), intent(out) :: scale_qc(mgncol,nlev)
   real(r8), intent(out) :: scale_nc(mgncol,nlev)
   real(r8), intent(out) :: scale_qr(mgncol,nlev)
   real(r8), intent(out) :: scale_nr(mgncol,nlev)
-  
+
   real(r8), intent(out) :: amk_c(mgncol,nlev,ncd)
   real(r8), intent(out) :: ank_c(mgncol,nlev,ncd)
   real(r8), intent(out) :: amk_r(mgncol,nlev,ncd)
@@ -181,12 +177,12 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   real(r8), intent(out) :: ank(mgncol,nlev,ncd)
   real(r8), intent(out) :: amk_out(mgncol,nlev,ncd)
   real(r8), intent(out) :: ank_out(mgncol,nlev,ncd)
-  
+
   real(r8), intent(out) :: mu_c(mgncol,nlev)
   real(r8), intent(out) :: lambda_c(mgncol,nlev)
   real(r8), intent(out) :: lambda_r(mgncol,nlev)
   real(r8), intent(out) :: n0r(mgncol,nlev)
-  
+
   real(r8), intent(out) :: qcin_new(mgncol,nlev)
   real(r8), intent(out) :: ncin_new(mgncol,nlev)
   real(r8), intent(out) :: qrin_new(mgncol,nlev)
@@ -194,18 +190,18 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   real(r8), intent(out) :: gmnnn_lmnnn_TAU(mgncol,nlev)
 
   ! Local variables
-  
+
   integer :: i,k,n,lcl
   integer :: cutoff_amk(mgncol,nlev),cutoff(mgncol,nlev)
-  
+
   real(r8) :: all_gmnnn,all_lmnnn
   real(r8) :: qscl
-  
+
   real(r8) :: qcin_old(mgncol,nlev)
   real(r8) :: ncin_old(mgncol,nlev)
   real(r8) :: qrin_old(mgncol,nlev)
   real(r8) :: nrin_old(mgncol,nlev)
-  
+
   real(r8) :: amk0(mgncol,nlev,ncd)
   real(r8) :: ank0(mgncol,nlev,ncd)
   real(r8) :: gnnnn(mgncol,nlev,ncd)
@@ -216,7 +212,7 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   real(r8) :: gmnnn0(mgncol,nlev,ncd)
   real(r8) :: lnnnn0(mgncol,nlev,ncd)
   real(r8) :: lmnnn0(mgncol,nlev,ncd)
-  
+
   integer, parameter :: sub_step = 60
 
   !$acc data create (cutoff_amk,cutoff,qcin_old,ncin_old,qrin_old, &
@@ -224,7 +220,7 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   !$acc              gnnnn0,gmnnn0,lnnnn0,lmnnn0)
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector collapse(2)  
+  !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
         cutoff(i,k) = cutoff_id - 1
@@ -233,14 +229,14 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   !$acc end parallel
 
   ! First make bins from cam size distribution (bins are diagnostic)
-  
+
   call cam_bin_distribute(qc,qr,qcin,ncin,qrin,nrin,mu_c,lambda_c, &
                           lambda_r,n0r,scale_qc, &
                           scale_nc,scale_qr,scale_nr,amk_c,ank_c,  &
                           amk_r,ank_r,amk,ank,cutoff_amk,mgncol,nlev)
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector collapse(2)  
+  !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
         if ( cutoff_amk(i,k) > 0 ) then
@@ -249,10 +245,10 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
      end do
   end do
   !$acc end parallel
- 
-!Then call the subroutines that actually do the calculations. The inputs/ouputs are described in comments below. 
 
-!This part of the code needs to be called each time for each process rate calculation 
+!Then call the subroutines that actually do the calculations. The inputs/ouputs are described in comments below.
+
+!This part of the code needs to be called each time for each process rate calculation
 ! (i.e., for each sampled cloud/rain gamma distribution):
 
 ! note: variables passed to compute_column_params are all inputs,
@@ -260,7 +256,7 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
 
 ! inputs: t --> input air temperature (K)
 !         rho --> input air density (kg/m^3)
-!         medge --> bin mass boundary (g) 
+!         medge --> bin mass boundary (g)
 !         amk --> array of bin mass mixing ratio, i.e., the input drop mass distribution (kg/kg)
 !         ank --> array of bin number mixing ratio, i.e., the input drop number distribution (kg^-1)
 
@@ -268,26 +264,26 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
 
 ! outputs: gnnnn --> bin number mass mixing tendency gain, array in bins (#/cm^3/s)
 !          lnnnn --> bin number mass mixing tendency loss, array in bins (#/cm^3/s)
-!          gmnnn --> bin mass mixing ratio tendency gain, array in bins (g/cm^3/s) 
+!          gmnnn --> bin mass mixing ratio tendency gain, array in bins (g/cm^3/s)
 !          lmnnn --> bin mass mixing ratio tendency loss, array in bins (g/cm^3/s)
 
 
 ! Call Kernel
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector collapse(2)  
+  !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
         qcin_new(i,k) = 0._r8
         ncin_new(i,k) = 0._r8
         qrin_new(i,k) = 0._r8
         nrin_new(i,k) = 0._r8
-        
+
         qcin_old(i,k) = 0._r8
         ncin_old(i,k) = 0._r8
         qrin_old(i,k) = 0._r8
         nrin_old(i,k) = 0._r8
-        
+
         qctend_TAU(i,k) = 0._r8
         nctend_TAU(i,k) = 0._r8
         qrtend_TAU(i,k) = 0._r8
@@ -313,7 +309,7 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
 ! update qc, nc, qr, nr
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector collapse(2)  
+  !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
         !$acc loop seq
@@ -334,7 +330,7 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
               all_gmnnn = all_gmnnn+gmnnn0(i,k,lcl)
               all_lmnnn = all_lmnnn+lmnnn0(i,k,lcl)
            end do
- 
+
            if ( (all_gmnnn == 0._r8) .or. (all_lmnnn == 0._r8) ) then
               !$acc loop seq
               do lcl=1,ncd
@@ -385,12 +381,12 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
            gmnnn_lmnnn_TAU(i,k) = gmnnn_lmnnn_TAU(i,k)+gmnnn(i,k,lcl)-lmnnn(i,k,lcl)
         end do
 
-        !$acc loop seq     
+        !$acc loop seq
         do lcl=1,ncd
            amk_out(i,k,lcl) = amk(i,k,lcl) + (gmnnn(i,k,lcl)-lmnnn(i,k,lcl))*1.e3_r8/rho(i,k)*deltatin
            ank_out(i,k,lcl) = ank(i,k,lcl) + (gnnnn(i,k,lcl)-lnnnn(i,k,lcl))*1.e6_r8/rho(i,k)*deltatin
         end do
-     
+
         qcin_new(i,k) = qcin_new(i,k)+qcin_old(i,k)
         ncin_new(i,k) = ncin_new(i,k)+ncin_old(i,k)
         qrin_new(i,k) = qrin_new(i,k)+qrin_old(i,k)
@@ -399,11 +395,11 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
   end do
   !$acc end parallel
 
-! Conservation checks 
+! Conservation checks
 ! AG: Added May 2023
 
   !$acc parallel vector_length(VLENS) default(present)
-  !$acc loop gang vector collapse(2)  
+  !$acc loop gang vector collapse(2)
   do k=1,nlev
      do i=1,mgncol
 
@@ -436,7 +432,7 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
         if ( qcin_new(i,k) < qsmall ) then
            ncin_new(i,k) = 0._r8
         end if
-        
+
         if ( qrin_new(i,k) < qsmall ) then
            nrin_new(i,k) = 0._r8
         end if
@@ -446,15 +442,15 @@ subroutine pumas_stochastic_collect_tau_tend(deltatin,t,rho,qc,qr,qcin,     &
         if ( qcin_new(i,k) > qsmall .and. ncin_new(i,k) < qsmall ) then
            ncin_new(i,k) = qcin_new(i,k)/m1
         end if
-        
+
         if ( qrin_new(i,k) > qsmall .and. nrin_new(i,k) < qsmall) then
            nrin_new(i,k) = qrin_new(i,k)/m1
         end if
 
 ! Then recalculate tendencies based on difference
-! Clip tendencies for cloud (qc,nc) to be <= 0. 
-! Qrtend is not used in pumas (-qctend is used) but clip that too). 
-! Nr tend can be muliply signed. 
+! Clip tendencies for cloud (qc,nc) to be <= 0.
+! Qrtend is not used in pumas (-qctend is used) but clip that too).
+! Nr tend can be muliply signed.
 
         qctend_TAU(i,k)= min((qcin_new(i,k) - qcin(i,k)) / deltatin,0._r8)
         nctend_TAU(i,k)= min((ncin_new(i,k) - ncin(i,k)) / deltatin,0._r8)
@@ -480,7 +476,7 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
   real(r8), dimension(mgncol,nlev), intent(in) :: qc_all,qr_all,qc,nc,qr,nr,mu_c, &
                                                   lambda_c,lambda_r,n0r
   real(r8), dimension(mgncol,nlev,ncd), intent(out) :: amk_c,ank_c,amk_r,ank_r,amk,ank
-  real(r8), dimension(mgncol,nlev), intent(out) :: scale_nc,scale_qc,scale_nr,scale_qr 
+  real(r8), dimension(mgncol,nlev), intent(out) :: scale_nc,scale_qc,scale_nr,scale_qr
   integer, dimension(mgncol,nlev), intent(out) :: cutoff_amk
 
   ! Local variables
@@ -488,7 +484,7 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
   integer  :: i,j,k
   real(r8) :: phi
   integer  :: id_max_qc, id_max_qr
-  real(r8) :: max_qc, max_qr, min_amk 
+  real(r8) :: max_qc, max_qr, min_amk
 
   !$acc parallel vector_length(VLENS) default(present)
   !$acc loop gang vector collapse(3)
@@ -531,7 +527,7 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
               ank_c(i,k,j) = phi*(diamedge(j+1)-diamedge(j))*1.e-2_r8   ! D cm --> m
               amk_c(i,k,j) = phi*(diamedge(j+1)-diamedge(j))*1.e-2_r8*mmean(j)*1.e-3_r8  ! mass in bin g --> kg
               scale_nc(i,k) = scale_nc(i,k)+ank_c(i,k,j)
-              scale_qc(i,k) = scale_qc(i,k)+amk_c(i,k,j) 
+              scale_qc(i,k) = scale_qc(i,k)+amk_c(i,k,j)
            end do
            scale_nc(i,k) = scale_nc(i,k)/nc(i,k)
            scale_qc(i,k) = scale_qc(i,k)/qc(i,k)
@@ -552,7 +548,7 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
            !$acc loop seq
            do j=1,ncd
               phi = n0r(i,k)*exp(-lambda_r(i,k)*diammean(j)*1.e-2_r8)   ! D cm --> m
-              ank_r(i,k,j) = phi*(diamedge(j+1)-diamedge(j))*1.e-2_r8   ! D cm --> m  
+              ank_r(i,k,j) = phi*(diamedge(j+1)-diamedge(j))*1.e-2_r8   ! D cm --> m
               amk_r(i,k,j) = phi*(diamedge(j+1)-diamedge(j))*1.e-2_r8*mmean(j)*1.e-3_r8
               scale_nr(i,k) = scale_nr(i,k) + ank_r(i,k,j)
               scale_qr(i,k) = scale_qr(i,k) + amk_r(i,k,j)
@@ -598,7 +594,7 @@ subroutine cam_bin_distribute(qc_all,qr_all,qc,nc,qr,nr,mu_c,lambda_c, &
 
 !this part will take a bit of thinking about.
 !use size distribution parameters (mu, lambda) to generate the values at discrete size points
-!need to also ensure mass conservation  
+!need to also ensure mass conservation
 
 end subroutine cam_bin_distribute
 
@@ -606,7 +602,7 @@ end subroutine cam_bin_distribute
 
 ! The Kernel is from Jerry from many moons ago (included)
 
-! I read in the file data and multiply by the summed mass of the individual bins 
+! I read in the file data and multiply by the summed mass of the individual bins
 ! (with a factor of 1.5 so that the values represent the middle of the bin
 
 ! 941 FORMAT(2X,E12.5)
@@ -767,5 +763,3 @@ END SUBROUTINE COMPUTE_COLL_PARAMS
 
 
 end module pumas_stochastic_collect_tau
-
-

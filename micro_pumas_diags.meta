@@ -1,0 +1,26 @@
+#################################
+#Metadata file for the PUMAS
+#process rates DDT to allow it
+#to be passed between PUMAS and
+#any CCPP intersitial schemes.
+#
+#Please note that this file only
+#allows for the DDT as a whole to
+#be passed between schemes, and
+#additional metadata should be
+#added if specific process rate
+#variables need to be passed
+#independent of the DDT.
+#################################
+
+[ccpp-table-properties]
+  name = proc_rates_type
+  type = ddt
+
+[ccpp-arg-table]
+  name = proc_rates_type
+  type = ddt
+
+#####################
+#End of metadata file
+#####################

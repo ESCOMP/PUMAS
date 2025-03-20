@@ -95,8 +95,10 @@ module micro_pumas_v1
 ! 2) saturation vapor pressure and specific humidity over water
 ! 3) svp over ice
 
+use pumas_kinds, only: r8=>kind_r8
+
 #ifndef HAVE_GAMMA_INTRINSICS
-use shr_spfn_mod, only: gamma => shr_spfn_gamma
+use pumas_gamma_function, only: gamma=>pumas_gamma
 #endif
 
 use wv_sat_methods, only: &
@@ -105,7 +107,6 @@ use wv_sat_methods, only: &
 
 ! Parameters from the utilities module.
 use micro_pumas_utils, only: &
-     r8, &
      pi, &
      omsm, &
      qsmall, &
@@ -340,9 +341,9 @@ subroutine micro_pumas_init( &
      stochastic_emulated_filename_output_scale, &
      iulog, errstring)
 
-  use micro_pumas_utils, only: micro_pumas_utils_init
+  use micro_pumas_utils,            only: micro_pumas_utils_init
   use pumas_stochastic_collect_tau, only: pumas_stochastic_kernel_init
-  use tau_neural_net_quantile, only:  initialize_tau_emulators
+  use tau_neural_net_quantile,      only: initialize_tau_emulators
 
   !-----------------------------------------------------------------------
   !
@@ -426,18 +427,22 @@ subroutine micro_pumas_init( &
                                   stochastic_emulated_filename_input_scale, &
                                   stochastic_emulated_filename_output_scale ! Files for emulated machine learning
 
-  integer, intent(in) :: iulog
+  integer, intent(in) :: iulog                ! Host model log file unit number
   character(128), intent(out) :: errstring    ! Output status (non-blank for error return)
 
   !-----------------------------------------------------------------------
 
+  ! Initialize ice autoconversion size
+  ! to host-model specified value:
   dcs = micro_mg_dcs
 
   ! Initialize subordinate utilities module.
   call micro_pumas_utils_init(kind, rair, rh2o, cpair, tmelt_in, latvap, latice, &
        dcs, errstring)
 
-  if (trim(errstring) /= "") return
+  if (trim(errstring) /= "") then !If True then error occured
+     return
+  end if
 
   ! declarations for MG code (transforms variable names)
 
@@ -609,15 +614,14 @@ subroutine micro_pumas_tend ( &
      freqs,                        freqr,                        &
      nfice,                        qcrat,                        &
      proc_rates,                                                 &
-     errstring, & ! Below arguments are "optional" (pass null pointers to omit).
+     errstring, &
      tnd_qsnow,          tnd_nsnow,          re_ice,             &
      prer_evap,                                                      &
      frzimm,             frzcnt,             frzdep)
 
   use pumas_stochastic_collect_tau, only: ncd, pumas_stochastic_collect_tau_tend
-  use tau_neural_net_quantile, only: tau_emulated_cloud_rain_interactions
-  use cam_logfile,    only: iulog
-  use ML_fixer_check, only: ML_fixer_calc
+  use tau_neural_net_quantile,      only: tau_emulated_cloud_rain_interactions
+  use ML_fixer_check,               only: ML_fixer_calc
 
   ! Constituent properties.
   use micro_pumas_utils, only: &
@@ -736,10 +740,10 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: sadsnow(mgncol,nlev)      ! cloud snow surface area density (cm2/cm3)
   real(r8), intent(out) :: prect(mgncol)             ! surface precip rate (m/s)
   real(r8), intent(out) :: preci(mgncol)             ! cloud ice/snow precip rate (m/s)
-  real(r8), intent(out) :: nevapr(mgncol,nlev)       ! evaporation rate of rain + snow (1/s)
+  real(r8), intent(out) :: nevapr(mgncol,nlev)       ! evaporation rate of rain + snow (kg/kg/s)
   real(r8), intent(out) :: am_evp_st(mgncol,nlev)    ! stratiform evaporation area (frac)
-  real(r8), intent(out) :: prain(mgncol,nlev)        ! production of rain + snow (1/s)
-  real(r8), intent(out) :: cmeout(mgncol,nlev)       ! evap/sub of cloud (1/s)
+  real(r8), intent(out) :: prain(mgncol,nlev)        ! production of rain + snow (kg/kg/s)
+  real(r8), intent(out) :: cmeout(mgncol,nlev)       ! Rate of cond-evap of ice (kg/kg/s)
   real(r8), intent(out) :: deffi(mgncol,nlev)        ! ice effective diameter for optics (radiation) (micron)
   real(r8), intent(out) :: pgamrad(mgncol,nlev)      ! ice gamma parameter for optics (radiation) (no units)
   real(r8), intent(out) :: lamcrad(mgncol,nlev)      ! slope of droplet distribution for optics (radiation) (1/m)
@@ -758,15 +762,15 @@ subroutine micro_pumas_tend ( &
 
   real(r8), intent(out) :: nrout(mgncol,nlev)        ! rain number concentration (1/m3)
   real(r8), intent(out) :: nsout(mgncol,nlev)        ! snow number concentration (1/m3)
-  real(r8), intent(out) :: refl(mgncol,nlev)         ! analytic radar reflectivity (94GHZ, cloud radar)
-  real(r8), intent(out) :: arefl(mgncol,nlev)        ! average reflectivity will zero points outside valid range
-  real(r8), intent(out) :: areflz(mgncol,nlev)       ! average reflectivity in z.
+  real(r8), intent(out) :: refl(mgncol,nlev)         ! analytic radar reflectivity (94GHZ, cloud radar) (dBZ)
+  real(r8), intent(out) :: arefl(mgncol,nlev)        ! average reflectivity will zero points outside valid range (dBZ)
+  real(r8), intent(out) :: areflz(mgncol,nlev)       ! average reflectivity in z. (mm6 m-3)
   real(r8), intent(out) :: frefl(mgncol,nlev)        ! fractional occurrence of radar reflectivity
-  real(r8), intent(out) :: csrfl(mgncol,nlev)        ! cloudsat reflectivity
-  real(r8), intent(out) :: acsrfl(mgncol,nlev)       ! cloudsat average
+  real(r8), intent(out) :: csrfl(mgncol,nlev)        ! cloudsat reflectivity (dBZ)
+  real(r8), intent(out) :: acsrfl(mgncol,nlev)       ! cloudsat average (dBZ)
   real(r8), intent(out) :: fcsrfl(mgncol,nlev)       ! cloudsat fractional occurrence of radar reflectivity
-  real(r8), intent(out) :: refl10cm(mgncol,nlev)     ! 10cm (rain) analytic radar reflectivity
-  real(r8), intent(out) :: reflz10cm(mgncol,nlev)    ! 10cm (rain) analytic radar reflectivity
+  real(r8), intent(out) :: refl10cm(mgncol,nlev)     ! 10cm (rain) analytic radar reflectivity (dBZ)
+  real(r8), intent(out) :: reflz10cm(mgncol,nlev)    ! 10cm (rain) analytic radar reflectivity (mm6 m-3)
   real(r8), intent(out) :: rercld(mgncol,nlev)       ! effective radius calculation for rain + cloud
   real(r8), intent(out) :: ncai(mgncol,nlev)         ! output number conc of ice nuclei available (1/m3)
   real(r8), intent(out) :: ncal(mgncol,nlev)         ! output number conc of CCN (1/m3)
@@ -778,7 +782,7 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: dsout2(mgncol,nlev)       ! mean snow particle diameter (m)
   real(r8), intent(out) :: freqs(mgncol,nlev)        ! fractional occurrence of snow
   real(r8), intent(out) :: freqr(mgncol,nlev)        ! fractional occurrence of rain
-  real(r8), intent(out) :: nfice(mgncol,nlev)        ! fractional occurrence of ice
+  real(r8), intent(out) :: nfice(mgncol,nlev)        ! fraction of frozen water to total condensed water
   real(r8), intent(out) :: qcrat(mgncol,nlev)        ! limiter for qc process rates (1=no limit --> 0. no qc)
   real(r8), intent(out) :: qgout(mgncol,nlev)        ! graupel/hail mixing ratio (kg/kg)
   real(r8), intent(out) :: dgout(mgncol,nlev)        ! graupel/hail diameter (m)
@@ -788,7 +792,7 @@ subroutine micro_pumas_tend ( &
   real(r8), intent(out) :: dgout2(mgncol,nlev)       ! mean graupel/hail particle diameter (m)
   real(r8), intent(out) :: freqg(mgncol,nlev)        ! fractional occurrence of graupel
 
-  real(r8), intent(out) :: prer_evap(mgncol,nlev)
+  real(r8), intent(out) :: prer_evap(mgncol,nlev)    ! evaporation rate of rain (kg/kg/s)
 
   type (proc_rates_type), intent(inout)  :: proc_rates
 
@@ -1463,6 +1467,15 @@ subroutine micro_pumas_tend ( &
         nprc1(i,k)              = 0._r8
         pra(i,k)                = 0._r8
         npra(i,k)               = 0._r8
+        n0i(i,k)                = 0._r8
+        lami(i,k)               = 0._r8
+        n0s(i,k)                = 0._r8
+        lams(i,k)               = 0._r8
+        ninstgm(i,k)            = 0._r8
+        psacws(i,k)             = 0._r8
+        pracs(i,k)              = 0._r8
+        bergs(i,k)              = 0._r8
+        prds(i,k)               = 0._r8
      end do
   end do
   !$acc end parallel
