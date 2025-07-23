@@ -1471,6 +1471,7 @@ subroutine micro_pumas_tend ( &
         lami(i,k)               = 0._r8
         n0s(i,k)                = 0._r8
         lams(i,k)               = 0._r8
+        ninstsm(i,k)            = 0._r8
         ninstgm(i,k)            = 0._r8
         psacws(i,k)             = 0._r8
         pracs(i,k)              = 0._r8

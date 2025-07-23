@@ -1,4 +1,11 @@
 ====================================
+.. pumas_cam-release_v1.39
+May 14, 2025 - One line bug fix to support CAM7 testing. Aux_pumas with the Intel compiler passed on Derecho except:
+ERP_Ln9.f09_f09_mg17.F2000dev.derecho_intel.cam-outfrq9s_mg3
+FAIL ERP_Ln9.f09_f09_mg17.F2000dev.derecho_intel.cam-outfrq9s_mg3 COMPARE_base_rest
+ERP_Ln9.f09_f09_mg17.F2000dev.derecho_intel.cam-outfrq9s_mg3.G.aux_pumas_intel_20250514153756.clm2.h0.0001-01-01-16200.nc.base did NOT match ERP_Ln9.f09_f09_mg17.F2000dev.derecho_intel.cam-outfrq9s_mg3.G.aux_pumas_intel_20250514153756.clm2.h0.0001-01-01-16200.nc.rest
+Upon discussion with B.Eaton, this is not related to the pumas change and an outdated test. Need to update the aux_pumas suite. 
+====================================
 .. pumas_cam-release_v1.38
 January 15, 2025 - Removed all CAM dependencies from core PUMAS routines except wv_sat_methods.  Also added a Common Community Physics Package (CCPP) wrapper (micro_pumas_ccpp.F90) for micro_pumas_v1.F90, including two new CCPP metadata files (micro_pumas_ccpp.meta and micro_pumas_diags.meta).  For CAM-SIMA this wrapper will be called inbetween a "pre" and "post" CCPP scheme which will handle host->PUMAS->host data conversions, diagnostics, etc.  A new CAM tag will also be made which calls the wrapper instead of PUMAS directly, although this isn't technically required.
 ====================================
