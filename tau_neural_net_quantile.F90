@@ -48,7 +48,7 @@ contains
 
 
     subroutine tau_emulated_cloud_rain_interactions(qc, nc, qr, nr, pgam, lamc, lamr, n0r, rho, lcldm, &
-            precip_frac, mgncol, q_small, qc_tend, qr_tend, nc_tend, nr_tend, iulog)
+            precip_frac, mgncol, q_small, qc_tend, qr_tend, nc_tend, nr_tend)
         ! Calculates emulated tau microphysics tendencies from neural networks.
         !
         ! Input args:
@@ -58,8 +58,8 @@ contains
         !   nr: rain water number concentration in particles m-3
         !   pgam: cloud liquid droplet size parameter
         !   lamc: cloud liquid size distribution parameter (slope)
+        !   lamr: rain size parameter
         !   n0r: rain size parameter (intercept)
-        !   lamr: rain size parameter (slope)
         !   rho: density of air in kg m-3
         !   q_small: minimum cloud water mixing ratio value for running the microphysics
         !   mgncol: MG number of grid cells in vertical column
@@ -70,15 +70,14 @@ contains
         !    nr_tend: nr tendency
         !
         integer, intent(in) :: mgncol
-        real(r8), dimension(mgncol), intent(in) :: qc, qr, nc, nr, pgam, lamc, n0r, lamr, rho, lcldm, precip_frac
+        real(r8), dimension(mgncol), intent(in) :: qc, qr, nc, nr, pgam, lamc, n0r, lamr, rho
         real(r8), intent(in) :: q_small
         real(r8), dimension(mgncol), intent(out) :: qc_tend, qr_tend, nc_tend, nr_tend
         integer(i8) :: i
         real(r8), dimension(batch_size, num_inputs) :: nn_inputs, nn_quantile_inputs
         real(r8), dimension(batch_size, num_outputs) :: nn_quantile_outputs, nn_outputs
         real(r8), parameter :: dt = 1800.0_r8
-        integer,  intent(in) :: iulog
-        
+
         do i = 1, mgncol
             if (qc(i) >= q_small) then
                 nn_inputs(1, 1) = qc(i)
@@ -90,12 +89,10 @@ contains
                 nn_inputs(1, 7) = lamr(i)
                 nn_inputs(1, 8) = n0r(i)
                 nn_inputs(1, 9) = rho(i)
-                ! nn_inputs(1, 6) = precip_frac(i)
-                ! nn_inputs(1, 7) = lcldm(i)
-                
+
                 call quantile_transform(nn_inputs, input_scale_values, nn_quantile_inputs)
 
-                call neural_net_predict(nn_quantile_inputs, q_all, nn_quantile_outputs, iulog)
+                call neural_net_predict(nn_quantile_inputs, q_all, nn_quantile_outputs)
 
                 call quantile_inv_transform(nn_quantile_outputs, output_scale_values, nn_outputs)
                 
