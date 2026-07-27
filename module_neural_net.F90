@@ -36,10 +36,10 @@ contains
         integer :: i, j, num_examples
         real(kind=r8) :: alpha, beta
         external :: dgemm
-        alpha = 1
-        beta = 1
-        dense_output = 0
-        output = 0
+        alpha = 1_r8
+        beta = 1_r8
+        dense_output = 0_r8
+        output = 0_r8
         num_examples = size(input, 1)
         call dgemm('n', 'n', num_examples, layer%output_size, layer%input_size, &
             alpha, input, num_examples, layer%weights, layer%input_size, beta, dense_output, num_examples)
@@ -73,9 +73,9 @@ contains
         real(kind=r8), dimension(size(input, 1), size(input, 2)), intent(out) :: output
 
         real(kind=r8), dimension(size(input, 1)) :: softmax_sum
-        real(kind=r8), parameter :: selu_alpha = 1.6732
-        real(kind=r8), parameter :: selu_lambda = 1.0507
-        real(kind=r8), parameter :: zero = 0.0
+        real(kind=r8), parameter :: selu_alpha = 1.6732_r8
+        real(kind=r8), parameter :: selu_lambda = 1.0507_r8
+        real(kind=r8), parameter :: zero = 0.0_r8
         integer :: i, j
         select case (activation_type)
             case (0)
@@ -87,7 +87,7 @@ contains
                     end do
                 end do
             case (2)
-                output = 1.0 / (1.0 + dexp(-input))
+                output = 1.0_r8 / (1.0_r8 + dexp(-input))
             case (3)
                 do i=1,size(input, 1)
                     do j=1, size(input,2)
@@ -283,28 +283,102 @@ contains
         if (trim(errstring) /= '') return
     end subroutine load_quantile_scale_values
 
-    subroutine linear_interp(x_in, xs, ys, y_in)
+    subroutine linear_interp_forward(x_in, xs, ys, y_in)
+        real(kind = r8), dimension(:), intent(in) :: x_in
+        real(kind = r8), dimension(:), intent(in) :: xs
+        real(kind = r8), dimension(:), intent(in) :: ys
+        real(kind = r8), dimension(size(x_in, 1)), intent(out) :: y_in
+        integer :: i, j, jl, jr, x_in_size, xs_size, x_pos
+        real(kind = r8) :: slope
+        x_in_size = size(x_in)
+        xs_size = size(xs)
+        do i = 1, x_in_size
+            call binary_search_left(xs, x_in(i), jl)
+            call binary_search_right(xs, x_in(i), jr)
+            j = (jl + jr) / 2
+            if ((j == 1) .or. (j == xs_size) .or. (xs(j + 1) - xs(j) == 0)) then
+                y_in(i) = ys(j)
+            else
+                slope = (ys(j + 1) - ys(j)) / (xs(j + 1) - xs(j))
+                y_in(i) = slope * (x_in(i) - xs(j)) + ys(j) 
+            end if
+        end do
+    end subroutine linear_interp_forward
+
+    subroutine linear_interp_inverse(x_in, xs, ys, y_in)
         real(kind = r8), dimension(:), intent(in) :: x_in
         real(kind = r8), dimension(:), intent(in) :: xs
         real(kind = r8), dimension(:), intent(in) :: ys
         real(kind = r8), dimension(size(x_in, 1)), intent(out) :: y_in
         integer :: i, j, x_in_size, xs_size, x_pos
-        x_in_size = size(x_in, 1)
-        xs_size = size(xs, 1)
+        real(kind = r8) :: slope
+        x_in_size = size(x_in)
+        xs_size = size(xs)
         do i = 1, x_in_size
-            if (x_in(i) <= xs(1)) then
-                y_in(i) = ys(1)
-            else if (x_in(i) >= xs(xs_size)) then
-                y_in(i) = ys(xs_size)
+            call binary_search_left(xs, x_in(i), j)
+            if ((j == 1) .or. (j == xs_size) .or. (xs(j + 1) - xs(j) == 0)) then
+                y_in(i) = ys(j)
             else
-                j = 1
-                do while (xs(j) < x_in(i))
-                    j = j + 1
-                end do
-                y_in(i) = (ys(j - 1) * (xs(j) - x_in(i)) + ys(j) * (x_in(i) - xs(j - 1))) / (xs(j) - xs(j - 1))
+                slope = (ys(j + 1) - ys(j)) / (xs(j + 1) - xs(j))
+                y_in(i) = slope * (x_in(i) - xs(j)) + ys(j) 
             end if
         end do
-    end subroutine linear_interp
+    end subroutine linear_interp_inverse
+
+    subroutine binary_search_left(x, target_val, val_index)
+        ! binary_search_left finds the leftmost index to insert
+        ! the target value in a sorted array x and returns
+        ! that index in val_index.
+        real(kind = r8), dimension(:), intent(in) :: x
+        real(kind = r8), intent(in) :: target_val
+        integer, intent(out) :: val_index
+        integer :: min_idx, max_idx, mid_idx
+        real(kind = r8) :: mid_val
+        min_idx = 1
+        max_idx = size(x)
+        mid_val = 1
+        mid_idx = 1
+        if (target_val <= x(min_idx)) then
+            max_idx = min_idx
+        end if
+        do while (min_idx < max_idx)
+            mid_idx = min_idx + (max_idx - min_idx) / 2
+            mid_val = x(mid_idx)
+            if (mid_val < target_val) then
+                min_idx = mid_idx + 1
+            else if (mid_val >= target_val) then
+                max_idx = mid_idx - 1
+            end if
+        end do
+        val_index = min_idx
+    end subroutine binary_search_left
+
+    subroutine binary_search_right(x, target_val, val_index)
+        ! binary_search_right finds the rightmost index to insert
+        ! the target value in a sorted array x and returns
+        ! that index in val_index.
+        real(kind = r8), dimension(:), intent(in) :: x
+        real(kind = r8), intent(in) :: target_val
+        integer, intent(out) :: val_index
+        integer :: min_idx, max_idx, mid_idx
+        real(kind = r8) :: mid_val
+        min_idx = 1
+        max_idx = size(x)
+        mid_idx = 1
+        if (target_val >= x(max_idx)) then
+            min_idx = max_idx
+        end if
+        do while (min_idx < max_idx)
+            mid_idx = min_idx + (max_idx - min_idx) / 2
+            mid_val = x(mid_idx)
+            if (mid_val <= target_val) then
+                min_idx = mid_idx + 1
+            else if (mid_val > target_val) then
+                max_idx = mid_idx - 1
+            end if
+        end do
+        val_index = max_idx
+    end subroutine binary_search_right
 
     subroutine quantile_transform(x_inputs, scale_values, x_transformed)
         real(kind = r8), dimension(:, :), intent(in) :: x_inputs
@@ -314,7 +388,7 @@ contains
         x_size = size(x_inputs, 1)
         scale_size = size(scale_values, 1)
         do j = 1, size(x_inputs, 2)
-            call linear_interp(x_inputs(:, j), scale_values(:, j + 1), &
+            call linear_interp_forward(x_inputs(:, j), scale_values(:, j + 1), &
                     scale_values(:, 1), x_transformed(:, j))
         end do
     end subroutine quantile_transform
@@ -327,11 +401,11 @@ contains
         x_size = size(x_inputs, 1)
         scale_size = size(scale_values, 1)
         do j = 1, size(x_inputs, 2)
-            call linear_interp(x_inputs(:, j), scale_values(:, 1), scale_values(:, j + 1), x_transformed(:, j))
+            call linear_interp_inverse(x_inputs(:, j), scale_values(:, 1), scale_values(:, j + 1), x_transformed(:, j))
         end do
     end subroutine quantile_inv_transform
 
-    subroutine neural_net_predict(input, neural_net_model, prediction)
+    subroutine neural_net_predict(input, neural_net_model, prediction, iulog)
         ! neural_net_predict
         ! Description: generate prediction from neural network model for an arbitrary set of input values
         !
@@ -347,6 +421,7 @@ contains
         integer :: input_size
         integer :: batch_index_size
         integer, allocatable :: batch_indices(:)
+        integer,  intent(in)  :: iulog
         type(DenseData) :: neural_net_data(size(neural_net_model))
         input_size = size(input, 1)
         num_layers = size(neural_net_model)
