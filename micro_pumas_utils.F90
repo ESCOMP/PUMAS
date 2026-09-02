@@ -1301,7 +1301,7 @@ integer :: i
 !$acc loop gang vector
 do i=1,vlen
    vap_deps(i)=0._r8
-   if (qs(i)>=qsmall.and.precip_frac(i)>=0.1) then
+   if (qs(i)>=qsmall.and.precip_frac(i)>=0.1_r8) then
 
 !GET IN-CLOUD qs, ns
 !===============================================
