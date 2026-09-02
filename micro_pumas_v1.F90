@@ -287,9 +287,9 @@ logical            :: remove_supersat      ! If true, remove supersaturation aft
 character(len=16)  :: warm_rain            ! 'tau','emulated','sb2001' or 'kk2000'
 
 !Parameters for Implicit Sedimentation Calculation
-real(r8), parameter :: vfactor = 1.0        ! Rain/Snow/Graupel Factor
-real(r8), parameter :: vfac_drop = 1.0      ! Cloud Liquid Factor
-real(r8), parameter :: vfac_ice  = 1.0      ! Cloud Ice Factor
+real(r8), parameter :: vfactor = 1.0_r8        ! Rain/Snow/Graupel Factor
+real(r8), parameter :: vfac_drop = 1.0_r8      ! Cloud Liquid Factor
+real(r8), parameter :: vfac_ice  = 1.0_r8      ! Cloud Ice Factor
 
 logical           :: do_implicit_fall !   = .true.
 
@@ -4783,7 +4783,7 @@ subroutine Sedimentation_implicit(mgncol,nlev,deltat,zint,pdel,dumx,fx,check_qsm
    !$acc parallel vector_length(VLENS) default(present) async(queue)
    !$acc loop gang vector
    do i=1,mgncol
-      if ( precip(i) .ge. 0.0 ) then !h1g, 2019-11-26, ensure numerical stability
+      if ( precip(i) .ge. 0.0_r8 ) then        !h1g, 2019-11-26, ensure numerical stability
          if ( present_prect ) prect(i) = prect(i) + precip(i) / g / deltat / 1000._r8
          if ( present_preci ) preci(i) = preci(i) + precip(i) / g / deltat / 1000._r8
       endif

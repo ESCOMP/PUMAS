@@ -60,7 +60,7 @@ subroutine calc_bins
 
 ! use mass doubling bins from Graham Feingold (note cgs units)
 
-  DIAM(1)=1.5625*2.E-04_r8                ! cm
+  DIAM(1)=1.5625_r8*2.E-04_r8                ! cm
   X(1)=PI/6._r8*DIAM(1)**3*rhow/1000._r8  ! rhow kg/m3 --> g/cm3
   radsl(1) = X(1)                         ! grams
 
