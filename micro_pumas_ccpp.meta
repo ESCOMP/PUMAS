@@ -119,7 +119,7 @@
   type = logical
   intent = in
 [use_hetfrz_classnuc]
-  standard_name = do_heterogeneous_ice_nucleation
+  standard_name = do_heterogeneous_freezing_by_classical_nucleation_theory
   long_name = flag for heterogeneous freezing for PUMAS microphysics
   units = flag
   dimensions = ()
