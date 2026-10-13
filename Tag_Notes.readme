@@ -2,6 +2,9 @@
 .. pumas_cam-release_v1.42
 October 12, 2026 - Add 'module_name' metadata property needed by CCPP-framework version 'capgen-v1'. Also updates the 'use_hetfrz_classnuc' standard name. CAM regression tests will not be impacted (as it is only metadata changes).
 ====================================
+.. pumas_cam-release_v1.41
+September 2, 2026 - Fix problems with real kind declarations, so that all floating-point literals use the '_r8' kind suffix (e.g. '1.0' -> '1.0_r8'), and remove an invalid '_r8' suffix from an integer exponent. Trailing whitespace was also removed from micro_mg1_0.F90.  No un-expected CAM regression test failures occurred.
+====================================
 .. pumas_cam-release_v1.40
 July 21, 2026 - Round 3 of CCPP updates, which allow the CCPP version of PUMAS to compile and run in CAM-SIMA.  The conversion to pumas_r8 was moved out of PUMAS and into the CAM-SIMA interstitial code, so that subsetting and unit conversion can occur in a single copy.  Also updated CCPP metadata standard names and units, and added a placeholder routine and metadata file (micro_pumas_tempfix.F90/.meta) which defines the proc_rates_type DDT until the PUMAS CCPP diagnostics routine is brought in.  Brought into CAM via atmos_phys0_27_000 in CAM tag cam6_4_196. Regression tests were all bit-for-bit, except for the following pre-existing failures:
 derecho/nvhpc/aux_cam:
