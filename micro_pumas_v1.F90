@@ -2436,10 +2436,11 @@ subroutine micro_pumas_tend ( &
            ntmp(i,k) = ncic(i,k)
 
            !Option: include recently autoconverted rain (prc, nprc) in accretion
+           !        remove the droplet-number sink (nprc1) from the provisional droplet number
            if (accre_sees_auto) then
               rtmp(i,k) = rtmp(i,k) + prc(i,k)*deltat
               ctmp(i,k) = ctmp(i,k) - prc(i,k)*deltat
-              ntmp(i,k) = ntmp(i,k) - nprc(i,k)*deltat
+              ntmp(i,k) = ntmp(i,k) - nprc1(i,k)*deltat
            endif
         end do
      end do
@@ -3349,9 +3350,7 @@ subroutine micro_pumas_tend ( &
         if (dumi(i,k).ge.qsmall) then
            proc_rates%vtrmi(i,k)=min(ain(i,k)*gamma_bi_plus4/(6._r8*lami(i,k)**bi), &
                 1.2_r8*rhof(i,k))
-           proc_rates%vtrmi(i,k)=proc_rates%vtrmi(i,k)*micro_mg_vtrmi_factor
 
-           fi(i,k) = g*rho(i,k)*proc_rates%vtrmi(i,k)
            fni(i,k) = g*rho(i,k)* &
                 min(ain(i,k)*gamma_bi_plus1/lami(i,k)**bi,1.2_r8*rhof(i,k))
 
@@ -3365,14 +3364,18 @@ subroutine micro_pumas_tend ( &
                  (1._r8 - ifrac) * &
                  min(ajn(i,k)*gamma_bj_plus4/(6._r8*lami(i,k)**bj), &
                  1.2_r8*rhof(i,k))
-              proc_rates%vtrmi(i,k)=proc_rates%vtrmi(i,k)*micro_mg_vtrmi_factor
 
-              fi(i,k)  = g*rho(i,k)*proc_rates%vtrmi(i,k)
               fni(i,k) = ifrac * fni(i,k) + &
                  (1._r8 - ifrac) * &
                  g*rho(i,k)* &
                  min(ajn(i,k)*gamma_bj_plus1/lami(i,k)**bj,1.2_r8*rhof(i,k))
            end if
+
+           ! apply micro_mg_vtrmi_factor once, after the small/large
+           ! blend, to both the mass- and number-weighted ice fall speeds
+           proc_rates%vtrmi(i,k) = proc_rates%vtrmi(i,k)*micro_mg_vtrmi_factor
+           fi(i,k)  = g*rho(i,k)*proc_rates%vtrmi(i,k)
+           fni(i,k) = fni(i,k)*micro_mg_vtrmi_factor
 
            ! Fix ice fall speed following IFS microphysics
            if (ifs_sed) then
