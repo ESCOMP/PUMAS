@@ -4268,7 +4268,7 @@ end if
         if (dumg(i,k).ge.qsmall) then
            if (dum_2D(i,k) /= dumng(i,k)) then
               ! adjust number conc if needed to keep mean size in reasonable range
-              ngtend(i,k)=(dumng(i,k)*precip_frac(i,k)-ng(i,k))*rdeltat
+              ngtend(i,k)=(dumng(i,k)-ng(i,k))*rdeltat
            end if
         end if
 

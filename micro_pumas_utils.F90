@@ -2569,7 +2569,7 @@ subroutine evaporate_sublimate_precip_graupel(t, rho, dv, mu, sc, q, qvl, qvi, &
                 (f1s/(lamg(i)*lamg(i))+                           &
                 f2s*(agn(i)*rho(i)/mu(i))**0.5_r8*                &
                 sc(i)**(1._r8/3._r8)*gamma(5._r8/2._r8+bg/2._r8)/ &
-                (lamg(i)**(5._r8/2._r8+bs/2._r8)))
+                (lamg(i)**(5._r8/2._r8+bg/2._r8)))
            prdg(i) = eps*(qclr-qvi(i))/abg
            ! only sublimate in out-of-cloud region and distribute over precip_frac
            prdg(i) = min(prdg(i)*am_evp_st(i),0._r8)
@@ -2690,7 +2690,7 @@ subroutine evaporate_sublimate_precip_graupel_mg4(t, rho, dv, mu, sc, q, qvl, qv
                 (f1s/(lamg(i)*lamg(i))+                           &
                 f2s*(agn(i)*rho(i)/mu(i))**0.5_r8*                &
                 sc(i)**(1._r8/3._r8)*gamma(5._r8/2._r8+bg/2._r8)/ &
-                (lamg(i)**(5._r8/2._r8+bs/2._r8)))
+                (lamg(i)**(5._r8/2._r8+bg/2._r8)))
            prdg(i) = eps*(qclr-qvi(i))/abg
            ! only sublimate in out-of-cloud region and distribute over precip_frac
            prdg(i) = min(prdg(i)*am_evp_st(i),0._r8)
@@ -2903,7 +2903,7 @@ subroutine graupel_riming_liquid_snow(psacws,qsic,qcic,nsic,rho,rhosn,rhog,asn,l
         dum       = max(rhosn/(rhog-rhosn)*pgsacw(i),0._r8)
 
         ! Number concentraiton of embryo graupel from riming of snow
-        nscng(i)  = dum/mg0*rho(i)
+        nscng(i)  = dum/mg0
         ! Limit max number converted to snow number  (dtime here correct? We think yes)
         nscng(i)  = min(nscng(i),nsic(i)/dtime)
 
